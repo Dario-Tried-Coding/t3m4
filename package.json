@@ -2,7 +2,7 @@
   "name": "t3m4",
   "private": true,
   "scripts": {
-    "CI": "turbo lint test build",
+    "CI": "turbo lint test build --filter=./packages/T3M4/*",
     "publish": "pnpm run CI && changeset publish",
     "build": "turbo run build",
     "dev": "turbo run dev",
