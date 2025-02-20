@@ -1,5 +1,5 @@
 {
-  "name": "my-monorepo",
+  "name": "t3m4",
   "private": true,
   "scripts": {
     "CI": "turbo lint test build",

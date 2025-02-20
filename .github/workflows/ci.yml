@@ -4,13 +4,11 @@ on:
   push:
     branches: ['main']
     paths:
-      - 'packages/core/**'
-      - 'packages/react/**'
+      - 'packages/T3M4/**'
   pull_request:
     types: [opened, synchronize]
     paths:
-      - 'packages/core/**'
-      - 'packages/react/**'
+      - 'packages/T3M4/**'
 
 jobs:
   build:

@@ -1,5 +1,5 @@
 {
-  "name": "@T3M4/core",
+  "name": "@t3m4/core",
   "version": "0.0.1",
   "description": "A typesafe abstraction for advanced theming across frameworks.",
   "private": false,
