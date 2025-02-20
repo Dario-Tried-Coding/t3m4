@@ -1,0 +1,55 @@
+{
+  "name": "@T3M4/core",
+  "version": "0.0.1",
+  "description": "A typesafe abstraction for advanced theming across frameworks.",
+  "private": false,
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "tsc"
+  },
+  "keywords": [
+    "theming",
+    "typescript"
+  ],
+  "author": "dariotriedcoding",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dario-Tried-Coding/T3M4.git"
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "import": "./dist/types/index.mjs",
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./types/config": {
+      "import": "./dist/types/config/index.mjs",
+      "types": "./dist/types/config/index.d.ts",
+      "default": "./dist/types/config/index.js"
+    }
+  },
+  "dependencies": {
+    "@repo/typescript-utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.6"
+  }
+}

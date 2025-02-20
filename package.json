@@ -1,12 +1,14 @@
 {
-  "name": "T3M4",
+  "name": "my-monorepo",
   "private": true,
   "scripts": {
+    "CI": "turbo lint test build",
+    "publish": "pnpm run CI && changeset publish",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "test": "turbo test",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
