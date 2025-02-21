@@ -59,7 +59,7 @@ export function script(args: ScriptArgs) {
       this._constraints = constraints
 
       const modeHandling = args.mode
-      const modeConfig = Object.entries(args.config).find(([_, { type }]) => type === 'mode') as UndefinedOr<[string, ModeProp]>
+      const modeConfig = Object.entries(args.config).find(([, { type }]) => type === 'mode') as UndefinedOr<[string, ModeProp]>
 
       const resolvedModes: Map<string, ResolvedMode> = new Map()
       // prettier-ignore

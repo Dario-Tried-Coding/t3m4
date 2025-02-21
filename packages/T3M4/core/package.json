@@ -10,7 +10,8 @@
     "test": "vitest run",
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "tsc"
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit"
   },
   "keywords": [
     "theming",
@@ -47,6 +48,9 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint": "^9.20.1",
     "tsup": "^8.3.6",
     "typescript": "^5.7.3",
     "vitest": "^3.0.6"

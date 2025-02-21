@@ -1,21 +1,3 @@
-'use client'
-
-import { useTheming } from '../lib/next-themes'
-
 export default function Home() {
-  const { state, updateState, resolvedMode, options } = useTheming()
-
-  return (
-    <div>
-      <pre>{JSON.stringify(state, null, 2)}</pre>
-      <pre>{resolvedMode}</pre>
-      {state && (
-        <>
-          <button onClick={() => updateState('mode', (prev) => (prev === 'dark' ? 'light' : 'dark'))}>mode</button>
-          <button onClick={() => updateState('radius', (prev) => (prev === '1' ? '0.5' : '1'))}>radius</button>
-        </>
-      )}
-      <pre>{JSON.stringify(options, null, 2)}</pre>
-    </div>
-  )
+  return <div>page</div>
 }
