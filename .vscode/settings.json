@@ -5,6 +5,8 @@
     }
   ],
   "material-icon-theme.folders.associations": {
-    "react": "React-components"
+    "react": "React-components",
+    "tailwind": "../../../../icons/tailwind-folder",
+    "presets": "../../../../icons/presets-folder"
   }
 }

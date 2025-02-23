@@ -1,5 +1,7 @@
-import '@/styles/globals.css'
+import { FontMono, FontSans } from '@/fonts'
+import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
+import '@/styles/globals.css'
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -13,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body>{children}</body>
+      <body className={cn('min-h-svh antialiased', FontSans.variable, FontMono.variable)}>{children}</body>
     </html>
   )
 }
