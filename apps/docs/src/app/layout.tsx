@@ -2,6 +2,7 @@ import { FontMono, FontSans } from '@/fonts'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
+import { Providers } from '@/components/Providers.server'
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -14,8 +15,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
-      <body className={cn('min-h-svh antialiased', FontSans.variable, FontMono.variable)}>{children}</body>
+    <html lang='en' suppressHydrationWarning>
+      <body className={cn('min-h-svh antialiased', FontSans.variable, FontMono.variable)}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }
