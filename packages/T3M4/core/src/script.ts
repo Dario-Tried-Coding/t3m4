@@ -1,7 +1,7 @@
 import { Nullable, NullOr, UndefinedOr } from '@repo/typescript-utils/nullable'
 import { ScriptArgs } from './types'
 import { ModeProp, ResolvedMode, Strat } from './types/config/mode'
-import { SystemValues } from './types/config/props'
+import { Prop, SystemValues } from './types/config/props'
 import { EventMap } from './types/events'
 import { DEFAULTS, Observer } from './types/script'
 
@@ -61,9 +61,9 @@ export function script(args: ScriptArgs) {
                 if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
 
                 const propOptions = new Set([
-                  ...(typeof propsItem === 'string' ? ['light'] : (propsItem.options as SystemValues).light ?? ['light']),
-                  ...(typeof propsItem === 'string' ? ['dark'] : (propsItem.options as SystemValues).dark ?? ['dark']),
-                  ...(typeof propsItem !== 'string' ? (propsItem.options as SystemValues).custom ?? [] : [])
+                  ...(typeof propsItem === 'string' ? ['light'] : [(propsItem.options as SystemValues).light ?? 'light']),
+                  ...(typeof propsItem === 'string' ? ['dark'] : [(propsItem.options as SystemValues).dark ?? 'dark']),
+                  ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
                 ])
 
                 options.set(prop, { preferred: stratObj.preferred, options: propOptions })
@@ -73,10 +73,10 @@ export function script(args: ScriptArgs) {
                 if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
               
                 const propOptions = new Set([
-                  ...(typeof propsItem === 'string' ? ['light'] : (propsItem.options as SystemValues).light ?? ['light']),
-                  ...(typeof propsItem === 'string' ? ['dark'] : (propsItem.options as SystemValues).dark ?? ['dark']),
-                  ...(typeof propsItem === 'string' ? ['system'] : (propsItem.options as SystemValues).system ?? ['system']),
-                  ...(typeof propsItem !== 'string' ? (propsItem.options as SystemValues).custom ?? [] : [])
+                  ...(typeof propsItem === 'string' ? ['light'] : [(propsItem.options as SystemValues).light ?? 'light']),
+                  ...(typeof propsItem === 'string' ? ['dark'] : [(propsItem.options as SystemValues).dark ?? 'dark']),
+                  ...(typeof propsItem === 'string' ? ['system'] : [(propsItem.options as SystemValues).system ?? 'system']),
+                  ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
                 ])
                 
                 options.set(prop, { preferred: stratObj.preferred, options: propOptions })
@@ -86,7 +86,7 @@ export function script(args: ScriptArgs) {
       this._options = options
 
       const modeConfig = Object.entries(args.config).find(([, { type }]) => type === 'mode') as UndefinedOr<[string, ModeProp]>
-      
+
       if (modeConfig) {
         const [prop, stratObj] = modeConfig
         const modeProp = props.find((i) => (typeof i === 'string' ? i === prop : i.prop === prop))
@@ -94,19 +94,26 @@ export function script(args: ScriptArgs) {
 
         // prettier-ignore
         switch (stratObj.strategy) {
-          case 'mono': resolvedModes.set(stratObj.preferred, stratObj.colorScheme); break
+          case 'mono': {
+            if (typeof modeProp === 'object' && (typeof modeProp.options === 'object' || Array.isArray(modeProp.options))) break;
+
+            const mode = typeof modeProp === 'string' ? 'default' : modeProp?.options as Extract<Prop, string>
+            resolvedModes.set(mode, stratObj.colorScheme)
+          }; break
           case 'multi': Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme)); break
           case 'light&dark':
           case 'system': {
-            resolvedModes.set(stratObj.colorSchemes?.light ?? 'light', 'light')
-            resolvedModes.set(stratObj.colorSchemes?.dark ?? 'dark', 'dark')
+            if (typeof modeProp === 'object' && (typeof modeProp.options === 'string' || Array.isArray(modeProp.options))) break;
+
+            resolvedModes.set(typeof modeProp === 'object' ? (modeProp.options as SystemValues).light ?? 'light' : 'light', 'light')
+            resolvedModes.set(typeof modeProp === 'object' ? (modeProp.options as SystemValues).dark ?? 'dark' : 'dark', 'dark')
             if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
           }; break
           default: break
         }
 
-        const systemMode = typeof modeProp === 'string' ? 'system' : typeof modeProp?.options === 'object' && !Array.isArray(modeProp.options) ? modeProp.options.system ?? 'system' : undefined
-        
+        const systemMode = typeof modeProp === 'string' ? 'system' : typeof modeProp?.options === 'object' && !Array.isArray(modeProp.options) ? (modeProp.options.system ?? 'system') : undefined
+
         this._modeHandling = {
           prop,
           strategy: stratObj.strategy,
@@ -123,7 +130,6 @@ export function script(args: ScriptArgs) {
           storageKey: modeHandling?.storageKey ?? defaults.mode.storageKey,
         }
       }
-
     }
 
     private static getInstance() {

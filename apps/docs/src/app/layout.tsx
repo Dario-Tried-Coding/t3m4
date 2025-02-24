@@ -1,8 +1,8 @@
 import { FontMono, FontSans } from '@/fonts'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
-import '@/styles/globals.css'
 import { Providers } from '@/components/Providers.server'
+import '@/styles/globals.css'
 
 export const metadata: Metadata = {
   title: 'Create Next App',
