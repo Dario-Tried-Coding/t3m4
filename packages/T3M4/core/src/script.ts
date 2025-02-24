@@ -1,11 +1,12 @@
-import { NullOr, UndefinedOr } from '@repo/typescript-utils/nullable'
+import { Nullable, NullOr, UndefinedOr } from '@repo/typescript-utils/nullable'
 import { ScriptArgs } from './types'
 import { ModeProp, ResolvedMode, Strat } from './types/config/mode'
+import { SystemValues } from './types/config/props'
 import { EventMap } from './types/events'
 import { DEFAULTS, Observer } from './types/script'
 
 export type State = Map<string, string>
-export type Constraints = Map<string, { base: string; options: Set<string> }>
+export type Options = Map<string, { preferred: string; options: Set<string> }>
 type ModeHandling = { prop: string; strategy: Strat; resolvedModes: Map<string, ResolvedMode>; system: UndefinedOr<{ mode: string; fallback: string }> } & Required<ScriptArgs['mode']>
 type Observers = Observer[]
 
@@ -27,71 +28,102 @@ export function script(args: ScriptArgs) {
   class ArgsProcessor {
     private static instance: ArgsProcessor
     private _storageKey = args.storageKey ?? defaults.storageKey
-    private _constraints: Constraints
-    private _modeHandling: NullOr<ModeHandling>
+    private _options: Options
+    private _modeHandling: Nullable<ModeHandling> = undefined
     private _observers: Observers = args.observe ?? defaults.observe
     private _nonce = args.nonce ?? defaults.nonce
     private _disableTransitionOnChange = args.disableTransitionOnChange ?? defaults.disableTransitionOnChange
 
     private constructor() {
-      const constraints: Constraints = new Map()
+      const { props, mode: modeHandling } = args
+
+      const options: Options = new Map()
       for (const [prop, stratObj] of Object.entries(args.config)) {
+        const propsItem = props.find((i) => (typeof i === 'string' ? prop === i : prop === i.prop))
+        if (!propsItem) continue
+
         // prettier-ignore
         switch (stratObj.strategy) {
-            case 'mono': constraints.set(prop, { options: new Set([stratObj.key]), base: stratObj.key }); break
-            case 'multi': constraints.set(prop, { options: new Set(Array.isArray(stratObj.keys) ? stratObj.keys : Object.keys(stratObj.keys)), base: stratObj.base }); break
-            case 'light_dark':
+            case 'mono': {
+              if ((typeof propsItem !== 'string' && typeof propsItem.options !== 'string')) break
+              
+              const propOptions = new Set(typeof propsItem === 'string' ? ['default'] : [propsItem.options as string])
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+            case 'multi': {
+              if (typeof propsItem === 'string' || !Array.isArray(propsItem.options)) break
+              
+              const propOptions = new Set(propsItem.options)
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+            case 'light&dark':
               {
-                constraints.set(prop, {
-                  options: new Set([stratObj.customKeys?.light ?? 'light', stratObj.customKeys?.dark ?? 'dark', ...(stratObj.customKeys?.custom ? Object.keys(stratObj.customKeys.custom) : [])]),
-                  base: stratObj.base,
-                })
+                if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
+
+                const propOptions = new Set([
+                  ...(typeof propsItem === 'string' ? ['light'] : (propsItem.options as SystemValues).light ?? ['light']),
+                  ...(typeof propsItem === 'string' ? ['dark'] : (propsItem.options as SystemValues).dark ?? ['dark']),
+                  ...(typeof propsItem !== 'string' ? (propsItem.options as SystemValues).custom ?? [] : [])
+                ])
+
+                options.set(prop, { preferred: stratObj.preferred, options: propOptions })
               }; break
             case 'system':
               {
-                constraints.set(prop, {
-                  options: new Set([stratObj.customKeys?.light ?? 'light', stratObj.customKeys?.dark ?? 'dark', stratObj.customKeys?.system ?? 'system', ...(stratObj.customKeys?.custom ? Object.keys(stratObj.customKeys.custom) : [])]),
-                  base: stratObj.base,
-                })
+                if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
+              
+                const propOptions = new Set([
+                  ...(typeof propsItem === 'string' ? ['light'] : (propsItem.options as SystemValues).light ?? ['light']),
+                  ...(typeof propsItem === 'string' ? ['dark'] : (propsItem.options as SystemValues).dark ?? ['dark']),
+                  ...(typeof propsItem === 'string' ? ['system'] : (propsItem.options as SystemValues).system ?? ['system']),
+                  ...(typeof propsItem !== 'string' ? (propsItem.options as SystemValues).custom ?? [] : [])
+                ])
+                
+                options.set(prop, { preferred: stratObj.preferred, options: propOptions })
               }; break
           }
       }
-      this._constraints = constraints
+      this._options = options
 
-      const modeHandling = args.mode
       const modeConfig = Object.entries(args.config).find(([, { type }]) => type === 'mode') as UndefinedOr<[string, ModeProp]>
+      
+      if (modeConfig) {
+        const [prop, stratObj] = modeConfig
+        const modeProp = props.find((i) => (typeof i === 'string' ? i === prop : i.prop === prop))
+        const resolvedModes: Map<string, ResolvedMode> = new Map()
 
-      const resolvedModes: Map<string, ResolvedMode> = new Map()
-      // prettier-ignore
-      switch (modeConfig?.[1].strategy) {
-        case 'mono': resolvedModes.set(modeConfig[1].key, modeConfig[1].colorScheme); break
-        case 'multi': Object.entries(modeConfig[1].keys).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme)); break
-        case 'light_dark':
-        case 'system': {
-          resolvedModes.set(modeConfig[1].customKeys?.light ?? 'light', 'light')
-          resolvedModes.set(modeConfig[1].customKeys?.dark ?? 'dark', 'dark')
-          if (modeConfig[1].customKeys?.custom) Object.entries(modeConfig[1].customKeys.custom).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
-        }; break
-        default: break
+        // prettier-ignore
+        switch (stratObj.strategy) {
+          case 'mono': resolvedModes.set(stratObj.preferred, stratObj.colorScheme); break
+          case 'multi': Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme)); break
+          case 'light&dark':
+          case 'system': {
+            resolvedModes.set(stratObj.colorSchemes?.light ?? 'light', 'light')
+            resolvedModes.set(stratObj.colorSchemes?.dark ?? 'dark', 'dark')
+            if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
+          }; break
+          default: break
+        }
+
+        const systemMode = typeof modeProp === 'string' ? 'system' : typeof modeProp?.options === 'object' && !Array.isArray(modeProp.options) ? modeProp.options.system ?? 'system' : undefined
+        
+        this._modeHandling = {
+          prop,
+          strategy: stratObj.strategy,
+          resolvedModes,
+          system:
+            stratObj.strategy === 'system'
+              ? {
+                  mode: systemMode!,
+                  fallback: stratObj.fallback,
+                }
+              : undefined,
+          attribute: modeHandling?.attribute ?? defaults.mode.attribute,
+          store: modeHandling?.store ?? defaults.mode.store,
+          storageKey: modeHandling?.storageKey ?? defaults.mode.storageKey,
+        }
       }
 
-      this._modeHandling = modeConfig
-        ? {
-            prop: modeConfig[0],
-            strategy: modeConfig[1].strategy,
-            resolvedModes,
-            system:
-              modeConfig[1].strategy === 'system'
-                ? {
-                    mode: modeConfig[1].customKeys?.system ?? 'system',
-                    fallback: modeConfig[1].fallback,
-                  }
-                : undefined,
-            attribute: modeHandling?.attribute ?? defaults.mode.attribute,
-            store: modeHandling?.store ?? defaults.mode.store,
-            storageKey: modeHandling?.storageKey ?? defaults.mode.storageKey,
-          }
-        : null
     }
 
     private static getInstance() {
@@ -104,7 +136,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static get constraints() {
-      return ArgsProcessor.getInstance()._constraints
+      return ArgsProcessor.getInstance()._options
     }
 
     public static get observers() {
@@ -189,7 +221,7 @@ export function script(args: ScriptArgs) {
       const isAllowed = isHandled && !!value ? ArgsProcessor.constraints.get(prop)!.options.has(value) : false
       const isAllowedFallback = isHandled && !!fallback ? ArgsProcessor.constraints.get(prop)!.options.has(fallback) : false
 
-      const preferred = isHandled ? ArgsProcessor.constraints.get(prop)!.base : undefined
+      const preferred = isHandled ? ArgsProcessor.constraints.get(prop)!.preferred : undefined
       const valValue = !isHandled ? undefined : isAllowed ? value! : isAllowedFallback ? fallback! : preferred
 
       return { passed: isHandled && isAllowed, value: valValue }
@@ -202,9 +234,9 @@ export function script(args: ScriptArgs) {
       let passed = false
       const normFallbacks = typeof fallbacks === 'string' ? Utils.jsonToMap(fallbacks) : fallbacks
 
-      for (const [prop, { base }] of ArgsProcessor.constraints.entries()) {
+      for (const [prop, { preferred }] of ArgsProcessor.constraints.entries()) {
         results.set(prop, { passed: false, value: undefined as unknown as string })
-        sanValues.set(prop, base)
+        sanValues.set(prop, preferred)
       }
 
       for (const [prop, fallback] of normFallbacks?.entries() ?? []) {

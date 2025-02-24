@@ -2,6 +2,8 @@ export type SystemValues = Partial<{ light: string; dark: string; system: string
 
 export type Options = string | string[] | SystemValues
 
-export type ExplicitProp = { prop: string; values: Options }
+export type ExplicitProp = { prop: string; options: Options }
 
-export type Props = (string | ExplicitProp)[]
+export type Prop = string | ExplicitProp
+
+export type Props = Prop[]

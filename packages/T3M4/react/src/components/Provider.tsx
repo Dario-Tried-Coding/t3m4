@@ -9,6 +9,7 @@ import { State as MState } from '../types/state'
 import { Script } from './Script'
 
 interface NextThemesProviderProps<Ps extends Props, C extends Config<Ps>> extends PropsWithChildren, ScriptArgs {
+  props: Ps
   config: C
 }
 export const NextThemesProvider = <Ps extends Props, C extends Config<Ps>>({ children, ...scriptArgs }: NextThemesProviderProps<Ps, C>) => {
