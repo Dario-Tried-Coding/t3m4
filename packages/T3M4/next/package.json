@@ -1,0 +1,60 @@
+{
+  "name": "@t3m4/next",
+  "version": "0.0.0",
+  "description": "A typesafe abstraction for advanced theming in your Next.js projects.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit"
+  },
+  "keywords": [
+    "theming",
+    "typescript",
+    "react",
+    "next.js"
+  ],
+  "author": "dariotriedcoding",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dario-Tried-Coding/T3M4"
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "import": "./dist/types.mjs",
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    }
+  },
+  "dependencies": {
+    "@t3m4/utils": "workspace:*",
+    "@t3m4/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "19.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint": "^9.20.1",
+    "react": "^19.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.4"
+  }
+}

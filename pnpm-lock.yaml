@@ -23,9 +23,9 @@ importers:
 
   apps/docs:
     dependencies:
-      '@t3m4/react':
+      '@t3m4/next':
         specifier: workspace:*
-        version: link:../../packages/T3M4/react
+        version: link:../../packages/T3M4/next
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -109,6 +109,43 @@ importers:
       vitest:
         specifier: ^3.0.6
         version: 3.0.6(@types/node@20.17.19)(jiti@1.21.7)(yaml@2.7.0)
+
+  packages/T3M4/next:
+    dependencies:
+      '@t3m4/core':
+        specifier: workspace:*
+        version: link:../core
+      '@t3m4/utils':
+        specifier: workspace:*
+        version: link:../utils
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      '@types/react':
+        specifier: 19.0.10
+        version: 19.0.10
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.24.1
+        version: 8.24.1(@typescript-eslint/parser@8.24.1(eslint@9.21.0(jiti@1.21.7))(typescript@5.7.3))(eslint@9.21.0(jiti@1.21.7))(typescript@5.7.3)
+      '@typescript-eslint/parser':
+        specifier: ^8.24.1
+        version: 8.24.1(eslint@9.21.0(jiti@1.21.7))(typescript@5.7.3)
+      eslint:
+        specifier: ^9.20.1
+        version: 9.21.0(jiti@1.21.7)
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      tsup:
+        specifier: ^8.3.5
+        version: 8.3.6(jiti@1.21.7)(postcss@8.5.3)(typescript@5.7.3)(yaml@2.7.0)
+      typescript:
+        specifier: ^5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: ^3.0.4
+        version: 3.0.7(@types/node@20.17.19)(jiti@1.21.7)(yaml@2.7.0)
 
   packages/T3M4/react:
     dependencies:
