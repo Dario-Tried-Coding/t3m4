@@ -12,6 +12,8 @@ export const ThemeSwitch: FC<Props> = ({}) => {
       <hr />
       <pre>{JSON.stringify(state, null, 2)}</pre>
       <hr />
+      <pre>{JSON.stringify(options, null, 2)}</pre>
+      <hr />
       <button onClick={() => updateState('mode', (prev) => (prev === 'custom-dark' ? 'custom-light' : 'custom-dark'))}>mode</button>
       <button onClick={() => updateState('color', (prev) => (prev === 'zinc' ? 'blue' : 'zinc'))}>color</button>
     </div>

@@ -41,6 +41,11 @@
       "import": "./dist/types/config/index.mjs",
       "types": "./dist/types/config/index.d.ts",
       "default": "./dist/types/config/index.js"
+    },
+    "./types/constants": {
+      "import": "./dist/types/constants/exports.mjs",
+      "types": "./dist/types/constants/exports.d.ts",
+      "default": "./dist/types/constants/exports.js"
     }
   },
   "dependencies": {

@@ -1,23 +1,53 @@
 import { Nullable, NullOr, UndefinedOr } from '@repo/typescript-utils/nullable'
 import { ScriptArgs } from './types'
-import { ModeProp, ResolvedMode, Strat } from './types/config/mode'
-import { Prop, SystemValues } from './types/config/props'
+import { ModeProp } from './types/config/mode'
+import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOption, SystemValues } from './types/config/props'
+import { CONSTANTS, OBSERVER, RESOLVED_MODE, STRAT } from './types/constants'
+import { STRATS } from './types/constants/strats'
+import { DEFAULTS } from './types/defaults'
 import { EventMap } from './types/events'
-import { DEFAULTS, Observer } from './types/script'
 
 export type State = Map<string, string>
 export type Options = Map<string, { preferred: string; options: Set<string> }>
-type ModeHandling = { prop: string; strategy: Strat; resolvedModes: Map<string, ResolvedMode>; system: UndefinedOr<{ mode: string; fallback: string }> } & Required<ScriptArgs['mode']>
-type Observers = Observer[]
+type ModeHandling = { prop: string; strategy: STRAT; resolvedModes: Map<string, RESOLVED_MODE>; system: UndefinedOr<{ mode: string; fallback: string }> } & Required<ScriptArgs['mode']>
 
 export function script(args: ScriptArgs) {
+  // #region CONSTANTS
+  const { DEFAULT, MODES, PROP_TYPES, STRATS, OBSERVERS, SELECTORS } = {
+    DEFAULT: 'default',
+    STRATS: {
+      MONO: 'mono',
+      MULTI: 'multi',
+      LIGHT_DARK: 'light&dark',
+      SYSTEM: 'system',
+    },
+    MODES: {
+      LIGHT: 'light',
+      DARK: 'dark',
+      SYSTEM: 'system',
+    },
+    PROP_TYPES: {
+      GENERIC: 'generic',
+      MODE: 'mode',
+    },
+    OBSERVERS: {
+      DOM: 'DOM',
+      STORAGE: 'storage',
+    },
+    SELECTORS: {
+      CLASS: 'class',
+      COLOR_SCHEME: 'color-scheme',
+      DATA_ATTRIBUTE: 'data-attribute',
+    },
+  } as const satisfies CONSTANTS
+
   // #region DEFAULTS
-  const defaults = {
+  const DEFAULTS = {
     storageKey: 'next-themes',
     mode: {
       storageKey: 'theme',
       store: false,
-      attribute: [],
+      selector: [],
     },
     observe: [],
     nonce: '',
@@ -27,14 +57,52 @@ export function script(args: ScriptArgs) {
   // #region CONFIG PROCESSOR
   class ArgsProcessor {
     private static instance: ArgsProcessor
-    private _storageKey = args.storageKey ?? defaults.storageKey
-    private _options: Options
+    private _storageKey = args.storageKey ?? DEFAULTS.storageKey
+    private _options: UndefinedOr<Options> = undefined
     private _modeHandling: Nullable<ModeHandling> = undefined
-    private _observers: Observers = args.observe ?? defaults.observe
-    private _nonce = args.nonce ?? defaults.nonce
-    private _disableTransitionOnChange = args.disableTransitionOnChange ?? defaults.disableTransitionOnChange
+    private _observers: OBSERVER[] = args.observe ?? DEFAULTS.observe
+    private _nonce = args.nonce ?? DEFAULTS.nonce
+    private _disableTransitionOnChange = args.disableTransitionOnChange ?? DEFAULTS.disableTransitionOnChange
 
     private constructor() {
+      const isProp = <Strat extends STRAT>(
+        prop: Prop,
+        strat: Strat
+      ): prop is Strat extends STRATS['MONO']
+        ? ImplicitProp | { prop: string; options: MonoOption }
+        : Strat extends STRATS['MULTI']
+          ? { prop: string; options: MultiOption }
+          : Strat extends STRATS['LIGHT_DARK']
+            ? ImplicitProp | { prop: string; options: LightDarkOption }
+            : Strat extends STRATS['SYSTEM']
+              ? ImplicitProp | { prop: string; options: SystemOption }
+              : never => {
+        // prettier-ignore
+        switch (strat) {
+          case STRATS.MONO: {
+            if (typeof prop === 'string') return true
+            if (typeof prop === 'object' && typeof prop.options === 'string') return true
+            return false
+          };
+          case STRATS.MULTI: {
+            if (typeof prop === 'string') return true
+            if (typeof prop === 'object' && typeof prop.options === 'string') return true
+            return false
+          };
+          case STRATS.LIGHT_DARK: {
+            if (typeof prop === 'string') return true
+            if (typeof prop === 'object' && typeof prop.options === 'object' && !Array.isArray(prop.options) && !('system' in prop.options)) return true
+            return false
+          };
+          case STRATS.SYSTEM: {
+            if (typeof prop === 'string') return true
+            if (typeof prop === 'object' && typeof prop.options === 'object' && !Array.isArray(prop.options)) return true
+            return false
+          };
+          default: return false;
+        }
+      }
+
       const { props, mode: modeHandling } = args
 
       const options: Options = new Map()
@@ -44,38 +112,38 @@ export function script(args: ScriptArgs) {
 
         // prettier-ignore
         switch (stratObj.strategy) {
-            case 'mono': {
+            case STRATS.MONO: {
               if ((typeof propsItem !== 'string' && typeof propsItem.options !== 'string')) break
               
-              const propOptions = new Set(typeof propsItem === 'string' ? ['default'] : [propsItem.options as string])
+              const propOptions = new Set(typeof propsItem === 'string' ? [DEFAULT] : [propsItem.options as string])
               options.set(prop, { preferred: stratObj.preferred, options: propOptions })
             }; break
-            case 'multi': {
+            case STRATS.MULTI: {
               if (typeof propsItem === 'string' || !Array.isArray(propsItem.options)) break
               
               const propOptions = new Set(propsItem.options)
               options.set(prop, { preferred: stratObj.preferred, options: propOptions })
             }; break
-            case 'light&dark':
+            case STRATS.LIGHT_DARK:
               {
                 if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
 
-                const propOptions = new Set([
-                  ...(typeof propsItem === 'string' ? ['light'] : [(propsItem.options as SystemValues).light ?? 'light']),
-                  ...(typeof propsItem === 'string' ? ['dark'] : [(propsItem.options as SystemValues).dark ?? 'dark']),
-                  ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
-                ])
+              const propOptions = new Set([
+                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
+                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
+                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
+              ])
 
                 options.set(prop, { preferred: stratObj.preferred, options: propOptions })
               }; break
-            case 'system':
+            case STRATS.SYSTEM:
               {
                 if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
               
                 const propOptions = new Set([
-                  ...(typeof propsItem === 'string' ? ['light'] : [(propsItem.options as SystemValues).light ?? 'light']),
-                  ...(typeof propsItem === 'string' ? ['dark'] : [(propsItem.options as SystemValues).dark ?? 'dark']),
-                  ...(typeof propsItem === 'string' ? ['system'] : [(propsItem.options as SystemValues).system ?? 'system']),
+                  ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
+                  ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
+                  ...(typeof propsItem === 'string' ? [MODES.SYSTEM] : [(propsItem.options as SystemValues).system ?? MODES.SYSTEM]),
                   ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
                 ])
                 
@@ -85,49 +153,55 @@ export function script(args: ScriptArgs) {
       }
       this._options = options
 
-      const modeConfig = Object.entries(args.config).find(([, { type }]) => type === 'mode') as UndefinedOr<[string, ModeProp]>
+      const modeConfig = Object.entries(args.config).find(([, { type }]) => type === PROP_TYPES.MODE) as UndefinedOr<[string, ModeProp]>
 
       if (modeConfig) {
         const [prop, stratObj] = modeConfig
-        const modeProp = props.find((i) => (typeof i === 'string' ? i === prop : i.prop === prop))
-        const resolvedModes: Map<string, ResolvedMode> = new Map()
+        const propItem = props.find((i) => (typeof i === 'string' ? i === prop : i.prop === prop))
+        const resolvedModes: Map<string, RESOLVED_MODE> = new Map()
 
-        // prettier-ignore
-        switch (stratObj.strategy) {
-          case 'mono': {
-            if (typeof modeProp === 'object' && (typeof modeProp.options === 'object' || Array.isArray(modeProp.options))) break;
+        if (propItem) {
+          // prettier-ignore
+          switch (stratObj.strategy) {
+            case STRATS.MONO: {
+              if (!isProp(propItem, STRATS.MONO)) break;
 
-            const mode = typeof modeProp === 'string' ? 'default' : modeProp?.options as Extract<Prop, string>
-            resolvedModes.set(mode, stratObj.colorScheme)
-          }; break
-          case 'multi': Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme)); break
-          case 'light&dark':
-          case 'system': {
-            if (typeof modeProp === 'object' && (typeof modeProp.options === 'string' || Array.isArray(modeProp.options))) break;
+              const mode = typeof propItem === 'string' ? DEFAULT : propItem?.options
+              resolvedModes.set(mode, stratObj.colorScheme)
+            }; break
+            case STRATS.MULTI: {
+              Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => {
+                resolvedModes.set(key, colorScheme)
+              })
+            }; break
+            case STRATS.LIGHT_DARK:
+            case STRATS.SYSTEM: {
+              if (!isProp(propItem, STRATS.LIGHT_DARK) && !isProp(propItem, STRATS.SYSTEM)) break;
 
-            resolvedModes.set(typeof modeProp === 'object' ? (modeProp.options as SystemValues).light ?? 'light' : 'light', 'light')
-            resolvedModes.set(typeof modeProp === 'object' ? (modeProp.options as SystemValues).dark ?? 'dark' : 'dark', 'dark')
-            if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
-          }; break
-          default: break
-        }
+              resolvedModes.set(typeof propItem === 'object' ? propItem.options.light ?? MODES.LIGHT : MODES.LIGHT, MODES.LIGHT)
+              resolvedModes.set(typeof propItem === 'object' ? propItem.options.dark ?? MODES.DARK : MODES.DARK, MODES.DARK)
+              if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
+            }; break
+            default: break
+          }
 
-        const systemMode = typeof modeProp === 'string' ? 'system' : typeof modeProp?.options === 'object' && !Array.isArray(modeProp.options) ? (modeProp.options.system ?? 'system') : undefined
+          const systemMode = stratObj.strategy === STRATS.SYSTEM && isProp(propItem, STRATS.SYSTEM) && typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : undefined
 
-        this._modeHandling = {
-          prop,
-          strategy: stratObj.strategy,
-          resolvedModes,
-          system:
-            stratObj.strategy === 'system'
-              ? {
-                  mode: systemMode!,
-                  fallback: stratObj.fallback,
-                }
-              : undefined,
-          attribute: modeHandling?.attribute ?? defaults.mode.attribute,
-          store: modeHandling?.store ?? defaults.mode.store,
-          storageKey: modeHandling?.storageKey ?? defaults.mode.storageKey,
+          this._modeHandling = {
+            prop,
+            strategy: stratObj.strategy,
+            resolvedModes,
+            system:
+              stratObj.strategy === STRATS.SYSTEM
+                ? {
+                    mode: systemMode!,
+                    fallback: stratObj.fallback,
+                  }
+                : undefined,
+            selector: modeHandling?.selector ?? DEFAULTS.mode.selector,
+            store: modeHandling?.store ?? DEFAULTS.mode.store,
+            storageKey: modeHandling?.storageKey ?? DEFAULTS.mode.storageKey,
+          }
         }
       }
     }
@@ -141,8 +215,8 @@ export function script(args: ScriptArgs) {
       return ArgsProcessor.getInstance()._modeHandling
     }
 
-    public static get constraints() {
-      return ArgsProcessor.getInstance()._options
+    public static get options() {
+      return ArgsProcessor.getInstance()._options!
     }
 
     public static get observers() {
@@ -223,11 +297,11 @@ export function script(args: ScriptArgs) {
     }
 
     static validate(prop: string, value: NullOr<string>, fallback?: NullOr<string>) {
-      const isHandled = ArgsProcessor.constraints.has(prop)
-      const isAllowed = isHandled && !!value ? ArgsProcessor.constraints.get(prop)!.options.has(value) : false
-      const isAllowedFallback = isHandled && !!fallback ? ArgsProcessor.constraints.get(prop)!.options.has(fallback) : false
+      const isHandled = ArgsProcessor.options.has(prop)
+      const isAllowed = isHandled && !!value ? ArgsProcessor.options.get(prop)!.options.has(value) : false
+      const isAllowedFallback = isHandled && !!fallback ? ArgsProcessor.options.get(prop)!.options.has(fallback) : false
 
-      const preferred = isHandled ? ArgsProcessor.constraints.get(prop)!.preferred : undefined
+      const preferred = isHandled ? ArgsProcessor.options.get(prop)!.preferred : undefined
       const valValue = !isHandled ? undefined : isAllowed ? value! : isAllowedFallback ? fallback! : preferred
 
       return { passed: isHandled && isAllowed, value: valValue }
@@ -240,7 +314,7 @@ export function script(args: ScriptArgs) {
       let passed = false
       const normFallbacks = typeof fallbacks === 'string' ? Utils.jsonToMap(fallbacks) : fallbacks
 
-      for (const [prop, { preferred }] of ArgsProcessor.constraints.entries()) {
+      for (const [prop, { preferred }] of ArgsProcessor.options.entries()) {
         results.set(prop, { passed: false, value: undefined as unknown as string })
         sanValues.set(prop, preferred)
       }
@@ -299,7 +373,7 @@ export function script(args: ScriptArgs) {
 
       StorageManager.storeState(values)
 
-      if (ArgsProcessor.observers.includes('storage')) {
+      if (ArgsProcessor.observers.includes(OBSERVERS.STORAGE)) {
         window.addEventListener('storage', ({ key, newValue, oldValue }) => {
           // prettier-ignore
           switch (key) {
@@ -389,7 +463,7 @@ export function script(args: ScriptArgs) {
     private static instance: UndefinedOr<DOMManager> = undefined
     private static target = document.documentElement
     private _state: NullOr<Map<string, string>> = null
-    private _resolvedMode: UndefinedOr<ResolvedMode> = undefined
+    private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
 
     private constructor(values: Map<string, string>) {
       this._state = values
@@ -399,13 +473,13 @@ export function script(args: ScriptArgs) {
 
       DOMManager.applyState(values)
 
-      if (ArgsProcessor.observers.includes('DOM-attrs')) {
+      if (ArgsProcessor.observers.includes(OBSERVERS.DOM)) {
         const handleMutations = (mutations: MutationRecord[]) => {
           for (const { attributeName, oldValue } of mutations) {
             // prettier-ignore
             switch (attributeName) {
               case 'style': {
-                if (!ArgsProcessor.modeHandling?.attribute.includes('colorScheme')) return
+                if (!ArgsProcessor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME)) return
 
                 const stateValue = DOMManager.resolvedMode!
                 const newValue = DOMManager.target.style.colorScheme
@@ -414,13 +488,13 @@ export function script(args: ScriptArgs) {
                 if (needsUpdate) DOMManager.target.style.colorScheme = stateValue
               }; break;
               case 'class': {
-                if (!ArgsProcessor.modeHandling?.attribute.includes('class')) return
+                if (!ArgsProcessor.modeHandling?.selector.includes(SELECTORS.CLASS)) return
 
                 const stateValue = DOMManager.resolvedMode!
-                const newValue = DOMManager.target.classList.contains('light') ? 'light' : DOMManager.target.classList.contains('dark') ? 'dark' : undefined
+                const newValue = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
 
                 if (stateValue !== newValue) {
-                  const other = stateValue === 'light' ? 'dark' : 'light'
+                  const other = stateValue === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
                   DOMManager.target.classList.replace(other, stateValue) || DOMManager.target.classList.add(stateValue)
                 }
               }; break;
@@ -442,9 +516,9 @@ export function script(args: ScriptArgs) {
           attributes: true,
           attributeOldValue: true,
           attributeFilter: [
-            ...Array.from(ArgsProcessor.constraints.keys()).map((prop) => `data-${prop}`),
-            ...(ArgsProcessor.modeHandling?.attribute.includes('colorScheme') ? ['style'] : []),
-            ...(ArgsProcessor.modeHandling?.attribute.includes('class') ? ['class'] : []),
+            ...Array.from(ArgsProcessor.options.keys()).map((prop) => `data-${prop}`),
+            ...(ArgsProcessor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
+            ...(ArgsProcessor.modeHandling?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
           ],
         })
       }
@@ -480,25 +554,25 @@ export function script(args: ScriptArgs) {
       enableTransitions?.()
     }
 
-    private static applyResolvedMode(resolvedMode: ResolvedMode) {
-      if (ArgsProcessor.modeHandling?.attribute.includes('colorScheme')) {
+    private static applyResolvedMode(resolvedMode: RESOLVED_MODE) {
+      if (ArgsProcessor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME)) {
         const currValue = DOMManager.target.style.colorScheme
         const needsUpdate = currValue !== resolvedMode
         if (needsUpdate) DOMManager.target.style.colorScheme = resolvedMode
       }
 
-      if (ArgsProcessor.modeHandling?.attribute.includes('class')) {
-        const isSet = DOMManager.target.classList.contains('light') ? 'light' : DOMManager.target.classList.contains('dark') ? 'dark' : undefined
+      if (ArgsProcessor.modeHandling?.selector.includes(SELECTORS.CLASS)) {
+        const isSet = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
         if (isSet === resolvedMode) return
 
-        const other = resolvedMode === 'light' ? 'dark' : 'light'
+        const other = resolvedMode === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
         DOMManager.target.classList.replace(other, resolvedMode) || DOMManager.target.classList.add(resolvedMode)
       }
     }
 
     private static getSystemPref() {
       const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
-      return supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : undefined
+      return supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
     }
 
     public static resolveMode(values: Map<string, string>) {
@@ -507,7 +581,7 @@ export function script(args: ScriptArgs) {
       const mode = values.get(ArgsProcessor.modeHandling.prop)
       if (!mode) return
 
-      const isSystemStrat = ArgsProcessor.modeHandling.strategy === 'system'
+      const isSystemStrat = ArgsProcessor.modeHandling.strategy === STRATS.SYSTEM
       const isSystemMode = ArgsProcessor.modeHandling.system?.mode === mode
       const isSystem = isSystemStrat && isSystemMode
       const fallbackMode = ArgsProcessor.modeHandling.system?.fallback
@@ -545,7 +619,7 @@ export function script(args: ScriptArgs) {
       return DOMManager.instance._resolvedMode
     }
 
-    public static set resolvedMode(resolvedMode: UndefinedOr<ResolvedMode>) {
+    public static set resolvedMode(resolvedMode: UndefinedOr<RESOLVED_MODE>) {
       if (!DOMManager.instance) DOMManager.instance = new DOMManager(new Map())
       else {
         if (!ArgsProcessor.modeHandling || !resolvedMode) return
@@ -563,7 +637,7 @@ export function script(args: ScriptArgs) {
   class Main {
     private static instance: UndefinedOr<Main> = undefined
     private _state: NullOr<Map<string, string>> = null
-    private _resolvedMode: UndefinedOr<ResolvedMode> = undefined
+    private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
 
     private constructor() {
       const state = StorageManager.state
@@ -600,12 +674,12 @@ export function script(args: ScriptArgs) {
       }
     }
 
-    public static get resolvedMode(): UndefinedOr<ResolvedMode> {
+    public static get resolvedMode(): UndefinedOr<RESOLVED_MODE> {
       if (!Main.instance) Main.instance = new Main()
       return Main.instance._resolvedMode
     }
 
-    private static set resolvedMode(resolvedMode: ResolvedMode) {
+    private static set resolvedMode(resolvedMode: RESOLVED_MODE) {
       if (!Main.instance) Main.instance = new Main()
       else {
         if (!ArgsProcessor.modeHandling || !resolvedMode) return
@@ -632,7 +706,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static get options() {
-      return ArgsProcessor.constraints
+      return ArgsProcessor.options
     }
 
     public static subscribe<E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) {

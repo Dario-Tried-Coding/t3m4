@@ -1,7 +1,8 @@
 'use client'
 
 import { ScriptArgs } from '@t3m4/core/types'
-import { Config, Props, ResolvedMode } from '@t3m4/core/types/config'
+import { Config, Props } from '@t3m4/core/types/config'
+import { ResolvedMode } from '@t3m4/core/types/constants'
 import { NullOr, UndefinedOr } from '@repo/typescript-utils/nullable'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { NextThemesContext } from '../context'
