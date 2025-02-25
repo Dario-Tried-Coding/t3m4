@@ -1,5 +1,11 @@
 # @t3m4/react
 
+## 0.0.5
+
+### Patch Changes
+
+- Adaptation to pure React environment
+
 ## 0.0.4
 
 ### Patch Changes
