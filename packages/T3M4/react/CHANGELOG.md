@@ -1,5 +1,11 @@
 # @t3m4/react
 
+## 0.0.3
+
+### Patch Changes
+
+- Aligned everything to T3M4 naming
+
 ## 0.0.2
 
 ### Patch Changes
