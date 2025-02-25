@@ -1,4 +1,4 @@
 'use client'
 
-export { NextThemesProvider } from "./components/Provider";
-export { useNextThemes } from "./context";
+export { T3M4Provider } from './components/Provider'
+export { useT3M4 } from './context'

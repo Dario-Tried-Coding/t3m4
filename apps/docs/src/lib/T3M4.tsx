@@ -1,5 +1,5 @@
 import { Config, Props } from '@t3m4/react/types'
-import { NextThemesProvider, useNextThemes } from '@t3m4/react'
+import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/react'
 import { FC, PropsWithChildren } from 'react'
 
 const props = [
@@ -33,8 +33,8 @@ const config = {
 type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <NextThemesProvider<TProps, TConfig> props={props} config={config} mode={{ selector: ['class'] }} observe={['DOM', 'storage']}>
+  <ThemingProvider<TProps, TConfig> props={props} config={config} mode={{ selector: ['class'] }} observe={['DOM', 'storage']}>
     {children}
-  </NextThemesProvider>
+  </ThemingProvider>
 )
-export const useT3M4 = useNextThemes<TProps, TConfig>
+export const useT3M4 = useTheming<TProps, TConfig>
