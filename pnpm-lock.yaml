@@ -149,6 +149,9 @@ importers:
 
   packages/T3M4/utils:
     devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.24.1
         version: 8.24.1(@typescript-eslint/parser@8.24.1(eslint@9.21.0(jiti@1.21.7))(typescript@5.7.3))(eslint@9.21.0(jiti@1.21.7))(typescript@5.7.3)
