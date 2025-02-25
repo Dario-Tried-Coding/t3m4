@@ -1,4 +1,4 @@
-import { Nullable, NullOr, UndefinedOr } from '@repo/typescript-utils/nullable'
+import { Nullable, NullOr, UndefinedOr } from '@t3m4/utils/nullables'
 import { ScriptArgs } from './types'
 import { ModeProp } from './types/config/mode'
 import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOption, SystemValues } from './types/config/props'

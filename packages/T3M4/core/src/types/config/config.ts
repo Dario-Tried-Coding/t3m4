@@ -1,8 +1,8 @@
-import { UndefinedOr } from '@repo/typescript-utils/nullable'
+import { HasKey } from '@t3m4/utils/objects'
+import { UndefinedOr } from '@t3m4/utils/nullables'
 import { GenericMono, GenericMulti, GenericProp } from './generic'
 import { ModeLightDark, ModeMono, ModeMulti, ModeProp, ModeSystem } from './mode'
 import { ExplicitProp, Props, SystemValues } from './props'
-import { HasKey } from '@repo/typescript-utils/object'
 
 export type ExtractProps<Ps extends Props> = Ps[number] extends infer U ? (U extends string ? U : U extends ExplicitProp ? U['prop'] : never) : never
 type ResolveProp<P extends Props[number]> = P extends ExplicitProp

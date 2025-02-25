@@ -1,4 +1,4 @@
-import { UndefinedOr } from '@repo/typescript-utils/nullable'
+import { UndefinedOr } from '@t3m4/utils/nullables'
 import { Options, State } from '../script'
 import { Config, Props } from './config'
 import { EventMap } from './events'

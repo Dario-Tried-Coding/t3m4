@@ -40,7 +40,7 @@
     }
   },
   "dependencies": {
-    "@repo/typescript-utils": "workspace:*",
+    "@t3m4/utils": "workspace:*",
     "@t3m4/core": "workspace:*"
   },
   "peerDependencies": {
