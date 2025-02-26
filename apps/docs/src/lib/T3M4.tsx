@@ -1,5 +1,5 @@
-import { Config, Props } from '@t3m4/react/types'
-import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/react'
+import { Config, Props } from '@t3m4/next/types'
+import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/next'
 import { FC, PropsWithChildren } from 'react'
 
 const props = [

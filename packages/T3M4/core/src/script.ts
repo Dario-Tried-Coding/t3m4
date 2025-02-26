@@ -55,8 +55,8 @@ export function script(args: ScriptArgs) {
   } as const satisfies DEFAULTS
 
   // #region CONFIG PROCESSOR
-  class ArgsProcessor {
-    private static instance: ArgsProcessor
+  class Processor {
+    private static instance: Processor
     private _storageKey = args.storageKey ?? DEFAULTS.storageKey
     private _options: UndefinedOr<Options> = undefined
     private _modeHandling: Nullable<ModeHandling> = undefined
@@ -77,30 +77,16 @@ export function script(args: ScriptArgs) {
             : Strat extends STRATS['SYSTEM']
               ? ImplicitProp | { prop: string; options: SystemOption }
               : never => {
-        // prettier-ignore
-        switch (strat) {
-          case STRATS.MONO: {
-            if (typeof prop === 'string') return true
-            if (typeof prop === 'object' && typeof prop.options === 'string') return true
-            return false
-          };
-          case STRATS.MULTI: {
-            if (typeof prop === 'string') return true
-            if (typeof prop === 'object' && typeof prop.options === 'string') return true
-            return false
-          };
-          case STRATS.LIGHT_DARK: {
-            if (typeof prop === 'string') return true
-            if (typeof prop === 'object' && typeof prop.options === 'object' && !Array.isArray(prop.options) && !('system' in prop.options)) return true
-            return false
-          };
-          case STRATS.SYSTEM: {
-            if (typeof prop === 'string') return true
-            if (typeof prop === 'object' && typeof prop.options === 'object' && !Array.isArray(prop.options)) return true
-            return false
-          };
-          default: return false;
+        if (typeof prop === 'string') return strat !== STRATS.MULTI
+        if (typeof prop === 'object') {
+          if (typeof prop.options === 'string') return strat === STRATS.MONO
+          if (Array.isArray(prop.options)) return strat === STRATS.MULTI
+          if (typeof prop.options === 'object') {
+            if (MODES.SYSTEM in prop.options) return strat === STRATS.SYSTEM
+            return strat === STRATS.LIGHT_DARK || strat === STRATS.SYSTEM
+          }
         }
+        return false
       }
 
       const { props, mode: modeHandling } = args
@@ -113,20 +99,19 @@ export function script(args: ScriptArgs) {
         // prettier-ignore
         switch (stratObj.strategy) {
             case STRATS.MONO: {
-              if ((typeof propsItem !== 'string' && typeof propsItem.options !== 'string')) break
+              if (!isProp(propsItem, STRATS.MONO)) break
               
               const propOptions = new Set(typeof propsItem === 'string' ? [DEFAULT] : [propsItem.options as string])
               options.set(prop, { preferred: stratObj.preferred, options: propOptions })
             }; break
             case STRATS.MULTI: {
-              if (typeof propsItem === 'string' || !Array.isArray(propsItem.options)) break
+              if (!isProp(propsItem, STRATS.MULTI)) break
               
               const propOptions = new Set(propsItem.options)
               options.set(prop, { preferred: stratObj.preferred, options: propOptions })
             }; break
-            case STRATS.LIGHT_DARK:
-              {
-                if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
+            case STRATS.LIGHT_DARK: {
+              if (!isProp(propsItem, STRATS.LIGHT_DARK)) break
 
               const propOptions = new Set([
                 ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
@@ -134,21 +119,20 @@ export function script(args: ScriptArgs) {
                 ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
               ])
 
-                options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-              }; break
-            case STRATS.SYSTEM:
-              {
-                if (typeof propsItem !== 'string' && (typeof propsItem.options === 'string' || Array.isArray(propsItem.options))) break
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+            case STRATS.SYSTEM: {
+              if (!isProp(propsItem, STRATS.SYSTEM)) break
+            
+              const propOptions = new Set([
+                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
+                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
+                ...(typeof propsItem === 'string' ? [MODES.SYSTEM] : [(propsItem.options as SystemValues).system ?? MODES.SYSTEM]),
+                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
+              ])
               
-                const propOptions = new Set([
-                  ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
-                  ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
-                  ...(typeof propsItem === 'string' ? [MODES.SYSTEM] : [(propsItem.options as SystemValues).system ?? MODES.SYSTEM]),
-                  ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
-                ])
-                
-                options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-              }; break
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
           }
       }
       this._options = options
@@ -207,32 +191,32 @@ export function script(args: ScriptArgs) {
     }
 
     private static getInstance() {
-      if (!ArgsProcessor.instance) ArgsProcessor.instance = new ArgsProcessor()
-      return ArgsProcessor.instance
+      if (!Processor.instance) Processor.instance = new Processor()
+      return Processor.instance
     }
 
     public static get modeHandling() {
-      return ArgsProcessor.getInstance()._modeHandling
+      return Processor.getInstance()._modeHandling
     }
 
     public static get options() {
-      return ArgsProcessor.getInstance()._options!
+      return Processor.getInstance()._options!
     }
 
     public static get observers() {
-      return ArgsProcessor.getInstance()._observers
+      return Processor.getInstance()._observers
     }
 
     public static get storageKey() {
-      return ArgsProcessor.getInstance()._storageKey
+      return Processor.getInstance()._storageKey
     }
 
     public static get nonce() {
-      return ArgsProcessor.getInstance()._nonce
+      return Processor.getInstance()._nonce
     }
 
     public static get disableTransitionOnChange() {
-      return ArgsProcessor.getInstance()._disableTransitionOnChange
+      return Processor.getInstance()._disableTransitionOnChange
     }
   }
 
@@ -278,61 +262,84 @@ export function script(args: ScriptArgs) {
     }
   }
 
-  // #region VALIDATOR
-  class Validator<TState extends 'uninitialized' | 'initialized' = 'uninitialized'> {
+  class Normalizer {
     private values: Map<string, string> = new Map()
 
     private constructor() {}
 
+    // Factory methods
     static ofJSON(json: NullOr<string>) {
-      const validator = new Validator<'initialized'>()
-      validator.values = Utils.jsonToMap(json)
-      return validator
+      return Normalizer.of(Utils.jsonToMap(json))
     }
 
     static ofMap(values: Map<string, string>) {
-      const validator = new Validator<'initialized'>()
-      validator.values = values
-      return validator
+      return Normalizer.of(values)
     }
 
-    static validate(prop: string, value: NullOr<string>, fallback?: NullOr<string>) {
-      const isHandled = ArgsProcessor.options.has(prop)
-      const isAllowed = isHandled && !!value ? ArgsProcessor.options.get(prop)!.options.has(value) : false
-      const isAllowedFallback = isHandled && !!fallback ? ArgsProcessor.options.get(prop)!.options.has(fallback) : false
-
-      const preferred = isHandled ? ArgsProcessor.options.get(prop)!.preferred : undefined
-      const valValue = !isHandled ? undefined : isAllowed ? value! : isAllowedFallback ? fallback! : preferred
-
-      return { passed: isHandled && isAllowed, value: valValue }
+    private static of(values: Map<string, string>) {
+      const normalizer = new Normalizer()
+      normalizer.values = values
+      return normalizer
     }
 
-    validate(fallbacks?: NullOr<string> | Map<string, string>): TState extends 'initialized' ? { passed: boolean; values: Map<string, string>; results: Map<string, { passed: boolean; value: string }> } : never
-    validate(fallbacks?: NullOr<string> | Map<string, string>) {
-      const results: Map<string, { passed: boolean; value: string }> = new Map()
-      const sanValues: Map<string, string> = new Map()
-      let passed = false
-      const normFallbacks = typeof fallbacks === 'string' ? Utils.jsonToMap(fallbacks) : fallbacks
+    // Utility methods
+    private static isHandled(prop: string) {
+      return Processor.options.has(prop)
+    }
 
-      for (const [prop, { preferred }] of ArgsProcessor.options.entries()) {
-        results.set(prop, { passed: false, value: undefined as unknown as string })
-        sanValues.set(prop, preferred)
+    private static isAllowed(prop: string, value: Nullable<string>) {
+      return !!value && Normalizer.isHandled(prop) && Processor.options.get(prop)!.options.has(value)
+    }
+
+    // Normalize one prop's value
+    static normalize(prop: string, value: NullOr<string>, fallback?: NullOr<string>): { handled: false, passed: false, value: undefined } | { handled: true, passed: boolean, value: string} {
+      const isHandled = Normalizer.isHandled(prop)
+      if (!isHandled) return { handled: false, passed: false, value: undefined }
+
+      const isAllowed = Normalizer.isAllowed(prop, value)
+      const isAllowedFallback = Normalizer.isAllowed(prop, fallback)
+      const preferred = Processor.options.get(prop)!.preferred
+
+      const finalValue = isAllowed ? value! : isAllowedFallback ? fallback! : preferred
+
+      return { handled: true, passed: isAllowed, value: finalValue }
+    }
+
+    // Normalize an entire map of values
+    normalize(provFallbacks?: Nullable<string | Map<string, string>>): { passed: boolean; values: Map<string, string>; results: Map<string, { passed: boolean; value: string}>} {
+      const results: Map<string, { passed: boolean; value: string; reason?: string }> = new Map()
+      const normValues: Map<string, string> = new Map()
+
+      const fallbacks = typeof provFallbacks === 'string' ? Utils.jsonToMap(provFallbacks) : provFallbacks
+
+      for (const [prop, { preferred }] of Processor.options.entries()) {
+        results.set(prop, { passed: false, value: preferred })
+        normValues.set(prop, preferred)
       }
 
-      for (const [prop, fallback] of normFallbacks?.entries() ?? []) {
-        const { passed, value: sanValue } = Validator.validate(prop, fallback)
-        results.set(prop, { passed, value: fallback })
-        if (sanValue) sanValues.set(prop, sanValue)
+      for (const [prop, fallback] of fallbacks?.entries() ?? []) {
+        const { handled, value } = Normalizer.normalize(prop, fallback)
+        if (handled) {
+          results.set(prop, { passed: false, value })
+          normValues.set(prop, value)
+        }
       }
 
       for (const [prop, value] of this.values.entries()) {
-        const { passed: valuePassed, value: sanValue } = Validator.validate(prop, value, normFallbacks?.get(prop))
-        results.set(prop, { passed, value })
-        if (sanValue) sanValues.set(prop, sanValue)
-        if (valuePassed) passed = true
+        const { handled, passed, value: normValue } = Normalizer.normalize(prop, value, fallbacks?.get(prop))
+        if (handled) {
+          results.set(prop, { passed, value: normValue })
+          normValues.set(prop, normValue)
+        }
       }
 
-      return { passed: true, values: sanValues, results } as TState extends 'initialized' ? { passed: boolean; values: Map<string, string>; results: Map<string, { passed: boolean; value: string }> } : never
+      const isFullyValid = Array.from(results.values()).every(({ passed }) => passed)
+
+      return {
+        passed: isFullyValid,
+        values: normValues,
+        results,
+      }
     }
   }
 
@@ -363,28 +370,28 @@ export function script(args: ScriptArgs) {
     private _mode: UndefinedOr<string> = undefined
 
     private constructor() {
-      const stateString = StorageManager.utils.retrieve(ArgsProcessor.storageKey)
-      const { values } = Validator.ofJSON(stateString).validate()
+      const stateString = StorageManager.utils.retrieve(Processor.storageKey)
+      const { values } = Normalizer.ofJSON(stateString).normalize()
 
       this._state = values
 
-      const mode = ArgsProcessor.modeHandling ? values.get(ArgsProcessor.modeHandling.prop) : undefined
+      const mode = Processor.modeHandling ? values.get(Processor.modeHandling.prop) : undefined
       if (mode) this._mode = mode
 
       StorageManager.storeState(values)
 
-      if (ArgsProcessor.observers.includes(OBSERVERS.STORAGE)) {
+      if (Processor.observers.includes(OBSERVERS.STORAGE)) {
         window.addEventListener('storage', ({ key, newValue, oldValue }) => {
           // prettier-ignore
           switch (key) {
-            case ArgsProcessor.storageKey: {
-              const { values } = Validator.ofJSON(newValue).validate(oldValue)
+            case Processor.storageKey: {
+              const { values } = Normalizer.ofJSON(newValue).normalize(oldValue)
               StorageManager.state = values
             }; break;
-            case ArgsProcessor.modeHandling?.storageKey: {
-              if (!ArgsProcessor.modeHandling?.store) return
+            case Processor.modeHandling?.storageKey: {
+              if (!Processor.modeHandling?.store) return
 
-              const { value } = Validator.validate(ArgsProcessor.modeHandling.prop, newValue, oldValue)
+              const { value } = Normalizer.normalize(Processor.modeHandling.prop, newValue, oldValue)
               if (value) StorageManager.mode = value
             }
           }
@@ -406,15 +413,15 @@ export function script(args: ScriptArgs) {
     }
 
     private static storeState(values: Map<string, string>) {
-      StorageManager.utils.store(ArgsProcessor.storageKey, Utils.mapToJSON(values))
+      StorageManager.utils.store(Processor.storageKey, Utils.mapToJSON(values))
 
-      const mode = values.get(ArgsProcessor.modeHandling?.prop ?? '')
+      const mode = values.get(Processor.modeHandling?.prop ?? '')
       if (mode) StorageManager.storeMode(mode)
     }
 
     private static storeMode(mode: string) {
-      if (!ArgsProcessor.modeHandling?.store) return
-      StorageManager.utils.store(ArgsProcessor.modeHandling.storageKey, mode)
+      if (!Processor.modeHandling?.store) return
+      StorageManager.utils.store(Processor.modeHandling.storageKey, mode)
     }
 
     public static get state() {
@@ -432,8 +439,8 @@ export function script(args: ScriptArgs) {
         EventManager.emit('Storage:update', merged)
       }
 
-      if (ArgsProcessor.modeHandling?.store) {
-        const mode = merged.get(ArgsProcessor.modeHandling.prop)
+      if (Processor.modeHandling?.store) {
+        const mode = merged.get(Processor.modeHandling.prop)
         const needsUpdate = !!mode && mode !== StorageManager.mode
         if (needsUpdate) StorageManager.instance!._mode = mode
       }
@@ -447,14 +454,14 @@ export function script(args: ScriptArgs) {
     }
 
     public static set mode(mode: string) {
-      if (!ArgsProcessor.modeHandling?.store) return
+      if (!Processor.modeHandling?.store) return
 
       const currMode = StorageManager.mode
 
       const needsUpdate = mode !== currMode
       if (needsUpdate) StorageManager.instance!._mode = mode
 
-      StorageManager.state = new Map([[ArgsProcessor.modeHandling.prop, mode]])
+      StorageManager.state = new Map([[Processor.modeHandling.prop, mode]])
     }
   }
 
@@ -462,6 +469,7 @@ export function script(args: ScriptArgs) {
   class DOMManager {
     private static instance: UndefinedOr<DOMManager> = undefined
     private static target = document.documentElement
+    private static systemPref: UndefinedOr<RESOLVED_MODE> = undefined
     private _state: NullOr<Map<string, string>> = null
     private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
 
@@ -473,13 +481,14 @@ export function script(args: ScriptArgs) {
 
       DOMManager.applyState(values)
 
-      if (ArgsProcessor.observers.includes(OBSERVERS.DOM)) {
+      if (Processor.observers.includes(OBSERVERS.DOM)) {
         const handleMutations = (mutations: MutationRecord[]) => {
+          const updates = new Map<string, string>()
           for (const { attributeName, oldValue } of mutations) {
             // prettier-ignore
             switch (attributeName) {
               case 'style': {
-                if (!ArgsProcessor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME)) return
+                if (!Processor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME)) return
 
                 const stateValue = DOMManager.resolvedMode!
                 const newValue = DOMManager.target.style.colorScheme
@@ -488,7 +497,7 @@ export function script(args: ScriptArgs) {
                 if (needsUpdate) DOMManager.target.style.colorScheme = stateValue
               }; break;
               case 'class': {
-                if (!ArgsProcessor.modeHandling?.selector.includes(SELECTORS.CLASS)) return
+                if (!Processor.modeHandling?.selector.includes(SELECTORS.CLASS)) return
 
                 const stateValue = DOMManager.resolvedMode!
                 const newValue = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
@@ -504,11 +513,12 @@ export function script(args: ScriptArgs) {
                 const prop = attributeName.replace('data-', '')
                 const newValue = DOMManager.target.getAttribute(attributeName)
 
-                const { value: sanValue } = Validator.validate(prop, newValue, oldValue)
-                DOMManager.state = new Map([[prop, sanValue!]])
+                const { value: normValue } = Normalizer.normalize(prop, newValue, oldValue)
+                updates.set(prop, normValue!)
               }
             }
           }
+          if (updates.size > 0) DOMManager.state = updates
         }
 
         const observer = new MutationObserver(handleMutations)
@@ -516,9 +526,9 @@ export function script(args: ScriptArgs) {
           attributes: true,
           attributeOldValue: true,
           attributeFilter: [
-            ...Array.from(ArgsProcessor.options.keys()).map((prop) => `data-${prop}`),
-            ...(ArgsProcessor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
-            ...(ArgsProcessor.modeHandling?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
+            ...Array.from(Processor.options.keys()).map((prop) => `data-${prop}`),
+            ...(Processor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
+            ...(Processor.modeHandling?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
           ],
         })
       }
@@ -529,7 +539,7 @@ export function script(args: ScriptArgs) {
 
     private static disableTransitions() {
       const css = document.createElement('style')
-      if (ArgsProcessor.nonce) css.setAttribute('nonce', ArgsProcessor.nonce)
+      if (Processor.nonce) css.setAttribute('nonce', Processor.nonce)
       css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
       document.head.appendChild(css)
 
@@ -540,7 +550,7 @@ export function script(args: ScriptArgs) {
     }
 
     private static applyState(values: Map<string, string>) {
-      const enableTransitions = ArgsProcessor.disableTransitionOnChange ? DOMManager.disableTransitions() : null
+      const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.disableTransitions() : null
 
       values.forEach((value, key) => {
         const currValue = DOMManager.target.getAttribute(`data-${key}`)
@@ -555,13 +565,13 @@ export function script(args: ScriptArgs) {
     }
 
     private static applyResolvedMode(resolvedMode: RESOLVED_MODE) {
-      if (ArgsProcessor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME)) {
+      if (Processor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME)) {
         const currValue = DOMManager.target.style.colorScheme
         const needsUpdate = currValue !== resolvedMode
         if (needsUpdate) DOMManager.target.style.colorScheme = resolvedMode
       }
 
-      if (ArgsProcessor.modeHandling?.selector.includes(SELECTORS.CLASS)) {
+      if (Processor.modeHandling?.selector.includes(SELECTORS.CLASS)) {
         const isSet = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
         if (isSet === resolvedMode) return
 
@@ -571,23 +581,27 @@ export function script(args: ScriptArgs) {
     }
 
     private static getSystemPref() {
-      const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
-      return supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
+      if (!DOMManager.systemPref) {
+        const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
+        DOMManager.systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
+      }
+
+      return DOMManager.systemPref
     }
 
     public static resolveMode(values: Map<string, string>) {
-      if (!ArgsProcessor.modeHandling) return
+      if (!Processor.modeHandling) return
 
-      const mode = values.get(ArgsProcessor.modeHandling.prop)
+      const mode = values.get(Processor.modeHandling.prop)
       if (!mode) return
 
-      const isSystemStrat = ArgsProcessor.modeHandling.strategy === STRATS.SYSTEM
-      const isSystemMode = ArgsProcessor.modeHandling.system?.mode === mode
+      const isSystemStrat = Processor.modeHandling.strategy === STRATS.SYSTEM
+      const isSystemMode = Processor.modeHandling.system?.mode === mode
       const isSystem = isSystemStrat && isSystemMode
-      const fallbackMode = ArgsProcessor.modeHandling.system?.fallback
-      if (isSystem) return DOMManager.getSystemPref() ?? ArgsProcessor.modeHandling.resolvedModes.get(fallbackMode!)
+      const fallbackMode = Processor.modeHandling.system?.fallback
+      if (isSystem) return DOMManager.getSystemPref() ?? Processor.modeHandling.resolvedModes.get(fallbackMode!)
 
-      return ArgsProcessor.modeHandling.resolvedModes.get(mode)
+      return Processor.modeHandling.resolvedModes.get(mode)
     }
 
     public static get state() {
@@ -622,7 +636,7 @@ export function script(args: ScriptArgs) {
     public static set resolvedMode(resolvedMode: UndefinedOr<RESOLVED_MODE>) {
       if (!DOMManager.instance) DOMManager.instance = new DOMManager(new Map())
       else {
-        if (!ArgsProcessor.modeHandling || !resolvedMode) return
+        if (!Processor.modeHandling || !resolvedMode) return
 
         const currResolvedMode = DOMManager.resolvedMode
         const needsUpdate = resolvedMode !== currResolvedMode
@@ -650,44 +664,41 @@ export function script(args: ScriptArgs) {
       EventManager.on('DOM:resolvedMode:update', (resolvedMode) => (Main.resolvedMode = resolvedMode))
     }
 
+    private static getInstance() {
+      if (!Main.instance) Main.instance = new Main()
+      return Main.instance
+    }
+
     public static init() {
       if (!Main.instance) Main.instance = new Main()
     }
 
     public static get state() {
-      if (!Main.instance) Main.instance = new Main()
-      return Main.instance._state!
+      return Main.getInstance()._state!
     }
 
     public static set state(values: Map<string, string>) {
-      if (!Main.instance) Main.instance = new Main()
-      else {
-        const currState = Main.state
-        const { values: valValues } = Validator.ofMap(values).validate(currState)
-        const merged = Utils.merge(currState, valValues)
+      const currState = Main.state
+      const { values: valValues } = Normalizer.ofMap(values).normalize(currState)
+      const merged = Utils.merge(currState, valValues)
 
-        const needsUpdate = !Utils.isSameMap(currState, merged)
-        if (needsUpdate) {
-          Main.instance._state = merged
-          EventManager.emit('State:update', merged)
-        }
+      const needsUpdate = !Utils.isSameMap(currState, merged)
+      if (needsUpdate) {
+        Main.getInstance()._state = merged
+        EventManager.emit('State:update', merged)
       }
     }
 
     public static get resolvedMode(): UndefinedOr<RESOLVED_MODE> {
-      if (!Main.instance) Main.instance = new Main()
-      return Main.instance._resolvedMode
+      return Main.getInstance()._resolvedMode
     }
 
     private static set resolvedMode(resolvedMode: RESOLVED_MODE) {
-      if (!Main.instance) Main.instance = new Main()
-      else {
-        if (!ArgsProcessor.modeHandling || !resolvedMode) return
+      if (!Processor.modeHandling || !resolvedMode) return
 
-        const currResolvedMode = DOMManager.resolvedMode
-        const needsUpdate = resolvedMode !== currResolvedMode
-        if (needsUpdate) Main.instance._resolvedMode = resolvedMode
-      }
+      const currResolvedMode = DOMManager.resolvedMode
+      const needsUpdate = resolvedMode !== currResolvedMode
+      if (needsUpdate) Main.getInstance()._resolvedMode = resolvedMode
     }
   }
 
@@ -706,7 +717,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static get options() {
-      return ArgsProcessor.options
+      return Processor.options
     }
 
     public static subscribe<E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) {
