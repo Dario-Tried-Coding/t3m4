@@ -18,7 +18,7 @@
   --radius: 1rem;
 }
 
-[data-color='zinc'].light {
+[data-color='zinc'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 240, 10%, 3.9%;
   --card: 0, 0%, 100%;
@@ -45,7 +45,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='zinc'].dark {
+[data-color='zinc'][data-color-scheme='dark'] {
   --background: 240, 10%, 3.9%;
   --foreground: 0, 0%, 98%;
   --card: 240, 10%, 3.9%;
@@ -72,7 +72,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='blue'].light {
+[data-color='blue'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 222.2, 84%, 4.9%;
   --card: 0, 0%, 100%;
@@ -100,7 +100,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='blue'].dark {
+[data-color='blue'][data-color-scheme='dark'] {
   --background: 222.2, 84%, 4.9%;
   --foreground: 210, 40%, 98%;
   --card: 222.2, 84%, 4.9%;

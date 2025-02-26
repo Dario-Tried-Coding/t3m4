@@ -33,7 +33,7 @@ const config = {
 type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TProps, TConfig> props={props} config={config} mode={{ selector: ['class'] }} observe={['DOM', 'storage']}>
+  <ThemingProvider<TProps, TConfig> props={props} config={config} mode={{ selector: ['data-attribute'] }} observe={['DOM', 'storage']}>
     {children}
   </ThemingProvider>
 )

@@ -262,6 +262,7 @@ export function script(args: ScriptArgs) {
     }
   }
 
+  // #region NORMALIZER
   class Normalizer {
     private values: Map<string, string> = new Map()
 
@@ -507,6 +508,15 @@ export function script(args: ScriptArgs) {
                   DOMManager.target.classList.replace(other, stateValue) || DOMManager.target.classList.add(stateValue)
                 }
               }; break;
+              case 'data-color-scheme': {
+                if (!Processor.modeHandling?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) return
+
+                const stateValue = DOMManager.resolvedMode!
+                const newValue = DOMManager.target.getAttribute('data-color-scheme')
+
+                const needsUpdate = stateValue !== newValue
+                if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', stateValue)
+              }; break;
               default: {
                 if (!attributeName) return
 
@@ -526,6 +536,7 @@ export function script(args: ScriptArgs) {
           attributes: true,
           attributeOldValue: true,
           attributeFilter: [
+            'data-color-scheme',
             ...Array.from(Processor.options.keys()).map((prop) => `data-${prop}`),
             ...(Processor.modeHandling?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
             ...(Processor.modeHandling?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
@@ -577,6 +588,12 @@ export function script(args: ScriptArgs) {
 
         const other = resolvedMode === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
         DOMManager.target.classList.replace(other, resolvedMode) || DOMManager.target.classList.add(resolvedMode)
+      }
+
+      if (Processor.modeHandling?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) {
+        const currValue = DOMManager.target.getAttribute('data-color-scheme')
+        const needsUpdate = currValue !== resolvedMode
+        if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', resolvedMode)
       }
     }
 
