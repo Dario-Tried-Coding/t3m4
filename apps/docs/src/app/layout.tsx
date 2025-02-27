@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { Providers } from '@/components/Providers.server'
 import '@/styles/globals.css'
+import { Navbar } from '@/components/Navbar'
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -17,7 +18,10 @@ export default function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <body className={cn('min-h-svh antialiased', FontSans.variable, FontMono.variable)}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <Navbar />
+          <div className='container border-x border-dashed'>{children}</div>
+        </Providers>
       </body>
     </html>
   )
