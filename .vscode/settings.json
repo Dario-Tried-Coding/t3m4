@@ -7,6 +7,7 @@
   "material-icon-theme.folders.associations": {
     "react": "React-components",
     "tailwind": "../../../../icons/tailwind-folder",
-    "presets": "../../../../icons/presets-folder"
+    "presets": "../../../../icons/presets-folder",
+    "next-intl": "Global"
   }
 }
