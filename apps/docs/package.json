@@ -22,6 +22,8 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@content-collections/core": "^0.8.0",
+    "@content-collections/next": "^0.2.5",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
