@@ -23,9 +23,8 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <body className={cn('min-h-svh antialiased', FontSans.variable, FontMono.variable)}>
         <Providers locale={locale}>
-          <Navbar />
-          <div className='container border-x border-dashed'>{children}</div>
-        </Providers>
+          {children}
+          </Providers>
       </body>
     </html>
   )
