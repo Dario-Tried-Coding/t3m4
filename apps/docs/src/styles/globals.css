@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --nav-height: theme('spacing.14');
+}
+
 [data-radius='0'] {
   --radius: 0rem;
 }

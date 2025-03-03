@@ -169,7 +169,7 @@ export function script(args: ScriptArgs) {
             default: break
           }
 
-          const systemMode = stratObj.strategy === STRATS.SYSTEM && isProp(propItem, STRATS.SYSTEM) && typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : undefined
+          const systemMode = isProp(propItem, STRATS.SYSTEM) ?  typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : STRATS.SYSTEM : undefined
 
           this._modeHandling = {
             prop,
@@ -293,7 +293,7 @@ export function script(args: ScriptArgs) {
     }
 
     // Normalize one prop's value
-    static normalize(prop: string, value: NullOr<string>, fallback?: NullOr<string>): { handled: false, passed: false, value: undefined } | { handled: true, passed: boolean, value: string} {
+    static normalize(prop: string, value: NullOr<string>, fallback?: NullOr<string>): { handled: false; passed: false; value: undefined } | { handled: true; passed: boolean; value: string } {
       const isHandled = Normalizer.isHandled(prop)
       if (!isHandled) return { handled: false, passed: false, value: undefined }
 
@@ -307,7 +307,7 @@ export function script(args: ScriptArgs) {
     }
 
     // Normalize an entire map of values
-    normalize(provFallbacks?: Nullable<string | Map<string, string>>): { passed: boolean; values: Map<string, string>; results: Map<string, { passed: boolean; value: string}>} {
+    normalize(provFallbacks?: Nullable<string | Map<string, string>>): { passed: boolean; values: Map<string, string>; results: Map<string, { passed: boolean; value: string }> } {
       const results: Map<string, { passed: boolean; value: string; reason?: string }> = new Map()
       const normValues: Map<string, string> = new Map()
 

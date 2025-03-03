@@ -9,5 +9,10 @@ export const spacingPlugin = plugin(() => {}, {
         xl: '2rem',
       },
     },
+    extend: {
+      spacing: {
+        nav: 'var(--nav-height)',
+      },
+    },
   },
 })

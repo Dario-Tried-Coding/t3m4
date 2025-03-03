@@ -3,7 +3,7 @@ import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/ne
 import { FC, PropsWithChildren } from 'react'
 
 const props = [
-  { prop: 'mode', options: { light: 'custom-light', dark: 'custom-dark', system: 'custom-system', custom: ['custom-1'] } },
+  'mode',
   { prop: 'radius', options: ['0', '0.3', '0.5', '0.75', '1'] },
   { prop: 'color', options: ['zinc', 'red', 'rose', 'orange', 'green', 'blue', 'yellow', 'violet'] },
 ] as const satisfies Props
@@ -13,11 +13,8 @@ const config = {
   mode: {
     type: 'mode',
     strategy: 'system',
-    preferred: 'custom-system',
-    fallback: 'custom-light',
-    colorSchemes: {
-      "custom-1": 'dark'
-    },
+    preferred: 'system',
+    fallback: 'light'
   },
   radius: {
     type: 'generic',

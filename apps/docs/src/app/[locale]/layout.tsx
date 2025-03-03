@@ -1,3 +1,4 @@
+import { Footer } from '@/components/Footer'
 import { Navbar } from '@/components/Navbar'
 import { Providers } from '@/components/providers/Providers.server'
 import { FontMono, FontSans } from '@/fonts'
@@ -21,10 +22,12 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={cn('min-h-svh antialiased', FontSans.variable, FontMono.variable)}>
+      <body className={cn('min-h-svh flex flex-col antialiased', FontSans.variable, FontMono.variable)}>
         <Providers locale={locale}>
-          {children}
-          </Providers>
+          <Navbar />
+          <main className='container border-x border-dashed flex-1'>{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   )

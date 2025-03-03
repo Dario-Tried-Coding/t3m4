@@ -1,5 +1,22 @@
 {
   "Index": {
     "test": "English test"
+  },
+  "Navbar": {
+    "Links": {
+      "docs": "Docs",
+      "playground": "Playground"
+    }
+  },
+  "Footer": {
+    "tagline": "Built by <Author></Author>. The source code is available on <Repo></Repo>."
+  },
+  "ThemeSwitch": {
+    "loading": "Loading...",
+    "Mode": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    }
   }
 }
