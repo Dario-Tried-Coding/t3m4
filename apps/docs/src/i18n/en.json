@@ -18,5 +18,9 @@
       "light": "Light",
       "system": "System"
     }
+  },
+  "CommandMenu": {
+    "search-verbose": "Search documentation...",
+    "search": "Search..."
   }
 }
