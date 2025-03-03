@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.0.4
+
+### Patch Changes
+
+- Fix: Processor - "undefined" system mode bug with string prop
+
 ## 0.0.3
 
 ### Patch Changes
