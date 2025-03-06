@@ -25,7 +25,7 @@ export default async function RootLayout({
       <body className={cn('min-h-svh flex flex-col antialiased', FontSans.variable, FontMono.variable)}>
         <Providers locale={locale}>
           <Navbar />
-          <main className='container border-x border-dashed flex-1'>{children}</main>
+          <main className='flex-1'>{children}</main>
           <Footer />
         </Providers>
       </body>

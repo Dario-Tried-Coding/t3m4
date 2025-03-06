@@ -1,13 +1,12 @@
-import { FC } from 'react'
-import { Icons } from './Icons'
-import { navLinks } from '../../config/navigation.config'
-import { useTranslations } from 'next-intl'
-import { cn } from '@/lib/utils'
 import { Link } from '@/lib/next-intl/navigation'
+import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
+import { FC } from 'react'
+import { navLinks } from '../../config/navigation.config'
+import { siteConfig } from '../../config/site.config'
+import { Icons } from './Icons'
 import { ModeSwitch } from './ModeSwitch'
 import { buttonVariants } from './ui/Button'
-import { siteConfig } from '../../config/site.config'
-import { CommandMenu } from './CommandMenu'
 
 export const Navbar: FC = () => {
   const t = useTranslations('Navbar.Links')
@@ -31,7 +30,7 @@ export const Navbar: FC = () => {
           </nav>
         </div>
         <div className='flex flex-1 items-center justify-between gap-2 md:justify-end'>
-          <CommandMenu />
+          {/* <CommandMenu /> */}
           <div className='flex gap-0.5'>
             <Link href={siteConfig.repo.url} target='_blank' className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))}>
               <Icons.github />
