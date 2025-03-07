@@ -34,17 +34,17 @@ export const ModeSwitch: FC<Props> = ({}) => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem onClick={() => updateState('mode', 'light')}>
+        <DropdownMenuItem onClick={() => updateState({ mode: 'light' })}>
           <Icon mode='light' />
           <span>{t('Mode.light')}</span>
           {state?.mode === 'light' && <Check className='ml-auto' />}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => updateState('mode', 'dark')}>
+        <DropdownMenuItem onClick={() => updateState({ mode: 'dark' })}>
           <Icon mode='dark' />
           <span>{t('Mode.dark')}</span>
           {state?.mode === 'dark' && <Check className='ml-auto' />}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => updateState('mode', 'system')}>
+        <DropdownMenuItem onClick={() => updateState({ mode: 'system' })}>
           <Icon mode='system' />
           <span>{t('Mode.system')}</span>
           {state?.mode === 'system' && <Check className='ml-auto' />}

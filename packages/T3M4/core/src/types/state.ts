@@ -1,4 +1,4 @@
-import { Config, ExplicitProp, ExtractProps, Prop, Props, SystemValues } from '@t3m4/core/types/config'
+import { Config, ExplicitProp, ExtractProps, Prop, Props, SystemValues } from './config'
 
 type ExtractProp<Ps extends Props, P extends Prop> = P extends string ? (P extends ExtractProps<Ps> ? P : never) : P extends ExplicitProp ? (P['prop'] extends ExtractProps<Ps> ? P['prop'] : never) : never
 
@@ -21,10 +21,7 @@ export type State<Ps extends Props, C extends Config<Ps>> = {
             ? 'light' | 'dark'
             : P extends ExplicitProp
               ? P['options'] extends SystemValues
-                ? 
-                  | (P['options']['light'] extends string ? P['options']['light'] : 'light')
-                  | (P['options']['dark'] extends string ? P['options']['dark'] : 'dark')
-                  | (P['options']['custom'] extends string[] ? P['options']['custom'][number] : never)
+                ? (P['options']['light'] extends string ? P['options']['light'] : 'light') | (P['options']['dark'] extends string ? P['options']['dark'] : 'dark') | (P['options']['custom'] extends string[] ? P['options']['custom'][number] : never)
                 : never
               : never
           : C[ExtractProp<Ps, P>]['strategy'] extends 'system'
@@ -42,3 +39,4 @@ export type State<Ps extends Props, C extends Config<Ps>> = {
             : never
     : never
 }
+export type Unsafe_State = Map<string, string>

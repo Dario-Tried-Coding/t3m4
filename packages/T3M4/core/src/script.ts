@@ -1,5 +1,7 @@
 import { Nullable, NullOr, UndefinedOr } from '@t3m4/utils/nullables'
 import { ScriptArgs } from './types'
+import { Unsafe_State as State } from './types/state'
+import { Unsafe_Options as Options } from './types/options'
 import { ModeProp } from './types/config/mode'
 import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOption, SystemValues } from './types/config/props'
 import { CONSTANTS, OBSERVER, RESOLVED_MODE, STRAT } from './types/constants'
@@ -7,8 +9,6 @@ import { STRATS } from './types/constants/strats'
 import { DEFAULTS } from './types/defaults'
 import { EventMap } from './types/events'
 
-export type State = Map<string, string>
-export type Options = Map<string, { preferred: string; options: Set<string> }>
 type ModeHandling = { prop: string; strategy: STRAT; resolvedModes: Map<string, RESOLVED_MODE>; system: UndefinedOr<{ mode: string; fallback: string }> } & Required<ScriptArgs['mode']>
 
 export function script(args: ScriptArgs) {
@@ -169,7 +169,7 @@ export function script(args: ScriptArgs) {
             default: break
           }
 
-          const systemMode = isProp(propItem, STRATS.SYSTEM) ?  typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : STRATS.SYSTEM : undefined
+          const systemMode = isProp(propItem, STRATS.SYSTEM) ? (typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : STRATS.SYSTEM) : undefined
 
           this._modeHandling = {
             prop,
@@ -224,20 +224,20 @@ export function script(args: ScriptArgs) {
   class Utils {
     private constructor() {}
 
-    static merge<T extends NullOr<Map<string, string>>[]>(...maps: T): T[number] extends null ? null : Map<string, string> {
+    static merge<T extends NullOr<State>[]>(...maps: T): T[number] extends null ? null : State {
       const merged = maps.reduce((acc, map) => {
         if (!map) return acc
         return new Map([...(acc ?? []), ...map])
-      }, new Map<string, string>())
+      }, new Map() as State)
 
-      return merged as T[number] extends null ? null : Map<string, string>
+      return merged as T[number] extends null ? null : State
     }
 
-    static mapToJSON(map: Map<string, string>) {
+    static mapToJSON(map: State) {
       return JSON.stringify(Object.fromEntries(map))
     }
 
-    static jsonToMap(json: NullOr<string>): Map<string, string> {
+    static jsonToMap(json: NullOr<string>): State {
       if (!json?.trim()) return new Map()
       try {
         const parsed = JSON.parse(json)
@@ -248,7 +248,7 @@ export function script(args: ScriptArgs) {
       }
     }
 
-    static isSameMap(map1: NullOr<Map<string, string>>, map2: NullOr<Map<string, string>>) {
+    static isSameMap(map1: NullOr<State>, map2: NullOr<State>) {
       if (!map1 || !map2) return false
       if (map1 === map2) return true
 
@@ -264,7 +264,7 @@ export function script(args: ScriptArgs) {
 
   // #region NORMALIZER
   class Normalizer {
-    private values: Map<string, string> = new Map()
+    private values: State = new Map()
 
     private constructor() {}
 
@@ -273,11 +273,11 @@ export function script(args: ScriptArgs) {
       return Normalizer.of(Utils.jsonToMap(json))
     }
 
-    static ofMap(values: Map<string, string>) {
+    static ofMap(values: State) {
       return Normalizer.of(values)
     }
 
-    private static of(values: Map<string, string>) {
+    private static of(values: State) {
       const normalizer = new Normalizer()
       normalizer.values = values
       return normalizer
@@ -307,9 +307,9 @@ export function script(args: ScriptArgs) {
     }
 
     // Normalize an entire map of values
-    normalize(provFallbacks?: Nullable<string | Map<string, string>>): { passed: boolean; values: Map<string, string>; results: Map<string, { passed: boolean; value: string }> } {
+    normalize(provFallbacks?: Nullable<string | State>): { passed: boolean; values: State; results: Map<string, { passed: boolean; value: string }> } {
       const results: Map<string, { passed: boolean; value: string; reason?: string }> = new Map()
-      const normValues: Map<string, string> = new Map()
+      const normValues: State = new Map()
 
       const fallbacks = typeof provFallbacks === 'string' ? Utils.jsonToMap(provFallbacks) : provFallbacks
 
@@ -367,7 +367,7 @@ export function script(args: ScriptArgs) {
   // #region STORAGE
   class StorageManager {
     private static instance: UndefinedOr<StorageManager> = undefined
-    private _state: NullOr<Map<string, string>> = null
+    private _state: NullOr<State> = null
     private _mode: UndefinedOr<string> = undefined
 
     private constructor() {
@@ -413,7 +413,7 @@ export function script(args: ScriptArgs) {
       },
     }
 
-    private static storeState(values: Map<string, string>) {
+    private static storeState(values: State) {
       StorageManager.utils.store(Processor.storageKey, Utils.mapToJSON(values))
 
       const mode = values.get(Processor.modeHandling?.prop ?? '')
@@ -430,7 +430,7 @@ export function script(args: ScriptArgs) {
       return StorageManager.instance._state!
     }
 
-    public static set state(values: Map<string, string>) {
+    public static set state(values: State) {
       const currState = StorageManager.state
       const merged = Utils.merge(currState, values)
 
@@ -471,10 +471,10 @@ export function script(args: ScriptArgs) {
     private static instance: UndefinedOr<DOMManager> = undefined
     private static target = document.documentElement
     private static systemPref: UndefinedOr<RESOLVED_MODE> = undefined
-    private _state: NullOr<Map<string, string>> = null
+    private _state: NullOr<State> = null
     private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
 
-    private constructor(values: Map<string, string>) {
+    private constructor(values: State) {
       this._state = values
 
       const resolvedMode = DOMManager.resolveMode(values)
@@ -484,7 +484,7 @@ export function script(args: ScriptArgs) {
 
       if (Processor.observers.includes(OBSERVERS.DOM)) {
         const handleMutations = (mutations: MutationRecord[]) => {
-          const updates = new Map<string, string>()
+          const updates = new Map() as State
           for (const { attributeName, oldValue } of mutations) {
             // prettier-ignore
             switch (attributeName) {
@@ -560,7 +560,7 @@ export function script(args: ScriptArgs) {
       }
     }
 
-    private static applyState(values: Map<string, string>) {
+    private static applyState(values: State) {
       const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.disableTransitions() : null
 
       values.forEach((value, key) => {
@@ -606,7 +606,7 @@ export function script(args: ScriptArgs) {
       return DOMManager.systemPref
     }
 
-    public static resolveMode(values: Map<string, string>) {
+    public static resolveMode(values: State) {
       if (!Processor.modeHandling) return
 
       const mode = values.get(Processor.modeHandling.prop)
@@ -626,7 +626,7 @@ export function script(args: ScriptArgs) {
       return DOMManager.instance._state!
     }
 
-    public static set state(values: Map<string, string>) {
+    public static set state(values: State) {
       if (!DOMManager.instance) DOMManager.instance = new DOMManager(values)
       else {
         const currState = DOMManager.state
@@ -667,7 +667,7 @@ export function script(args: ScriptArgs) {
 
   class Main {
     private static instance: UndefinedOr<Main> = undefined
-    private _state: NullOr<Map<string, string>> = null
+    private _state: NullOr<State> = null
     private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
 
     private constructor() {
@@ -694,7 +694,7 @@ export function script(args: ScriptArgs) {
       return Main.getInstance()._state!
     }
 
-    public static set state(values: Map<string, string>) {
+    public static set state(values: State) {
       const currState = Main.state
       const { values: valValues } = Normalizer.ofMap(values).normalize(currState)
       const merged = Utils.merge(currState, valValues)
@@ -725,7 +725,7 @@ export function script(args: ScriptArgs) {
       return Main.state
     }
 
-    public static set state(values: Map<string, string>) {
+    public static set state(values: State) {
       Main.state = values
     }
 
@@ -739,10 +739,6 @@ export function script(args: ScriptArgs) {
 
     public static subscribe<E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) {
       EventManager.on(e, cb)
-    }
-
-    public static update(prop: string, value: string) {
-      NextThemes.state = new Map([[prop, value]])
     }
   }
 

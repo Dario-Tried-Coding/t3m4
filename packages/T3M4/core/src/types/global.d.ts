@@ -1,4 +1,4 @@
-import { NextThemes } from "./script"
+import { NextThemes } from "./interface"
 
 declare global {
   interface Window {

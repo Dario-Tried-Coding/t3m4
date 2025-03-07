@@ -1,8 +1,5 @@
-import { UndefinedOr } from '@t3m4/utils/nullables'
-import { Options, State } from '../script'
 import { Config, Props } from './config'
-import { EventMap } from './events'
-import { OBSERVER, RESOLVED_MODE, SELECTOR } from './constants'
+import { OBSERVER, SELECTOR } from './constants'
 
 export type ScriptArgs = {
   storageKey?: string
@@ -16,12 +13,4 @@ export type ScriptArgs = {
   observe?: OBSERVER[]
   nonce?: string
   disableTransitionOnChange?: boolean
-}
-
-export interface NextThemes {
-  state: State
-  resolvedMode: UndefinedOr<RESOLVED_MODE>
-  options: Options
-  subscribe: <E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) => void
-  update: (prop: string, value: string) => void
 }

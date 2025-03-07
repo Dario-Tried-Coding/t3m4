@@ -1,14 +1,14 @@
 'use client'
 
 import { useT3M4 } from '@/lib/T3M4'
+import { cn } from '@/lib/utils'
+import { Check, Repeat } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { FC } from 'react'
 import { Button } from './ui/Button'
-import { Drawer, DrawerContent, DrawerTrigger } from './ui/Drawer'
-import { Popover, PopoverContent, PopoverTrigger } from './ui/Popover'
-import { Check, Repeat } from 'lucide-react'
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from './ui/Drawer'
 import { Label } from './ui/Label'
-import { cn } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/Popover'
 
 interface Props {}
 export const ThemeSwitch: FC<Props> = ({}) => {
@@ -23,12 +23,13 @@ export const ThemeSwitch: FC<Props> = ({}) => {
           </Button>
         </DrawerTrigger>
         <DrawerContent className='p-6 pt-0'>
+          <DrawerTitle hidden>{t('Demo.title')}</DrawerTitle>
           <Switch />
         </DrawerContent>
       </Drawer>
       <Popover>
         <PopoverTrigger asChild>
-          <Button size='sm' variant='ghost'>
+          <Button size='sm' variant='ghost' className='hidden md:block'>
             {t('Demo.trigger')}
           </Button>
         </PopoverTrigger>
@@ -51,12 +52,12 @@ const Switch: FC = () => {
           <h4 className='font-semibold leading-none tracking-tight'>{t('Demo.title')}</h4>
           <p className='text-muted-foreground text-xs'>{t('Demo.description')}</p>
         </div>
-        <Button variant='ghost' size='icon'>
+        <Button variant='ghost' size='icon' onClick={() => updateState({ color: 'zinc', radius: '0.5', mode: 'dark' })}>
           <Repeat />
           <span className='sr-only'>{t('Demo.reset')}</span>
         </Button>
       </div>
-      <div className='mt-4 md:mt-6 space-y-6'>
+      <div className='mt-4 space-y-6 md:mt-6'>
         <div className='space-y-1.5'>
           <Label className='text-xs'>{t('Demo.Props.Color.label')}</Label>
           <div className='grid grid-cols-3 gap-2'>
@@ -64,7 +65,7 @@ const Switch: FC = () => {
               const isActive = state?.color === c
 
               return (
-                <Button variant='outline' size='sm' key={c} onClick={() => updateState('color', c)} className={cn('justify-start', isActive && 'border-primary border-2')}>
+                <Button variant='outline' size='sm' key={c} onClick={() => updateState({ color: c })} className={cn('justify-start', isActive && 'border-primary border-2')}>
                   <span data-color={c} data-color-scheme={resolvedMode} className='bg-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full'>
                     {isActive && <Check className='h-4 w-4 text-white' />}
                   </span>
@@ -81,7 +82,7 @@ const Switch: FC = () => {
               const isActive = state?.radius === r
 
               return (
-                <Button variant='outline' size='sm' key={r} onClick={() => updateState('radius', r)} className={cn('', isActive && 'border-primary border-2')}>
+                <Button variant='outline' size='sm' key={r} onClick={() => updateState({ radius: r })} className={cn('', isActive && 'border-primary border-2')}>
                   {r}
                 </Button>
               )
@@ -91,15 +92,17 @@ const Switch: FC = () => {
         <div className='space-y-1.5'>
           <Label className='text-xs'>{t('Demo.Props.Mode.label')}</Label>
           <div className='grid grid-cols-5 gap-2'>
-            {options.mode.filter(m => m !== 'system').map((m) => {
-              const isActive = resolvedMode === m
+            {options.mode
+              .filter((m) => m !== 'system')
+              .map((m) => {
+                const isActive = resolvedMode === m
 
-              return (
-                <Button variant='outline' size='sm' key={m} onClick={() => updateState('mode', m)} className={cn('', isActive && 'border-primary border-2')}>
-                  {t(`Demo.Props.Mode.Options.${m}`)}
-                </Button>
-              )
-            })}
+                return (
+                  <Button variant='outline' size='sm' key={m} onClick={() => updateState({ mode: m })} className={cn('', isActive && 'border-primary border-2')}>
+                    {t(`Demo.Props.Mode.Options.${m}`)}
+                  </Button>
+                )
+              })}
           </div>
         </div>
       </div>

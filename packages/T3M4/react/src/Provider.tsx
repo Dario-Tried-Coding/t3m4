@@ -5,7 +5,7 @@ import { ResolvedMode } from '@t3m4/core/types/constants'
 import { NullOr, UndefinedOr } from '@t3m4/utils/nullables'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { T3M4Context } from './context'
-import { State } from './types/state'
+import { State } from '@t3m4/core/types'
 
 interface T3M4Props extends PropsWithChildren {}
 export const T3M4Provider = <Ps extends Props, C extends Config<Ps>>({ children }: T3M4Props) => {
@@ -23,10 +23,9 @@ export const T3M4Provider = <Ps extends Props, C extends Config<Ps>>({ children 
     window.NextThemes.subscribe('DOM:resolvedMode:update', (resolvedMode) => setResolvedMode(resolvedMode))
   }, [])
 
-  const updateState: T3M4Context<Ps, C>['updateState'] = (prop, value) => {
-    const currValue = state?.[prop]
-    const newValue = typeof value === 'function' ? (value as (currValue: State<Ps, C>[typeof prop] | undefined) => State<Ps, C>[typeof prop])(currValue) : value
-    window.NextThemes.update(prop as Extract<typeof prop, string>, newValue as Extract<typeof newValue, string>)
+  const updateState: T3M4Context<Ps, C>['updateState'] = (state) => {
+    const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
+    window.NextThemes.state = new Map(Object.entries(newState))
   }
 
   return <T3M4Context.Provider value={{ state, updateState, resolvedMode, options: options.current }}>{children}</T3M4Context.Provider>

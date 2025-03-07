@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.0.5
+
+### Patch Changes
+
+- updateState API: improvement - now single & multi prop update both possible
+
 ## 0.0.4
 
 ### Patch Changes

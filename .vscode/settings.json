@@ -8,6 +8,6 @@
     "react": "React-components",
     "tailwind": "../../../../icons/tailwind-folder",
     "presets": "../../../../icons/presets-folder",
-    "next-intl": "Global"
+    "next-intl": "Global",
   }
 }

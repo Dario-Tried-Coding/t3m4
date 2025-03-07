@@ -2,15 +2,15 @@
 
 import { ResolvedMode } from '@t3m4/core/types/constants'
 import { Config, Props } from '@t3m4/core/types/config'
+import { Options } from '@t3m4/core/types'
 import { NullOr, UndefinedOr } from '@t3m4/utils/nullables'
 import { Context, createContext, useContext } from 'react'
-import { Options } from './types/options'
-import { State } from './types/state'
+import { State } from '@t3m4/core/types'
 
 export type T3M4Context<Ps extends Props, C extends Config<Ps>> = {
   state: NullOr<State<Ps, C>>
   resolvedMode: UndefinedOr<ResolvedMode>
-  updateState: <P extends keyof State<Ps, C>>(prop: P, value: State<Ps, C>[P] | ((curr: State<Ps, C>[P]) => State<Ps, C>[P])) => void
+  updateState: <S extends State<Ps, C>>(state: Partial<S> | ((state: S) => Partial<S>)) => void
   options: Options<Ps, C, State<Ps, C>>
 }
 export const T3M4Context = createContext<NullOr<T3M4Context<any, any>>>(null)

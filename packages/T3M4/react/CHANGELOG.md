@@ -1,5 +1,13 @@
 # @t3m4/react
 
+## 0.0.7
+
+### Patch Changes
+
+- updateState API: improvement - now single & multi prop update both possible
+- Updated dependencies
+  - @t3m4/core@0.0.5
+
 ## 0.0.6
 
 ### Patch Changes
