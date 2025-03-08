@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.0.6
+
+### Patch Changes
+
+- Custom "target" API
+
 ## 0.0.5
 
 ### Patch Changes

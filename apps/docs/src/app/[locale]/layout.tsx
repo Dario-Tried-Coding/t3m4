@@ -22,7 +22,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={cn('min-h-svh flex flex-col antialiased', FontSans.variable, FontMono.variable)}>
+      <body  className={cn('min-h-svh flex flex-col antialiased', FontSans.variable, FontMono.variable)}>
         <Providers locale={locale}>
           <Navbar />
           <main className='flex-1'>{children}</main>

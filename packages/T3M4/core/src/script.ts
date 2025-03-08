@@ -469,7 +469,7 @@ export function script(args: ScriptArgs) {
   // #region DOM
   class DOMManager {
     private static instance: UndefinedOr<DOMManager> = undefined
-    private static target = document.documentElement
+    private static target = document.getElementById(args.target ?? '') ?? document.documentElement
     private static systemPref: UndefinedOr<RESOLVED_MODE> = undefined
     private _state: NullOr<State> = null
     private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined

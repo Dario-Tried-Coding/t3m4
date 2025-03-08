@@ -10,6 +10,7 @@ export type ScriptArgs = {
     store?: boolean
     storageKey?: string
   }
+  target?: string
   observe?: OBSERVER[]
   nonce?: string
   disableTransitionOnChange?: boolean
