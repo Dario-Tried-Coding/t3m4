@@ -1,5 +1,5 @@
-import { Config, Props } from './config'
-import { OBSERVER, SELECTOR } from './constants'
+import { Config, Props } from './config/index'
+import { OBSERVABLE, SELECTOR } from './constants'
 
 export type ScriptArgs = {
   storageKey?: string
@@ -11,7 +11,7 @@ export type ScriptArgs = {
     storageKey?: string
   }
   target?: string
-  observe?: OBSERVER[]
+  observe?: OBSERVABLE[]
   nonce?: string
   disableTransitionOnChange?: boolean
 }

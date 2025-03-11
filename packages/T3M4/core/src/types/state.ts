@@ -1,4 +1,4 @@
-import { Config, ExplicitProp, ExtractProps, Prop, Props, SystemValues } from './config'
+import { Config, ExplicitProp, ExtractProps, Prop, Props, SystemValues } from './config/index'
 
 type ExtractProp<Ps extends Props, P extends Prop> = P extends string ? (P extends ExtractProps<Ps> ? P : never) : P extends ExplicitProp ? (P['prop'] extends ExtractProps<Ps> ? P['prop'] : never) : never
 

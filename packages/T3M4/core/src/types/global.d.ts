@@ -1,8 +1,8 @@
-import { NextThemes } from "./interface"
+import { T3M4 } from "./interface"
 
 declare global {
   interface Window {
-    NextThemes: NextThemes
+    T3M4: T3M4
   }
 }
 

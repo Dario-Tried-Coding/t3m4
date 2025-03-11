@@ -1,1 +1,1 @@
-export type { Config, Props } from '@t3m4/core/types/config'
+export type {Config, Props} from "@t3m4/react/types"

@@ -1,5 +1,14 @@
 # @t3m4/react
 
+## 0.0.9
+
+### Patch Changes
+
+- Core: reboot API support
+- SSR compatibility
+- Updated dependencies
+  - @t3m4/core@0.0.7
+
 ## 0.0.8
 
 ### Patch Changes

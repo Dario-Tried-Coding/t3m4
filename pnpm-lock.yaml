@@ -151,9 +151,9 @@ importers:
 
   packages/T3M4/next:
     dependencies:
-      '@t3m4/core':
+      '@t3m4/react':
         specifier: workspace:*
-        version: link:../core
+        version: link:../react
       '@t3m4/utils':
         specifier: workspace:*
         version: link:../utils

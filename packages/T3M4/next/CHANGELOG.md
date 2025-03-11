@@ -1,5 +1,14 @@
 # @t3m4/next
 
+## 0.0.4
+
+### Patch Changes
+
+- Core: reboot API support
+- Next: de-duplication of code - now based on React pkg
+- Updated dependencies
+  - @t3m4/react@0.0.9
+
 ## 0.0.3
 
 ### Patch Changes

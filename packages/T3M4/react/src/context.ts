@@ -17,6 +17,6 @@ export const T3M4Context = createContext<NullOr<T3M4Context<any, any>>>(null)
 
 export const useT3M4 = <Ps extends Props, C extends Config<Ps>>() => {
   const context = useContext(T3M4Context as Context<NullOr<T3M4Context<Ps, C>>>)
-  if (!context) throw new Error('useNextThemes must be used within a NextThemesProvider')
+  if (!context) throw new Error('useT3M4 must be used within a NextThemesProvider')
   return context
 }

@@ -1,5 +1,5 @@
 import { MODES, RESOLVED_MODE } from './modes'
-import { OBSERVERS, OBSERVER } from './observers'
+import { OBSERVABLES, OBSERVABLE } from './observables'
 import { PROP_TYPES } from './props'
 import { SELECTORS, SELECTOR } from './selectors'
 import { STRATS, STRAT } from './strats'
@@ -11,8 +11,8 @@ export type CONSTANTS = {
   STRATS: STRATS
   MODES: MODES
   PROP_TYPES: PROP_TYPES
-  OBSERVERS: OBSERVERS
+  OBSERVABLES: OBSERVABLES
   SELECTORS: SELECTORS
 }
 
-export type { STRAT, STRATS, RESOLVED_MODE, OBSERVER, SELECTOR}
+export type { STRAT, STRATS, RESOLVED_MODE, OBSERVABLE, SELECTOR}

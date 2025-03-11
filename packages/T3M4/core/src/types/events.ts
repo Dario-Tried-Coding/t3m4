@@ -5,4 +5,5 @@ export type EventMap = {
   'DOM:resolvedMode:update': RESOLVED_MODE
   'Storage:update': Map<string, string>
   'State:update': Map<string, string>
+  'State:reset': void
 }

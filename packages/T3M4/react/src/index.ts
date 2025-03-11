@@ -2,4 +2,5 @@
 
 export { T3M4Provider } from './Provider'
 export { useT3M4 } from './context'
-export { T3M4Script } from './script'
+export { script, Script } from './script'
+export { T3M4Context } from "./context"

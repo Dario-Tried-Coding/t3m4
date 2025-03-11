@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.0.7
+
+### Patch Changes
+
+- Core: reboot API support
+
 ## 0.0.6
 
 ### Patch Changes

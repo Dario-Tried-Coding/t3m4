@@ -4,16 +4,16 @@ import { Unsafe_State as State } from './types/state'
 import { Unsafe_Options as Options } from './types/options'
 import { ModeProp } from './types/config/mode'
 import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOption, SystemValues } from './types/config/props'
-import { CONSTANTS, OBSERVER, RESOLVED_MODE, STRAT } from './types/constants'
+import { CONSTANTS, OBSERVABLE, RESOLVED_MODE, STRAT } from './types/constants'
 import { STRATS } from './types/constants/strats'
-import { DEFAULTS } from './types/defaults'
+import { CONFIG } from './types/config'
 import { EventMap } from './types/events'
 
 type ModeHandling = { prop: string; strategy: STRAT; resolvedModes: Map<string, RESOLVED_MODE>; system: UndefinedOr<{ mode: string; fallback: string }> } & Required<ScriptArgs['mode']>
 
 export function script(args: ScriptArgs) {
   // #region CONSTANTS
-  const { DEFAULT, MODES, PROP_TYPES, STRATS, OBSERVERS, SELECTORS } = {
+  const { DEFAULT, MODES, PROP_TYPES, STRATS, OBSERVABLES, SELECTORS } = {
     DEFAULT: 'default',
     STRATS: {
       MONO: 'mono',
@@ -30,7 +30,7 @@ export function script(args: ScriptArgs) {
       GENERIC: 'generic',
       MODE: 'mode',
     },
-    OBSERVERS: {
+    OBSERVABLES: {
       DOM: 'DOM',
       STORAGE: 'storage',
     },
@@ -41,8 +41,8 @@ export function script(args: ScriptArgs) {
     },
   } as const satisfies CONSTANTS
 
-  // #region DEFAULTS
-  const DEFAULTS = {
+  // #region CONFIG
+  const CONFIG = {
     storageKey: 'next-themes',
     mode: {
       storageKey: 'theme',
@@ -52,173 +52,7 @@ export function script(args: ScriptArgs) {
     observe: [],
     nonce: '',
     disableTransitionOnChange: false,
-  } as const satisfies DEFAULTS
-
-  // #region CONFIG PROCESSOR
-  class Processor {
-    private static instance: Processor
-    private _storageKey = args.storageKey ?? DEFAULTS.storageKey
-    private _options: UndefinedOr<Options> = undefined
-    private _modeHandling: Nullable<ModeHandling> = undefined
-    private _observers: OBSERVER[] = args.observe ?? DEFAULTS.observe
-    private _nonce = args.nonce ?? DEFAULTS.nonce
-    private _disableTransitionOnChange = args.disableTransitionOnChange ?? DEFAULTS.disableTransitionOnChange
-
-    private constructor() {
-      const isProp = <Strat extends STRAT>(
-        prop: Prop,
-        strat: Strat
-      ): prop is Strat extends STRATS['MONO']
-        ? ImplicitProp | { prop: string; options: MonoOption }
-        : Strat extends STRATS['MULTI']
-          ? { prop: string; options: MultiOption }
-          : Strat extends STRATS['LIGHT_DARK']
-            ? ImplicitProp | { prop: string; options: LightDarkOption }
-            : Strat extends STRATS['SYSTEM']
-              ? ImplicitProp | { prop: string; options: SystemOption }
-              : never => {
-        if (typeof prop === 'string') return strat !== STRATS.MULTI
-        if (typeof prop === 'object') {
-          if (typeof prop.options === 'string') return strat === STRATS.MONO
-          if (Array.isArray(prop.options)) return strat === STRATS.MULTI
-          if (typeof prop.options === 'object') {
-            if (MODES.SYSTEM in prop.options) return strat === STRATS.SYSTEM
-            return strat === STRATS.LIGHT_DARK || strat === STRATS.SYSTEM
-          }
-        }
-        return false
-      }
-
-      const { props, mode: modeHandling } = args
-
-      const options: Options = new Map()
-      for (const [prop, stratObj] of Object.entries(args.config)) {
-        const propsItem = props.find((i) => (typeof i === 'string' ? prop === i : prop === i.prop))
-        if (!propsItem) continue
-
-        // prettier-ignore
-        switch (stratObj.strategy) {
-            case STRATS.MONO: {
-              if (!isProp(propsItem, STRATS.MONO)) break
-              
-              const propOptions = new Set(typeof propsItem === 'string' ? [DEFAULT] : [propsItem.options as string])
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-            case STRATS.MULTI: {
-              if (!isProp(propsItem, STRATS.MULTI)) break
-              
-              const propOptions = new Set(propsItem.options)
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-            case STRATS.LIGHT_DARK: {
-              if (!isProp(propsItem, STRATS.LIGHT_DARK)) break
-
-              const propOptions = new Set([
-                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
-                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
-                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
-              ])
-
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-            case STRATS.SYSTEM: {
-              if (!isProp(propsItem, STRATS.SYSTEM)) break
-            
-              const propOptions = new Set([
-                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
-                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
-                ...(typeof propsItem === 'string' ? [MODES.SYSTEM] : [(propsItem.options as SystemValues).system ?? MODES.SYSTEM]),
-                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
-              ])
-              
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-          }
-      }
-      this._options = options
-
-      const modeConfig = Object.entries(args.config).find(([, { type }]) => type === PROP_TYPES.MODE) as UndefinedOr<[string, ModeProp]>
-
-      if (modeConfig) {
-        const [prop, stratObj] = modeConfig
-        const propItem = props.find((i) => (typeof i === 'string' ? i === prop : i.prop === prop))
-        const resolvedModes: Map<string, RESOLVED_MODE> = new Map()
-
-        if (propItem) {
-          // prettier-ignore
-          switch (stratObj.strategy) {
-            case STRATS.MONO: {
-              if (!isProp(propItem, STRATS.MONO)) break;
-
-              const mode = typeof propItem === 'string' ? DEFAULT : propItem?.options
-              resolvedModes.set(mode, stratObj.colorScheme)
-            }; break
-            case STRATS.MULTI: {
-              Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => {
-                resolvedModes.set(key, colorScheme)
-              })
-            }; break
-            case STRATS.LIGHT_DARK:
-            case STRATS.SYSTEM: {
-              if (!isProp(propItem, STRATS.LIGHT_DARK) && !isProp(propItem, STRATS.SYSTEM)) break;
-
-              resolvedModes.set(typeof propItem === 'object' ? propItem.options.light ?? MODES.LIGHT : MODES.LIGHT, MODES.LIGHT)
-              resolvedModes.set(typeof propItem === 'object' ? propItem.options.dark ?? MODES.DARK : MODES.DARK, MODES.DARK)
-              if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
-            }; break
-            default: break
-          }
-
-          const systemMode = isProp(propItem, STRATS.SYSTEM) ? (typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : STRATS.SYSTEM) : undefined
-
-          this._modeHandling = {
-            prop,
-            strategy: stratObj.strategy,
-            resolvedModes,
-            system:
-              stratObj.strategy === STRATS.SYSTEM
-                ? {
-                    mode: systemMode!,
-                    fallback: stratObj.fallback,
-                  }
-                : undefined,
-            selector: modeHandling?.selector ?? DEFAULTS.mode.selector,
-            store: modeHandling?.store ?? DEFAULTS.mode.store,
-            storageKey: modeHandling?.storageKey ?? DEFAULTS.mode.storageKey,
-          }
-        }
-      }
-    }
-
-    private static getInstance() {
-      if (!Processor.instance) Processor.instance = new Processor()
-      return Processor.instance
-    }
-
-    public static get modeHandling() {
-      return Processor.getInstance()._modeHandling
-    }
-
-    public static get options() {
-      return Processor.getInstance()._options!
-    }
-
-    public static get observers() {
-      return Processor.getInstance()._observers
-    }
-
-    public static get storageKey() {
-      return Processor.getInstance()._storageKey
-    }
-
-    public static get nonce() {
-      return Processor.getInstance()._nonce
-    }
-
-    public static get disableTransitionOnChange() {
-      return Processor.getInstance()._disableTransitionOnChange
-    }
-  }
+  } as const satisfies CONFIG
 
   // #region UTILS
   class Utils {
@@ -362,13 +196,202 @@ export function script(args: ScriptArgs) {
         else callback()
       })
     }
+
+    public static clear() {
+      EventManager.events.clear()
+    }
+  }
+
+  // #region CONFIG PROCESSOR
+  class Processor {
+    private static instance: Processor
+    private static _args: ScriptArgs = args
+    private _target: UndefinedOr<string>
+    private _storageKey: UndefinedOr<string>
+    private _options: UndefinedOr<Options>
+    private _modeHandling: Nullable<ModeHandling>
+    private _observe: UndefinedOr<OBSERVABLE[]>
+    private _nonce: UndefinedOr<string>
+    private _disableTransitionOnChange: UndefinedOr<boolean>
+
+    private constructor() {
+      this._target = Processor.args.target
+      this._storageKey = Processor.args.storageKey ?? CONFIG.storageKey
+      this._observe = Processor.args.observe ?? CONFIG.observe
+      this._nonce = Processor.args.nonce ?? CONFIG.nonce
+      this._disableTransitionOnChange = Processor.args.disableTransitionOnChange ?? CONFIG.disableTransitionOnChange
+
+      const isProp = <Strat extends STRAT>(
+        prop: Prop,
+        strat: Strat
+      ): prop is Strat extends STRATS['MONO']
+        ? ImplicitProp | { prop: string; options: MonoOption }
+        : Strat extends STRATS['MULTI']
+          ? { prop: string; options: MultiOption }
+          : Strat extends STRATS['LIGHT_DARK']
+            ? ImplicitProp | { prop: string; options: LightDarkOption }
+            : Strat extends STRATS['SYSTEM']
+              ? ImplicitProp | { prop: string; options: SystemOption }
+              : never => {
+        if (typeof prop === 'string') return strat !== STRATS.MULTI
+        if (typeof prop === 'object') {
+          if (typeof prop.options === 'string') return strat === STRATS.MONO
+          if (Array.isArray(prop.options)) return strat === STRATS.MULTI
+          if (typeof prop.options === 'object') {
+            if (MODES.SYSTEM in prop.options) return strat === STRATS.SYSTEM
+            return strat === STRATS.LIGHT_DARK || strat === STRATS.SYSTEM
+          }
+        }
+        return false
+      }
+
+      const options: Options = new Map()
+      for (const [prop, stratObj] of Object.entries(Processor.args.config)) {
+        const propsItem = Processor.args.props.find((i) => (typeof i === 'string' ? prop === i : prop === i.prop))
+        if (!propsItem) continue
+
+        // prettier-ignore
+        switch (stratObj.strategy) {
+            case STRATS.MONO: {
+              if (!isProp(propsItem, STRATS.MONO)) break
+              
+              const propOptions = new Set(typeof propsItem === 'string' ? [DEFAULT] : [propsItem.options as string])
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+            case STRATS.MULTI: {
+              if (!isProp(propsItem, STRATS.MULTI)) break
+              
+              const propOptions = new Set(propsItem.options)
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+            case STRATS.LIGHT_DARK: {
+              if (!isProp(propsItem, STRATS.LIGHT_DARK)) break
+
+              const propOptions = new Set([
+                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
+                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
+                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
+              ])
+
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+            case STRATS.SYSTEM: {
+              if (!isProp(propsItem, STRATS.SYSTEM)) break
+            
+              const propOptions = new Set([
+                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
+                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
+                ...(typeof propsItem === 'string' ? [MODES.SYSTEM] : [(propsItem.options as SystemValues).system ?? MODES.SYSTEM]),
+                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
+              ])
+              
+              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
+            }; break
+          }
+      }
+      this._options = options
+
+      const modeConfig = Object.entries(args.config).find(([, { type }]) => type === PROP_TYPES.MODE) as UndefinedOr<[string, ModeProp]>
+      if (modeConfig) {
+        const [prop, stratObj] = modeConfig
+        const propItem = Processor.args.props.find((i) => (typeof i === 'string' ? i === prop : i.prop === prop))
+        const resolvedModes: Map<string, RESOLVED_MODE> = new Map()
+
+        if (propItem) {
+          // prettier-ignore
+          switch (stratObj.strategy) {
+            case STRATS.MONO: {
+              if (!isProp(propItem, STRATS.MONO)) break;
+
+              const mode = typeof propItem === 'string' ? DEFAULT : propItem?.options
+              resolvedModes.set(mode, stratObj.colorScheme)
+            }; break
+            case STRATS.MULTI: {
+              Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => {
+                resolvedModes.set(key, colorScheme)
+              })
+            }; break
+            case STRATS.LIGHT_DARK:
+            case STRATS.SYSTEM: {
+              if (!isProp(propItem, STRATS.LIGHT_DARK) && !isProp(propItem, STRATS.SYSTEM)) break;
+
+              resolvedModes.set(typeof propItem === 'object' ? propItem.options.light ?? MODES.LIGHT : MODES.LIGHT, MODES.LIGHT)
+              resolvedModes.set(typeof propItem === 'object' ? propItem.options.dark ?? MODES.DARK : MODES.DARK, MODES.DARK)
+              if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
+            }; break
+            default: break
+          }
+
+          const systemMode = isProp(propItem, STRATS.SYSTEM) ? (typeof propItem !== 'string' ? (propItem.options.system ?? MODES.SYSTEM) : STRATS.SYSTEM) : undefined
+
+          this._modeHandling = {
+            prop,
+            strategy: stratObj.strategy,
+            resolvedModes,
+            system:
+              stratObj.strategy === STRATS.SYSTEM
+                ? {
+                    mode: systemMode!,
+                    fallback: stratObj.fallback,
+                  }
+                : undefined,
+            selector: Processor.args.mode?.selector ?? CONFIG.mode.selector,
+            store: Processor.args.mode?.store ?? CONFIG.mode.store,
+            storageKey: Processor.args.mode?.storageKey ?? CONFIG.mode.storageKey,
+          }
+        }
+      }
+    }
+
+    private static getInstance() {
+      if (!Processor.instance) Processor.instance = new Processor()
+      return Processor.instance
+    }
+
+    public static reboot(args: ScriptArgs) {
+      Processor._args = args
+      Processor.instance = new Processor()
+    }
+
+    public static get args() {
+      return Processor._args
+    }
+
+    public static get target() {
+      return Processor.getInstance()._target
+    }
+
+    public static get options() {
+      return Processor.getInstance()._options!
+    }
+
+    public static get modeHandling() {
+      return Processor.getInstance()._modeHandling as Exclude<Processor['_modeHandling'], undefined>
+    }
+
+    public static get observe() {
+      return Processor.getInstance()._observe!
+    }
+
+    public static get storageKey() {
+      return Processor.getInstance()._storageKey!
+    }
+
+    public static get nonce() {
+      return Processor.getInstance()._nonce!
+    }
+
+    public static get disableTransitionOnChange() {
+      return Processor.getInstance()._disableTransitionOnChange!
+    }
   }
 
   // #region STORAGE
   class StorageManager {
     private static instance: UndefinedOr<StorageManager> = undefined
+    private static controller = new AbortController()
     private _state: NullOr<State> = null
-    private _mode: UndefinedOr<string> = undefined
+    private _mode: UndefinedOr<string>
 
     private constructor() {
       const stateString = StorageManager.utils.retrieve(Processor.storageKey)
@@ -381,10 +404,12 @@ export function script(args: ScriptArgs) {
 
       StorageManager.storeState(values)
 
-      if (Processor.observers.includes(OBSERVERS.STORAGE)) {
-        window.addEventListener('storage', ({ key, newValue, oldValue }) => {
-          // prettier-ignore
-          switch (key) {
+      if (Processor.observe.includes(OBSERVABLES.STORAGE)) {
+        window.addEventListener(
+          'storage',
+          ({ key, newValue, oldValue }) => {
+            // prettier-ignore
+            switch (key) {
             case Processor.storageKey: {
               const { values } = Normalizer.ofJSON(newValue).normalize(oldValue)
               StorageManager.state = values
@@ -396,7 +421,9 @@ export function script(args: ScriptArgs) {
               if (value) StorageManager.mode = value
             }
           }
-        })
+          },
+          { signal: StorageManager.controller.signal }
+        )
       }
 
       EventManager.on('DOM:state:update', (state) => (StorageManager.state = state))
@@ -423,6 +450,13 @@ export function script(args: ScriptArgs) {
     private static storeMode(mode: string) {
       if (!Processor.modeHandling?.store) return
       StorageManager.utils.store(Processor.modeHandling.storageKey, mode)
+    }
+
+    public static dispose() {
+      StorageManager.controller.abort()
+
+      StorageManager.controller = new AbortController()
+      StorageManager.instance = undefined
     }
 
     public static get state() {
@@ -468,11 +502,12 @@ export function script(args: ScriptArgs) {
 
   // #region DOM
   class DOMManager {
-    private static instance: UndefinedOr<DOMManager> = undefined
-    private static target = document.getElementById(args.target ?? '') ?? document.documentElement
-    private static systemPref: UndefinedOr<RESOLVED_MODE> = undefined
+    private static instance: UndefinedOr<DOMManager>
+    private static target: HTMLElement = document.getElementById(Processor.target ?? '') ?? document.documentElement
+    private static systemPref: UndefinedOr<RESOLVED_MODE>
+    private observer: UndefinedOr<MutationObserver>
     private _state: NullOr<State> = null
-    private _resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
+    private _resolvedMode: UndefinedOr<RESOLVED_MODE>
 
     private constructor(values: State) {
       this._state = values
@@ -482,7 +517,7 @@ export function script(args: ScriptArgs) {
 
       DOMManager.applyState(values)
 
-      if (Processor.observers.includes(OBSERVERS.DOM)) {
+      if (Processor.observe.includes(OBSERVABLES.DOM)) {
         const handleMutations = (mutations: MutationRecord[]) => {
           const updates = new Map() as State
           for (const { attributeName, oldValue } of mutations) {
@@ -531,8 +566,8 @@ export function script(args: ScriptArgs) {
           if (updates.size > 0) DOMManager.state = updates
         }
 
-        const observer = new MutationObserver(handleMutations)
-        observer.observe(DOMManager.target, {
+        this.observer = new MutationObserver(handleMutations)
+        this.observer.observe(DOMManager.target, {
           attributes: true,
           attributeOldValue: true,
           attributeFilter: [
@@ -564,7 +599,7 @@ export function script(args: ScriptArgs) {
       const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.disableTransitions() : null
 
       values.forEach((value, key) => {
-        const currValue = DOMManager.target.getAttribute(`data-${key}`)
+        const currValue = this.target.getAttribute(`data-${key}`)
         const needsUpdate = currValue !== value
         if (needsUpdate) DOMManager.target.setAttribute(`data-${key}`, value)
       })
@@ -619,6 +654,12 @@ export function script(args: ScriptArgs) {
       if (isSystem) return DOMManager.getSystemPref() ?? Processor.modeHandling.resolvedModes.get(fallbackMode!)
 
       return Processor.modeHandling.resolvedModes.get(mode)
+    }
+
+    public static dispose() {
+      DOMManager.instance?.observer?.disconnect()
+      DOMManager.instance = undefined
+      DOMManager.target = document.getElementById(Processor.target ?? '') ?? document.documentElement
     }
 
     public static get state() {
@@ -690,6 +731,28 @@ export function script(args: ScriptArgs) {
       if (!Main.instance) Main.instance = new Main()
     }
 
+    public static reboot(args: ScriptArgs) {
+      if (JSON.stringify(args) === JSON.stringify(Processor.args)) return
+
+      console.warn('[T3M4] Rebooting...')
+
+      EventManager.emit('State:reset')
+      
+      Processor.reboot(args)
+      EventManager.clear()
+      StorageManager.dispose()
+      DOMManager.dispose()
+      Main.dispose()
+
+      Main.init()
+
+      console.warn('[T3M4] Rebooted!')
+    }
+
+    public static dispose() {
+      Main.instance = undefined
+    }
+
     public static get state() {
       return Main.getInstance()._state!
     }
@@ -720,7 +783,7 @@ export function script(args: ScriptArgs) {
   }
 
   // #region NEXT-THEMES
-  class NextThemes {
+  class T3M4 {
     public static get state() {
       return Main.state
     }
@@ -740,8 +803,12 @@ export function script(args: ScriptArgs) {
     public static subscribe<E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) {
       EventManager.on(e, cb)
     }
+
+    public static reboot(args: ScriptArgs) {
+      Main.reboot(args)
+    }
   }
 
   Main.init()
-  window.NextThemes = NextThemes
+  window.T3M4 = T3M4
 }

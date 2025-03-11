@@ -1,6 +1,6 @@
 {
   "name": "@t3m4/core",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A typesafe abstraction for advanced theming across frameworks.",
   "private": false,
   "main": "./dist/index.js",
