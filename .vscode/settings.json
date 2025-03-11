@@ -8,6 +8,7 @@
     "react": "React-components",
     "tailwind": "../../../../icons/tailwind-folder",
     "presets": "../../../../icons/presets-folder",
+    "T3M4": "../../../../icons/T3M4-folder",
     "next-intl": "Global",
   }
 }
