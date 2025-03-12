@@ -14,20 +14,20 @@ export const T3M4Provider = <Ps extends Props, C extends Config<Ps>>({ children,
   const options = useRef<T3M4Context<Ps, C>['options']>({} as T3M4Context<Ps, C>['options'])
 
   useEffect(() => {
-      window.T3M4.reboot(scriptArgs)
+      // window.T3M4.reboot(scriptArgs)
   
-      setState(Object.fromEntries(window.T3M4.state) as State<Ps, C>)
-      setResolvedMode(window.T3M4.resolvedMode)
-      options.current = Object.fromEntries(Array.from(window.T3M4.options.entries(), ([key, { options }]) => [key, Array.from(options)])) as T3M4Context<Ps, C>['options']
+      // setState(Object.fromEntries(window.T3M4.state) as State<Ps, C>)
+      // setResolvedMode(window.T3M4.resolvedMode)
+      // options.current = Object.fromEntries(Array.from(window.T3M4.options.entries(), ([key, { options }]) => [key, Array.from(options)])) as T3M4Context<Ps, C>['options']
   
-      window.T3M4.subscribe('DOM:state:update', (values) => setState(Object.fromEntries(values) as State<Ps, C>))
-      window.T3M4.subscribe('DOM:resolvedMode:update', resolvedMode => setResolvedMode(resolvedMode))
-      window.T3M4.subscribe('Storage:update', (values) => setState(Object.fromEntries(values) as State<Ps, C>))
-      window.T3M4.subscribe('State:reset', () => {
-        setState(null)
-        setResolvedMode(undefined)
-        options.current = {} as T3M4Context<Ps, C>['options']
-      })
+      // window.T3M4.subscribe('DOM:state:update', (values) => setState(Object.fromEntries(values) as State<Ps, C>))
+      // window.T3M4.subscribe('DOM:resolvedMode:update', resolvedMode => setResolvedMode(resolvedMode))
+      // window.T3M4.subscribe('Storage:update', (values) => setState(Object.fromEntries(values) as State<Ps, C>))
+      // window.T3M4.subscribe('State:reset', () => {
+      //   setState(null)
+      //   setResolvedMode(undefined)
+      //   options.current = {} as T3M4Context<Ps, C>['options']
+      // })
     }, [JSON.stringify(scriptArgs)])
 
   const updateState: T3M4Context<Ps, C>['updateState'] = (state) => {

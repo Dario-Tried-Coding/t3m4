@@ -1,9 +1,11 @@
 import { RESOLVED_MODE } from './constants'
+import { Unsafe_State as State } from './state'
 
 export type EventMap = {
-  'DOM:state:update': Map<string, string>
+  'DOM:state:update': State
   'DOM:resolvedMode:update': RESOLVED_MODE
-  'Storage:update': Map<string, string>
-  'State:update': Map<string, string>
+  'Storage:state:update': State
+  'Storage:mode:update': string
+  'State:update': State
   'State:reset': void
 }
