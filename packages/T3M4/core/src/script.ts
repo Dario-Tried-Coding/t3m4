@@ -48,7 +48,7 @@ export function script(args: ScriptArgs) {
 
   // #region CONFIG
   const CONFIG = {
-    storageKey: 'next-themes',
+    storageKey: 'T3M4',
     mode: {
       storageKey: 'theme',
       store: false,
@@ -112,19 +112,13 @@ export function script(args: ScriptArgs) {
       return true
     }
 
-    public static deepEqualMaps<K, V>(map1: Map<K, V>, map2: Map<K, V>): boolean {
-      if (map1 === map2) {
-        return true
-      }
-
-      if (map1.size !== map2.size) {
-        return false
-      }
+    public static deepEqualMaps<K, V>(map1: NullOr<Map<K, V>>, map2: NullOr<Map<K, V>>): boolean {
+      if (!map1 || !map2) return false
+      if (map1 === map2) return true
+      if (map1.size !== map2.size) return false
 
       for (const [key, value] of map1) {
-        if (!map2.has(key) || !Utils.deepEqualObjects(value, map2.get(key))) {
-          return false
-        }
+        if (!map2.has(key) || !Utils.deepEqualObjects(value, map2.get(key))) return false
       }
 
       return true
@@ -480,27 +474,39 @@ export function script(args: ScriptArgs) {
       const changedKeys = Processor.update(args)
       if (!changedKeys) return
 
+      Main.state = null
       Main.smartReboot(changedKeys)
     }
 
-    public static get state() {
-      if (!Main.instance) throw new Error('Main instance not initialized. Call Main.init() first.')
-      return Main.getInstance().state!
+    public static get state(): NullOr<State> {
+      return Main.instance?.state ?? null
     }
 
-    public static set state(state: State) {
-      Main.getInstance().state = state
-      EventManager.emit('State:update', state)
+    public static set state(state: NullOr<State>) {
+      if (!state) {
+        Main.getInstance().state = null
+        EventManager.emit('State:reset')
+        return
+      }
+
+      const currState = Main.state
+      const newState = Utils.merge(currState, state)
+
+      Main.getInstance().state = newState
+      EventManager.emit('State:update', newState)
     }
 
-    private state: UndefinedOr<State> = undefined
+    private state: NullOr<State> = null
 
     private constructor() {
       StorageManager.init()
-      
+      DOMManager.init()
+
       this.state = StorageManager.state
+      EventManager.emit('State:update', this.state)
 
       EventManager.on('Storage:state:update', (state) => (Main.state = state))
+      EventManager.on('DOM:state:update', (state) => (Main.state = state))
     }
   }
 
@@ -523,7 +529,7 @@ export function script(args: ScriptArgs) {
 
     private static store = {
       state(state: State) {
-        const currState = Main.state
+        const currState = Main.state ?? StorageManager.state
         const newState = Utils.merge(currState, state)
         const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
 
@@ -539,9 +545,9 @@ export function script(args: ScriptArgs) {
         const mustStoreMode = Processor.mode?.store
         if (!mustStoreMode) return
 
-        const currState = Main.state
+        const currState = Main.state ?? StorageManager.state
 
-        const currMode = currState.get(Processor.mode!.prop)
+        const currMode = currState?.get(Processor.mode!.prop)
         const storageCurrMode = StorageManager.utils.retrieve(Processor.mode!.storageKey)
 
         if (!currMode) return
@@ -579,6 +585,8 @@ export function script(args: ScriptArgs) {
     }
 
     private constructor() {
+      StorageManager.state = StorageManager.state
+
       EventManager.on('State:update', (state) => (StorageManager.state = state))
 
       if (Processor.observe.includes(OBSERVABLES.STORAGE)) {
@@ -616,5 +624,196 @@ export function script(args: ScriptArgs) {
     }
   }
 
+  // #region DOM MANAGER
+  class DOMManager implements Rebootable {
+    private static instance: UndefinedOr<DOMManager>
+    private static target = Processor.target
+    private static systemPref: UndefinedOr<RESOLVED_MODE>
+    private static observer: MutationObserver
+
+    private static utils = {
+      getSystemPref() {
+        if (!DOMManager.systemPref) {
+          const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
+          DOMManager.systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
+        }
+
+        return DOMManager.systemPref
+      },
+      resolveMode(state: State) {
+        if (!Processor.mode) return
+
+        const mode = state.get(Processor.mode.prop)
+        if (!mode) return
+
+        const isSystemStrat = Processor.mode.strategy === STRATS.SYSTEM
+        const isSystemMode = Processor.mode.system?.mode === mode
+        const isSystem = isSystemStrat && isSystemMode
+        const fallbackMode = Processor.mode.system?.fallback
+        if (isSystem) return DOMManager.utils.getSystemPref() ?? Processor.mode.resolvedModes.get(fallbackMode!)
+
+        return Processor.mode.resolvedModes.get(mode)
+      },
+      disableTransitions() {
+        const css = document.createElement('style')
+        if (Processor.nonce) css.setAttribute('nonce', Processor.nonce)
+        css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
+        document.head.appendChild(css)
+
+        return () => {
+          ;(() => window.getComputedStyle(document.body))()
+          setTimeout(() => document.head.removeChild(css), 1)
+        }
+      },
+    }
+
+    private static set state(state: State) {
+      const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.utils.disableTransitions() : undefined
+
+      state.forEach((value, prop) => {
+        const currValue = DOMManager.target.getAttribute(`data-${prop}`)
+        const needsUpdate = currValue !== value
+        if (needsUpdate) DOMManager.target.setAttribute(`data-${prop}`, value)
+      })
+
+      const resolvedMode = DOMManager.utils.resolveMode(state)
+      if (resolvedMode) {
+        if (Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME)) {
+          const currValue = DOMManager.target.style.colorScheme
+          const needsUpdate = currValue !== resolvedMode
+          if (needsUpdate) DOMManager.target.style.colorScheme = resolvedMode
+        }
+
+        if (Processor.mode?.selector.includes(SELECTORS.CLASS)) {
+          const isSet = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
+          if (isSet === resolvedMode) return
+
+          const other = resolvedMode === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
+          DOMManager.target.classList.replace(other, resolvedMode) || DOMManager.target.classList.add(resolvedMode)
+        }
+
+        if (Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) {
+          const currValue = DOMManager.target.getAttribute('data-color-scheme')
+          const needsUpdate = currValue !== resolvedMode
+          if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', resolvedMode)
+        }
+      }
+
+      const needsUpdate = !Utils.deepEqualMaps(Main.state, state)
+      if (needsUpdate) EventManager.emit('DOM:state:update', state)
+
+      enableTransitions?.()
+    }
+
+    public static resolveMode(state: State) {
+      return DOMManager.utils.resolveMode(state)
+    }
+
+    private constructor() {
+      EventManager.on('State:update', (state) => (DOMManager.state = state))
+
+      if (Processor.observe.includes(OBSERVABLES.DOM)) {
+        const handleMutations = (mutations: MutationRecord[]) => {
+          const updates = new Map() as State
+          for (const { attributeName, oldValue } of mutations) {
+            // prettier-ignore
+            switch (attributeName) {
+              case 'style': {
+                if (!Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME)) return
+
+                const currRM = DOMManager.utils.resolveMode(Main.state!)!
+                const newRM = DOMManager.target.style.colorScheme
+
+                const needsUpdate = currRM !== newRM
+                if (needsUpdate) DOMManager.target.style.colorScheme = currRM
+              }; break;
+              case 'class': {
+                if (!Processor.mode?.selector.includes(SELECTORS.CLASS)) return
+
+                const currRM = DOMManager.utils.resolveMode(Main.state!)!
+                const newRM = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
+
+                if (currRM !== newRM) {
+                  const other = currRM === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
+                  DOMManager.target.classList.replace(other, currRM) || DOMManager.target.classList.add(currRM)
+                }
+              }; break;
+              case 'data-color-scheme': {
+                if (!Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) return
+
+                const currRM = DOMManager.utils.resolveMode(Main.state!)!
+                const newRM = DOMManager.target.getAttribute('data-color-scheme')
+
+                const needsUpdate = currRM !== newRM
+                if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', currRM)
+              }; break;
+              default: {
+                if (!attributeName) return
+
+                const prop = attributeName.replace('data-', '')
+                const newValue = DOMManager.target.getAttribute(attributeName)
+
+                const { value: normValue } = Normalizer.normalize(prop, newValue, oldValue)
+                updates.set(prop, normValue!)
+              }
+            }
+          }
+          if (updates.size > 0) DOMManager.state = updates
+        }
+        DOMManager.observer = new MutationObserver(handleMutations)
+        DOMManager.observer.observe(DOMManager.target, {
+          attributes: true,
+          attributeOldValue: true,
+          attributeFilter: [
+            'data-color-scheme',
+            ...Array.from(Processor.options.keys()).map((prop) => `data-${prop}`),
+            ...(Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
+            ...(Processor.mode?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
+          ],
+        })
+      }
+
+      Main.registerModule(this, ['target', 'observe', 'mode', 'config', 'props'])
+    }
+
+    public static init() {
+      if (!DOMManager.instance) DOMManager.instance = new DOMManager()
+    }
+
+    public reboot() {
+      DOMManager.observer.disconnect()
+      DOMManager.target = Processor.target
+      DOMManager.instance = new DOMManager()
+    }
+  }
+
+  // #region T3M4
+  class T3M4 {
+    public static get state() {
+      return Main.state!
+    }
+
+    public static set state(values: State) {
+      Main.state = values
+    }
+
+    public static get resolvedMode() {
+      return DOMManager.resolveMode(Main.state!)
+    }
+
+    public static get options() {
+      return Processor.options
+    }
+
+    public static subscribe<E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) {
+      EventManager.on(e, cb)
+    }
+
+    public static reboot(args: ScriptArgs) {
+      Main.reboot(args)
+    }
+  }
+
   Main.init()
+  window.T3M4 = T3M4
 }
