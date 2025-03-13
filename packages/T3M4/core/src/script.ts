@@ -4,7 +4,7 @@ import { CONFIG } from './types/config'
 import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOption, SystemValues } from './types/config/props'
 import { CONSTANTS, OBSERVABLE, RESOLVED_MODE, STRAT } from './types/constants'
 import { STRATS } from './types/constants/strats'
-import { EventMap } from './types/events'
+import { CallbackID, EventMap } from './types/events'
 import { Unsafe_Options as Options } from './types/options'
 import { Unsafe_State as State } from './types/state'
 import { ModeProp } from './types/config/mode'
@@ -207,15 +207,15 @@ export function script(args: ScriptArgs) {
     }
   }
 
-  // #region EVENTS
+  // #region EVENT MANAGER
   class EventManager {
-    private static events: Map<string, Set<(...args: any[]) => void>> = new Map()
+    private static events: Map<string, Map<string, (...args: any[]) => void>> = new Map()
 
-    public static on<K extends keyof EventMap>(event: K, callback: (payload: EventMap[K]) => void): void {
-      if (!EventManager.events.has(event)) {
-        EventManager.events.set(event, new Set())
-      }
-      EventManager.events.get(event)!.add(callback)
+    public static on<K extends keyof EventMap>(event: K, id: CallbackID, callback: (payload: EventMap[K]) => void): void {
+      if (!EventManager.events.has(event)) EventManager.events.set(event, new Map())
+
+      const eventCallbacks = EventManager.events.get(event)!
+      eventCallbacks.set(id, callback)
     }
 
     public static emit<K extends keyof EventMap>(event: K, ...args: EventMap[K] extends void ? [] : [payload: EventMap[K]]): void {
@@ -226,6 +226,15 @@ export function script(args: ScriptArgs) {
       })
     }
 
+    public static off<K extends keyof EventMap>(event: K, id: CallbackID): void {
+      const eventCallbacks = EventManager.events.get(event)
+      if (eventCallbacks) {
+        eventCallbacks.delete(id)
+        if (eventCallbacks.size === 0) EventManager.events.delete(event)
+      }
+    }
+
+    // Metodo per rimuovere tutti gli eventi
     public static dispose() {
       EventManager.events.clear()
     }
@@ -437,14 +446,14 @@ export function script(args: ScriptArgs) {
     }
   }
 
-  interface Rebootable {
-    reboot(): void
+  interface Terminable {
+    terminate(): void
   }
 
   // #region MAIN
   class Main {
     private static instance: UndefinedOr<Main>
-    private static modules: Map<string, { instance: Rebootable; dependencies: (keyof ScriptArgs)[] }> = new Map()
+    private static modules: Map<string, { instance: Terminable; dependencies: (keyof ScriptArgs)[] }> = new Map()
 
     private static getInstance() {
       if (!Main.instance) Main.instance = new Main()
@@ -458,14 +467,14 @@ export function script(args: ScriptArgs) {
         if (dependencies.some((d) => changedKeys.includes(d))) modulesToRestart.push(name)
       })
 
-      modulesToRestart.forEach((name) => Main.modules.get(name)!.instance.reboot())
+      modulesToRestart.forEach((name) => Main.modules.get(name)!.instance.terminate())
     }
 
     public static init() {
       if (!Main.instance) Main.instance = new Main()
     }
 
-    public static registerModule(instance: Rebootable, dependencies: (keyof ScriptArgs)[]) {
+    public static registerModule(instance: Terminable, dependencies: (keyof ScriptArgs)[]) {
       const name = instance.constructor.name
       Main.modules.set(name, { instance, dependencies })
     }
@@ -474,47 +483,66 @@ export function script(args: ScriptArgs) {
       const changedKeys = Processor.update(args)
       if (!changedKeys) return
 
-      Main.state = null
+      EventManager.emit('State:reset')
       Main.smartReboot(changedKeys)
+      Main.instance = new Main()
     }
 
     public static get state(): NullOr<State> {
       return Main.instance?.state ?? null
     }
 
-    public static set state(state: NullOr<State>) {
-      if (!state) {
-        Main.getInstance().state = null
-        EventManager.emit('State:reset')
-        return
-      }
-
+    public static set state(state: State) {
       const currState = Main.state
       const newState = Utils.merge(currState, state)
+
+      const needsUpdate = !Utils.deepEqualMaps(currState, newState)
+      if (!needsUpdate) return
 
       Main.getInstance().state = newState
       EventManager.emit('State:update', newState)
     }
 
+    public static get resolvedMode(): UndefinedOr<RESOLVED_MODE> {
+      return Main.instance?.resolvedMode
+    }
+
+    public static set resolvedMode(RM: RESOLVED_MODE) {
+      const currRM = Main.resolvedMode
+      
+      const needsUpdate = currRM !== RM
+      if (!needsUpdate) return
+
+      Main.getInstance().resolvedMode = RM
+      EventManager.emit('ResolvedMode:update', RM)
+    }
+
     private state: NullOr<State> = null
+    private resolvedMode: UndefinedOr<RESOLVED_MODE>
 
     private constructor() {
       StorageManager.init()
       DOMManager.init()
 
-      this.state = StorageManager.state
-      EventManager.emit('State:update', this.state)
+      const storageState = StorageManager.state
+      this.state = storageState
+      EventManager.emit('State:update', storageState)
 
-      EventManager.on('Storage:state:update', (state) => (Main.state = state))
-      EventManager.on('DOM:state:update', (state) => (Main.state = state))
+      const resolvedMode = DOMManager.resolveMode(storageState)
+      this.resolvedMode = resolvedMode
+      if (resolvedMode) EventManager.emit('ResolvedMode:update', resolvedMode)
+
+      EventManager.on('Storage:state:update', 'Main:state:update', (state) => (Main.state = state))
+      EventManager.on('DOM:state:update', 'Main:state:update', (state) => (Main.state = state))
+      EventManager.on('DOM:resolvedMode:update', 'Main:resolvedMode:update', RM => Main.resolvedMode = RM)
     }
   }
 
   // #region STORAGE MANAGER
-  class StorageManager implements Rebootable {
+  class StorageManager implements Terminable {
     private static instance: UndefinedOr<StorageManager> = undefined
     private static isInternalChange = false
-    private static controller = new AbortController()
+    private static controller: AbortController
 
     private static utils = {
       retrieve(storageKey: string) {
@@ -529,7 +557,7 @@ export function script(args: ScriptArgs) {
 
     private static store = {
       state(state: State) {
-        const currState = Main.state ?? StorageManager.state
+        const currState = Main.state
         const newState = Utils.merge(currState, state)
         const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
 
@@ -545,12 +573,12 @@ export function script(args: ScriptArgs) {
         const mustStoreMode = Processor.mode?.store
         if (!mustStoreMode) return
 
-        const currState = Main.state ?? StorageManager.state
+        const currState = Main.state
 
         const currMode = currState?.get(Processor.mode!.prop)
-        const storageCurrMode = StorageManager.utils.retrieve(Processor.mode!.storageKey)
-
         if (!currMode) return
+
+        const storageCurrMode = StorageManager.utils.retrieve(Processor.mode!.storageKey)
 
         const storageNeedsUpdate = storageCurrMode !== currMode
         if (storageNeedsUpdate) StorageManager.utils.store(Processor.mode!.storageKey, mode)
@@ -572,7 +600,7 @@ export function script(args: ScriptArgs) {
 
     private static set state(state: State) {
       StorageManager.store.state(state)
-      StorageManager.store.mode(state.get(Processor.mode?.prop ?? ''))
+      if (Processor.mode) StorageManager.store.mode(state.get(Processor.mode.prop))
     }
 
     private static get mode(): Nullable<string> {
@@ -580,16 +608,17 @@ export function script(args: ScriptArgs) {
     }
 
     private static set mode(mode: string) {
+      if (!Processor.mode) return
+
       StorageManager.store.mode(mode)
-      StorageManager.store.state(new Map([[Processor.mode!.prop, mode]]))
+      StorageManager.store.state(new Map([[Processor.mode.prop, mode]]))
     }
 
     private constructor() {
-      StorageManager.state = StorageManager.state
-
-      EventManager.on('State:update', (state) => (StorageManager.state = state))
+      EventManager.on('State:update', 'StorageManager:state:update', (state) => (StorageManager.state = state))
 
       if (Processor.observe.includes(OBSERVABLES.STORAGE)) {
+        StorageManager.controller = new AbortController()
         window.addEventListener(
           'storage',
           ({ key, newValue, oldValue }) => {
@@ -617,15 +646,18 @@ export function script(args: ScriptArgs) {
       Main.registerModule(this, ['storageKey', 'observe', 'mode', 'config', 'props'])
     }
 
-    public reboot() {
+    public terminate() {
       StorageManager.controller.abort()
-      StorageManager.controller = new AbortController()
-      StorageManager.instance = new StorageManager()
+
+      localStorage.removeItem(Processor.storageKey)
+      if (Processor.mode) localStorage.removeItem(Processor.mode.storageKey)
+
+      StorageManager.instance = undefined
     }
   }
 
   // #region DOM MANAGER
-  class DOMManager implements Rebootable {
+  class DOMManager implements Terminable {
     private static instance: UndefinedOr<DOMManager>
     private static target = Processor.target
     private static systemPref: UndefinedOr<RESOLVED_MODE>
@@ -640,7 +672,8 @@ export function script(args: ScriptArgs) {
 
         return DOMManager.systemPref
       },
-      resolveMode(state: State) {
+      resolveMode(state: NullOr<State>) {
+        if (!state) return
         if (!Processor.mode) return
 
         const mode = state.get(Processor.mode.prop)
@@ -667,40 +700,65 @@ export function script(args: ScriptArgs) {
       },
     }
 
+    private static apply = {
+      state(state: State) {
+        state.forEach((value, prop) => {
+          const currValue = DOMManager.target.getAttribute(`data-${prop}`)
+          const needsUpdate = currValue !== value
+          if (needsUpdate) DOMManager.target.setAttribute(`data-${prop}`, value)
+        })
+
+        const currState = Main.state
+        const newState = Utils.merge(currState, state)
+
+        const needsUpdate = !Utils.deepEqualMaps(currState, newState)
+        if (needsUpdate) EventManager.emit('DOM:state:update', state)
+      },
+      resolvedMode(RM: UndefinedOr<RESOLVED_MODE>) {
+        if (!Processor.mode) return
+        if (!RM) return
+
+        if (Processor.mode.selector.includes(SELECTORS.COLOR_SCHEME)) {
+          const DomCurrRM = DOMManager.target.style.colorScheme
+          const DomNeedsUpdate = DomCurrRM !== RM
+          if (DomNeedsUpdate) DOMManager.target.style.colorScheme = RM
+        }
+
+        if (Processor.mode.selector.includes(SELECTORS.CLASS)) {
+          const isSet = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
+          if (isSet === RM) return
+
+          const other = RM === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
+          DOMManager.target.classList.replace(other, RM) || DOMManager.target.classList.add(RM)
+        }
+
+        if (Processor.mode.selector.includes(SELECTORS.DATA_ATTRIBUTE)) {
+          const currValue = DOMManager.target.getAttribute('data-color-scheme')
+          const needsUpdate = currValue !== RM
+          if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', RM)
+        }
+
+        const stateCurrRM = Main.resolvedMode
+        const stateNeedsUpdate = stateCurrRM !== RM
+        if (stateNeedsUpdate) EventManager.emit('DOM:resolvedMode:update', RM)
+      },
+    }
+
     private static set state(state: State) {
       const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.utils.disableTransitions() : undefined
 
-      state.forEach((value, prop) => {
-        const currValue = DOMManager.target.getAttribute(`data-${prop}`)
-        const needsUpdate = currValue !== value
-        if (needsUpdate) DOMManager.target.setAttribute(`data-${prop}`, value)
-      })
+      DOMManager.apply.state(state)
 
-      const resolvedMode = DOMManager.utils.resolveMode(state)
-      if (resolvedMode) {
-        if (Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME)) {
-          const currValue = DOMManager.target.style.colorScheme
-          const needsUpdate = currValue !== resolvedMode
-          if (needsUpdate) DOMManager.target.style.colorScheme = resolvedMode
-        }
+      const RM = DOMManager.utils.resolveMode(state)
+      DOMManager.apply.resolvedMode(RM)
 
-        if (Processor.mode?.selector.includes(SELECTORS.CLASS)) {
-          const isSet = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
-          if (isSet === resolvedMode) return
+      enableTransitions?.()
+    }
 
-          const other = resolvedMode === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
-          DOMManager.target.classList.replace(other, resolvedMode) || DOMManager.target.classList.add(resolvedMode)
-        }
+    private static set resolvedMode(RM: RESOLVED_MODE) {
+      const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.utils.disableTransitions() : undefined
 
-        if (Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) {
-          const currValue = DOMManager.target.getAttribute('data-color-scheme')
-          const needsUpdate = currValue !== resolvedMode
-          if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', resolvedMode)
-        }
-      }
-
-      const needsUpdate = !Utils.deepEqualMaps(Main.state, state)
-      if (needsUpdate) EventManager.emit('DOM:state:update', state)
+      DOMManager.apply.resolvedMode(RM)
 
       enableTransitions?.()
     }
@@ -710,7 +768,8 @@ export function script(args: ScriptArgs) {
     }
 
     private constructor() {
-      EventManager.on('State:update', (state) => (DOMManager.state = state))
+      EventManager.on('State:update', 'DOMManager:state:update', (state) => (DOMManager.state = state))
+      EventManager.on('ResolvedMode:update', 'DOMManager:resolvedMode:update', (RM) => (DOMManager.resolvedMode = RM))
 
       if (Processor.observe.includes(OBSERVABLES.DOM)) {
         const handleMutations = (mutations: MutationRecord[]) => {
@@ -721,7 +780,7 @@ export function script(args: ScriptArgs) {
               case 'style': {
                 if (!Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME)) return
 
-                const currRM = DOMManager.utils.resolveMode(Main.state!)!
+                const currRM = Main.resolvedMode!
                 const newRM = DOMManager.target.style.colorScheme
 
                 const needsUpdate = currRM !== newRM
@@ -730,7 +789,7 @@ export function script(args: ScriptArgs) {
               case 'class': {
                 if (!Processor.mode?.selector.includes(SELECTORS.CLASS)) return
 
-                const currRM = DOMManager.utils.resolveMode(Main.state!)!
+                const currRM = Main.resolvedMode!
                 const newRM = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
 
                 if (currRM !== newRM) {
@@ -738,14 +797,14 @@ export function script(args: ScriptArgs) {
                   DOMManager.target.classList.replace(other, currRM) || DOMManager.target.classList.add(currRM)
                 }
               }; break;
-              case 'data-color-scheme': {
+              case `data-${SELECTORS.DATA_ATTRIBUTE}`: {
                 if (!Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) return
 
-                const currRM = DOMManager.utils.resolveMode(Main.state!)!
-                const newRM = DOMManager.target.getAttribute('data-color-scheme')
+                const currRM = Main.resolvedMode!
+                const newRM = DOMManager.target.getAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`)
 
                 const needsUpdate = currRM !== newRM
-                if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', currRM)
+                if (needsUpdate) DOMManager.target.setAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`, currRM)
               }; break;
               default: {
                 if (!attributeName) return
@@ -765,25 +824,34 @@ export function script(args: ScriptArgs) {
           attributes: true,
           attributeOldValue: true,
           attributeFilter: [
-            'data-color-scheme',
             ...Array.from(Processor.options.keys()).map((prop) => `data-${prop}`),
             ...(Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
             ...(Processor.mode?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
+            ...(Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE) ? [`data-${SELECTORS.DATA_ATTRIBUTE}`] : []),
           ],
         })
       }
 
-      Main.registerModule(this, ['target', 'observe', 'mode', 'config', 'props'])
+      Main.registerModule(this, ['target', 'observe', 'mode', 'config', 'props', 'disableTransitionOnChange'])
     }
 
     public static init() {
       if (!DOMManager.instance) DOMManager.instance = new DOMManager()
     }
 
-    public reboot() {
+    public terminate() {
       DOMManager.observer.disconnect()
+
+      Main.state?.forEach((_, prop) => {
+        if (DOMManager.target.getAttribute(`data-${prop}`)) DOMManager.target.removeAttribute(`data-${prop}`)
+      })
+      if (DOMManager.target.style.colorScheme) DOMManager.target.style.colorScheme = ''
+      if (DOMManager.target.classList.contains(MODES.LIGHT)) DOMManager.target.classList.remove(MODES.LIGHT)
+      if (DOMManager.target.classList.contains(MODES.DARK)) DOMManager.target.classList.remove(MODES.DARK)
+      if (DOMManager.target.getAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`)) DOMManager.target.removeAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`)
+
       DOMManager.target = Processor.target
-      DOMManager.instance = new DOMManager()
+      DOMManager.instance = undefined
     }
   }
 
@@ -798,15 +866,15 @@ export function script(args: ScriptArgs) {
     }
 
     public static get resolvedMode() {
-      return DOMManager.resolveMode(Main.state!)
+      return Main.resolvedMode
     }
 
     public static get options() {
       return Processor.options
     }
 
-    public static subscribe<E extends keyof EventMap>(e: E, cb: (payload: EventMap[E]) => void) {
-      EventManager.on(e, cb)
+    public static subscribe<E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) {
+      EventManager.on(e, id, cb)
     }
 
     public static reboot(args: ScriptArgs) {

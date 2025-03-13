@@ -14,7 +14,7 @@ const config = {
     type: 'mode',
     strategy: 'system',
     preferred: 'system',
-    fallback: 'light'
+    fallback: 'dark'
   },
   radius: {
     type: 'generic',
@@ -30,7 +30,7 @@ const config = {
 type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TProps, TConfig> props={props} config={config} mode={{ selector: ['data-attribute'], store: true }} observe={['DOM', 'storage']} >
+  <ThemingProvider<TProps, TConfig> props={props} config={config} mode={{ selector: ['data-attribute'], store: false }} observe={['DOM', 'storage']} >
     {children}
   </ThemingProvider>
 )

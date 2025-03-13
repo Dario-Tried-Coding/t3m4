@@ -1,5 +1,13 @@
 # @t3m4/react
 
+## 0.0.10
+
+### Patch Changes
+
+- Smart rebooting & improved state management
+- Updated dependencies
+  - @t3m4/core@0.0.8
+
 ## 0.0.9
 
 ### Patch Changes

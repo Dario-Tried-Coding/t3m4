@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.0.8
+
+### Patch Changes
+
+- Smart rebooting & improved state management
+
 ## 0.0.7
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @t3m4/next
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @t3m4/react@0.0.10
+
 ## 0.0.4
 
 ### Patch Changes
