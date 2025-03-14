@@ -269,29 +269,13 @@ export function script(args: ScriptArgs) {
       return false
     }
 
-    private static getChangedKeys<A extends ScriptArgs>(newArgs: A, oldArgs: A): (keyof A)[] {
-      const changedKeys: (keyof A)[] = []
-
-      for (const key of Object.keys(newArgs)) {
-        const tKey = key as keyof A
-        if (!Utils.deepEqualObjects(newArgs[tKey], oldArgs[tKey])) {
-          changedKeys.push(tKey)
-        }
-      }
-
-      return changedKeys
-    }
-
-    public static update(args: ScriptArgs) {
+    public static needsReboot(args: ScriptArgs) {
       if (Utils.deepEqualObjects(args, Processor._args)) return
 
-      const changedKeys = Processor.getChangedKeys(args, Processor._args)
-      if (!changedKeys.length) return
-
-      Processor._args = args
-      Processor.instance = new Processor()
-
-      return changedKeys
+      return () => {
+        Processor._args = args
+        Processor.instance = new Processor()
+      }
     }
 
     public static getInstance() {
@@ -446,45 +430,25 @@ export function script(args: ScriptArgs) {
     }
   }
 
-  interface Terminable {
-    terminate(): void
-  }
-
   // #region MAIN
   class Main {
     private static instance: UndefinedOr<Main>
-    private static modules: Map<string, { instance: Terminable; dependencies: (keyof ScriptArgs)[] }> = new Map()
-
-    private static getInstance() {
-      if (!Main.instance) Main.instance = new Main()
-      return Main.instance
-    }
-
-    private static smartReboot(changedKeys: (keyof ScriptArgs)[]) {
-      const modulesToRestart: string[] = []
-
-      Main.modules.forEach(({ dependencies }, name) => {
-        if (dependencies.some((d) => changedKeys.includes(d))) modulesToRestart.push(name)
-      })
-
-      modulesToRestart.forEach((name) => Main.modules.get(name)!.instance.terminate())
-    }
 
     public static init() {
       if (!Main.instance) Main.instance = new Main()
     }
 
-    public static registerModule(instance: Terminable, dependencies: (keyof ScriptArgs)[]) {
-      const name = instance.constructor.name
-      Main.modules.set(name, { instance, dependencies })
-    }
-
     public static reboot(args: ScriptArgs) {
-      const changedKeys = Processor.update(args)
-      if (!changedKeys) return
+      const rebootProcessor = Processor.needsReboot(args)
+      if (!rebootProcessor) return
 
       EventManager.emit('State:reset')
-      Main.smartReboot(changedKeys)
+
+      StorageManager.terminate()
+      DOMManager.terminate()
+
+      rebootProcessor()
+
       Main.instance = new Main()
     }
 
@@ -493,54 +457,60 @@ export function script(args: ScriptArgs) {
     }
 
     public static set state(state: State) {
+      if (!Main.instance) return
+
       const currState = Main.state
       const newState = Utils.merge(currState, state)
 
       const needsUpdate = !Utils.deepEqualMaps(currState, newState)
-      if (!needsUpdate) return
+      if (needsUpdate) {
+        Main.instance.state = newState
+        EventManager.emit('State:update', newState)
+      }
 
-      Main.getInstance().state = newState
-      EventManager.emit('State:update', newState)
+      const resolvedMode = DOMManager.resolveMode(newState)
+      Main.resolvedMode = resolvedMode
     }
 
     public static get resolvedMode(): UndefinedOr<RESOLVED_MODE> {
       return Main.instance?.resolvedMode
     }
 
-    public static set resolvedMode(RM: RESOLVED_MODE) {
+    public static set resolvedMode(RM: UndefinedOr<RESOLVED_MODE>) {
+      if (!Main.instance) return
+      if (!RM) return
+
       const currRM = Main.resolvedMode
-      
+
       const needsUpdate = currRM !== RM
       if (!needsUpdate) return
 
-      Main.getInstance().resolvedMode = RM
+      Main.instance.resolvedMode = RM
       EventManager.emit('ResolvedMode:update', RM)
     }
 
     private state: NullOr<State> = null
-    private resolvedMode: UndefinedOr<RESOLVED_MODE>
+    private resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
 
     private constructor() {
       StorageManager.init()
       DOMManager.init()
 
-      const storageState = StorageManager.state
-      this.state = storageState
-      EventManager.emit('State:update', storageState)
+      const state = StorageManager.state
+      this.state = state
+      EventManager.emit('State:update', state)
 
-      const resolvedMode = DOMManager.resolveMode(storageState)
-      this.resolvedMode = resolvedMode
-      if (resolvedMode) EventManager.emit('ResolvedMode:update', resolvedMode)
-
-      EventManager.on('Storage:state:update', 'Main:state:update', (state) => (Main.state = state))
-      EventManager.on('DOM:state:update', 'Main:state:update', (state) => (Main.state = state))
-      EventManager.on('DOM:resolvedMode:update', 'Main:resolvedMode:update', RM => Main.resolvedMode = RM)
+      const resolvedMode = DOMManager.resolveMode(state)
+      if (resolvedMode) {
+        this.resolvedMode = resolvedMode
+        EventManager.emit('ResolvedMode:update', resolvedMode)
+      }
     }
   }
 
   // #region STORAGE MANAGER
-  class StorageManager implements Terminable {
-    private static instance: UndefinedOr<StorageManager> = undefined
+  class StorageManager {
+    private static instance: UndefinedOr<StorageManager>
     private static isInternalChange = false
     private static controller: AbortController
 
@@ -559,37 +529,50 @@ export function script(args: ScriptArgs) {
       state(state: State) {
         const currState = Main.state
         const newState = Utils.merge(currState, state)
-        const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
 
+        const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
         const storageNeedsUpdate = currStorageState !== Utils.mapToJSON(newState)
         if (storageNeedsUpdate) StorageManager.utils.store(Processor.storageKey, Utils.mapToJSON(newState))
 
         const stateNeedsUpdate = !Utils.deepEqualMaps(currState, newState)
-        if (stateNeedsUpdate) EventManager.emit('Storage:state:update', newState)
+        if (stateNeedsUpdate) Main.state = newState
       },
       mode(mode: UndefinedOr<string>) {
         if (!mode) return
-
-        const mustStoreMode = Processor.mode?.store
-        if (!mustStoreMode) return
+        if (!Processor.mode) return
+        if (!Processor.mode.store) return
 
         const currState = Main.state
+        const stateCurrMode = currState?.get(Processor.mode.prop)
+        const storageCurrMode = StorageManager.utils.retrieve(Processor.mode.storageKey)
 
-        const currMode = currState?.get(Processor.mode!.prop)
-        if (!currMode) return
-
-        const storageCurrMode = StorageManager.utils.retrieve(Processor.mode!.storageKey)
-
-        const storageNeedsUpdate = storageCurrMode !== currMode
+        const storageNeedsUpdate = storageCurrMode !== mode
         if (storageNeedsUpdate) StorageManager.utils.store(Processor.mode!.storageKey, mode)
 
-        const stateNeedsUpdate = currMode !== mode
-        if (stateNeedsUpdate) EventManager.emit('Storage:mode:update', mode)
+        const stateNeedsUpdate = stateCurrMode !== mode
+        if (stateNeedsUpdate) Main.state = new Map([[Processor.mode.prop, mode]])
       },
+    }
+
+    private static set state(state: State) {
+      StorageManager.store.state(state)
+    }
+
+    private static set mode(mode: UndefinedOr<string>) {
+      StorageManager.store.mode(mode)
     }
 
     public static init() {
       if (!StorageManager.instance) StorageManager.instance = new StorageManager()
+    }
+
+    public static terminate(): void {
+      StorageManager.controller.abort()
+
+      localStorage.removeItem(Processor.storageKey)
+      if (Processor.mode) localStorage.removeItem(Processor.mode.storageKey)
+
+      StorageManager.instance = undefined
     }
 
     public static get state() {
@@ -598,24 +581,11 @@ export function script(args: ScriptArgs) {
       return values
     }
 
-    private static set state(state: State) {
-      StorageManager.store.state(state)
-      if (Processor.mode) StorageManager.store.mode(state.get(Processor.mode.prop))
-    }
-
-    private static get mode(): Nullable<string> {
-      return Processor.mode ? StorageManager.utils.retrieve(Processor.mode.storageKey) : undefined
-    }
-
-    private static set mode(mode: string) {
-      if (!Processor.mode) return
-
-      StorageManager.store.mode(mode)
-      StorageManager.store.state(new Map([[Processor.mode.prop, mode]]))
-    }
-
     private constructor() {
-      EventManager.on('State:update', 'StorageManager:state:update', (state) => (StorageManager.state = state))
+      EventManager.on('State:update', 'StorageManager:state:update', (state) => {
+        StorageManager.state = state
+        StorageManager.mode = state.get(Processor.mode?.prop ?? '')
+      })
 
       if (Processor.observe.includes(OBSERVABLES.STORAGE)) {
         StorageManager.controller = new AbortController()
@@ -642,22 +612,11 @@ export function script(args: ScriptArgs) {
           { signal: StorageManager.controller.signal }
         )
       }
-
-      Main.registerModule(this, ['storageKey', 'observe', 'mode', 'config', 'props'])
-    }
-
-    public terminate() {
-      StorageManager.controller.abort()
-
-      localStorage.removeItem(Processor.storageKey)
-      if (Processor.mode) localStorage.removeItem(Processor.mode.storageKey)
-
-      StorageManager.instance = undefined
     }
   }
 
   // #region DOM MANAGER
-  class DOMManager implements Terminable {
+  class DOMManager {
     private static instance: UndefinedOr<DOMManager>
     private static target = Processor.target
     private static systemPref: UndefinedOr<RESOLVED_MODE>
@@ -712,11 +671,11 @@ export function script(args: ScriptArgs) {
         const newState = Utils.merge(currState, state)
 
         const needsUpdate = !Utils.deepEqualMaps(currState, newState)
-        if (needsUpdate) EventManager.emit('DOM:state:update', state)
+        if (needsUpdate) Main.state = newState
       },
       resolvedMode(RM: UndefinedOr<RESOLVED_MODE>) {
-        if (!Processor.mode) return
         if (!RM) return
+        if (!Processor.mode) return
 
         if (Processor.mode.selector.includes(SELECTORS.COLOR_SCHEME)) {
           const DomCurrRM = DOMManager.target.style.colorScheme
@@ -733,14 +692,14 @@ export function script(args: ScriptArgs) {
         }
 
         if (Processor.mode.selector.includes(SELECTORS.DATA_ATTRIBUTE)) {
-          const currValue = DOMManager.target.getAttribute('data-color-scheme')
-          const needsUpdate = currValue !== RM
-          if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', RM)
+          const DomCurrRM = DOMManager.target.getAttribute('data-color-scheme')
+          const DomNeedsUpdate = DomCurrRM !== RM
+          if (DomNeedsUpdate) DOMManager.target.setAttribute('data-color-scheme', RM)
         }
 
         const stateCurrRM = Main.resolvedMode
         const stateNeedsUpdate = stateCurrRM !== RM
-        if (stateNeedsUpdate) EventManager.emit('DOM:resolvedMode:update', RM)
+        if (stateNeedsUpdate) Main.resolvedMode = RM
       },
     }
 
@@ -748,9 +707,6 @@ export function script(args: ScriptArgs) {
       const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.utils.disableTransitions() : undefined
 
       DOMManager.apply.state(state)
-
-      const RM = DOMManager.utils.resolveMode(state)
-      DOMManager.apply.resolvedMode(RM)
 
       enableTransitions?.()
     }
@@ -761,6 +717,25 @@ export function script(args: ScriptArgs) {
       DOMManager.apply.resolvedMode(RM)
 
       enableTransitions?.()
+    }
+
+    public static init() {
+      if (!DOMManager.instance) DOMManager.instance = new DOMManager()
+    }
+
+    public static terminate() {
+      DOMManager.observer.disconnect()
+
+      Main.state?.forEach((_, prop) => {
+        if (DOMManager.target.getAttribute(`data-${prop}`)) DOMManager.target.removeAttribute(`data-${prop}`)
+      })
+      if (DOMManager.target.style.colorScheme) DOMManager.target.style.colorScheme = ''
+      if (DOMManager.target.classList.contains(MODES.LIGHT)) DOMManager.target.classList.remove(MODES.LIGHT)
+      if (DOMManager.target.classList.contains(MODES.DARK)) DOMManager.target.classList.remove(MODES.DARK)
+      if (DOMManager.target.getAttribute('data-color-scheme')) DOMManager.target.removeAttribute('data-color-scheme')
+
+      DOMManager.target = Processor.target
+      DOMManager.instance = undefined
     }
 
     public static resolveMode(state: State) {
@@ -831,27 +806,6 @@ export function script(args: ScriptArgs) {
           ],
         })
       }
-
-      Main.registerModule(this, ['target', 'observe', 'mode', 'config', 'props', 'disableTransitionOnChange'])
-    }
-
-    public static init() {
-      if (!DOMManager.instance) DOMManager.instance = new DOMManager()
-    }
-
-    public terminate() {
-      DOMManager.observer.disconnect()
-
-      Main.state?.forEach((_, prop) => {
-        if (DOMManager.target.getAttribute(`data-${prop}`)) DOMManager.target.removeAttribute(`data-${prop}`)
-      })
-      if (DOMManager.target.style.colorScheme) DOMManager.target.style.colorScheme = ''
-      if (DOMManager.target.classList.contains(MODES.LIGHT)) DOMManager.target.classList.remove(MODES.LIGHT)
-      if (DOMManager.target.classList.contains(MODES.DARK)) DOMManager.target.classList.remove(MODES.DARK)
-      if (DOMManager.target.getAttribute('data-color-scheme')) DOMManager.target.removeAttribute('data-color-scheme')
-
-      DOMManager.target = Processor.target
-      DOMManager.instance = undefined
     }
   }
 
