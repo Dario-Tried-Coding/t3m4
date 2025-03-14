@@ -1,5 +1,13 @@
 # @t3m4/react
 
+## 0.0.11
+
+### Patch Changes
+
+- Bug fixing & script state optimization
+- Updated dependencies
+  - @t3m4/core@0.0.9
+
 ## 0.0.10
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.0.9
+
+### Patch Changes
+
+- Bug fixing & script state optimization
+
 ## 0.0.8
 
 ### Patch Changes
