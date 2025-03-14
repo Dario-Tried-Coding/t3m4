@@ -1,9 +1,18 @@
 import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { buttonVariants } from '@/components/ui/Button'
 import { Link } from '@/lib/next-intl/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, Locale } from 'next-intl'
+import { setRequestLocale } from 'next-intl/server'
+import { use } from 'react'
 
-export default function Home() {
+interface Props {
+  params: Promise<{locale: Locale}>
+}
+export default function Home({ params }: Props) {
+  const { locale } = use(params)
+
+  setRequestLocale(locale)
+  
   const t = useTranslations('Marketing.Landing')
 
   return (

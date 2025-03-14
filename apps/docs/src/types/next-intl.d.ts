@@ -1,7 +1,11 @@
-import en from '../i18n/en.json'
+import messages from '../i18n/en.json'
+import { i18nRouting } from '@/lib/next-intl/routing'
+import { formats } from '@/lib/next-intl/request'
 
-type Messages = typeof en
-
-declare global {
-  interface IntlMessages extends Messages {}
+declare module 'next-intl' {
+  interface AppConfig {
+    Locale: (typeof i18nRouting.locales)[number]
+    Messages: typeof messages
+    Formats: typeof formats
+  }
 }

@@ -1,8 +1,6 @@
-import { FC, PropsWithChildren } from 'react'
+import { PropsWithChildren } from 'react'
 
 interface Props extends PropsWithChildren {}
-export const Page: FC<Props> = () => {
+export default function Page() {
   return <div>docs</div>
 }
-
-export default Page
