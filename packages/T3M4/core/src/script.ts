@@ -797,14 +797,14 @@ export function script(args: ScriptArgs) {
                   DOMManager.target.classList.replace(other, currRM) || DOMManager.target.classList.add(currRM)
                 }
               }; break;
-              case `data-${SELECTORS.DATA_ATTRIBUTE}`: {
+              case 'data-color-scheme': {
                 if (!Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) return
 
                 const currRM = Main.resolvedMode!
-                const newRM = DOMManager.target.getAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`)
+                const newRM = DOMManager.target.getAttribute('data-color-scheme')
 
                 const needsUpdate = currRM !== newRM
-                if (needsUpdate) DOMManager.target.setAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`, currRM)
+                if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', currRM)
               }; break;
               default: {
                 if (!attributeName) return
@@ -827,7 +827,7 @@ export function script(args: ScriptArgs) {
             ...Array.from(Processor.options.keys()).map((prop) => `data-${prop}`),
             ...(Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
             ...(Processor.mode?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
-            ...(Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE) ? [`data-${SELECTORS.DATA_ATTRIBUTE}`] : []),
+            ...(Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE) ? ['data-color-scheme'] : []),
           ],
         })
       }
@@ -848,7 +848,7 @@ export function script(args: ScriptArgs) {
       if (DOMManager.target.style.colorScheme) DOMManager.target.style.colorScheme = ''
       if (DOMManager.target.classList.contains(MODES.LIGHT)) DOMManager.target.classList.remove(MODES.LIGHT)
       if (DOMManager.target.classList.contains(MODES.DARK)) DOMManager.target.classList.remove(MODES.DARK)
-      if (DOMManager.target.getAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`)) DOMManager.target.removeAttribute(`data-${SELECTORS.DATA_ATTRIBUTE}`)
+      if (DOMManager.target.getAttribute('data-color-scheme')) DOMManager.target.removeAttribute('data-color-scheme')
 
       DOMManager.target = Processor.target
       DOMManager.instance = undefined
