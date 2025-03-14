@@ -10,8 +10,7 @@ import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from './ui/Drawer'
 import { Label } from './ui/Label'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/Popover'
 
-interface Props {}
-export const ThemeSwitch: FC<Props> = ({}) => {
+export const ThemeSwitch: FC = ({}) => {
   const t = useTranslations('ThemeSwitch')
 
   return (

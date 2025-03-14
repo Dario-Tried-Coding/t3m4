@@ -6,7 +6,7 @@ import { i18nRouting } from '@/lib/next-intl/routing'
 import { cn } from '@/lib/utils'
 import '@/styles/globals.css'
 import { hasLocale, Locale } from 'next-intl'
-import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { ReactNode } from 'react'
 
@@ -19,10 +19,9 @@ export function generateStaticParams() {
   return i18nRouting.locales.map((locale) => ({ locale }))
 }
 
-export async function generateMetadata({ params }: Omit<Props, 'children'>) {
-  const { locale } = await params
-
-  const t = await getTranslations({ locale, namespace: 'Index' })
+export async function generateMetadata({ }: Omit<Props, 'children'>) {
+  // const { locale } = await params
+  // const t = await getTranslations({ locale, namespace: 'Index' })
 
   return {
     title: 'Create Next App',

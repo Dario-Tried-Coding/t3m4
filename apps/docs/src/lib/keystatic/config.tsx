@@ -1,4 +1,5 @@
 import { config, fields, collection } from '@keystatic/core'
+import Image from 'next/image'
 
 export const showAdminUI = process.env.NODE_ENV === 'development'
 
@@ -9,7 +10,7 @@ export default config({
       mark({ colorScheme }) {
         const path = colorScheme === 'dark' ? '/logo-light.svg' : '/logo-dark.svg'
 
-        return <img src={path} alt="T3M4" width={24} height={24} />
+        return <Image src={path} alt="T3M4" width={24} height={24} />
       },
     },
   },

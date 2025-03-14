@@ -1,4 +1,5 @@
 import plugin from 'tailwindcss/plugin'
+import animatePlugin from 'tailwindcss-animate'
 
 function withOpacity(color: string) {
   return `hsla(var(${color}), <alpha-value>)`
@@ -63,6 +64,6 @@ export const shadcnUIPlugin = plugin(
         },
       },
     },
-    plugins: [require('tailwindcss-animate')],
+    plugins: [animatePlugin],
   }
 )

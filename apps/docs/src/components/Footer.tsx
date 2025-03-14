@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { FC } from 'react'
-import { siteConfig } from '../../config/site.config'
+import { siteConfig } from '../config/site.config'
 
 export const Footer: FC = () => {
   const t = useTranslations('Footer')

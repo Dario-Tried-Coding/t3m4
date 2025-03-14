@@ -1,8 +1,8 @@
-import { NestedKeyOf } from 'next-intl'
+import { Messages, NestedKeyOf } from 'next-intl'
 import { JSX } from 'react'
 
 type LinkConfig = {
-  label: NestedKeyOf<IntlMessages['Navbar']['Links']>
+  label: NestedKeyOf<Messages['Navbar']['Links']>
   href: string
   showIn: ('header' | 'footer')[]
   disabled?: boolean

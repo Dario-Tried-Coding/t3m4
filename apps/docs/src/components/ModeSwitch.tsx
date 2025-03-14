@@ -20,8 +20,7 @@ const Icon: FC<IconProps> = ({ mode, ...rest }) => {
   return icons[mode]
 }
 
-interface Props {}
-export const ModeSwitch: FC<Props> = ({}) => {
+export const ModeSwitch: FC = ({}) => {
   const { state, updateState, resolvedMode } = useT3M4()
   const t = useTranslations('ThemeSwitch')
 
