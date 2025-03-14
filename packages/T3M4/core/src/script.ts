@@ -5,7 +5,7 @@ import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOpt
 import { CONSTANTS, OBSERVABLE, RESOLVED_MODE, STRAT } from './types/constants'
 import { STRATS } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
-import { Unsafe_Options as Options } from './types/options'
+import { Mapped_Options as Options } from './types/options'
 import { Unsafe_State as State } from './types/state'
 import { ModeProp } from './types/config/mode'
 
@@ -452,6 +452,11 @@ export function script(args: ScriptArgs) {
       Main.instance = new Main()
     }
 
+    public static get options() {
+      const options = Processor.options
+      return Object.fromEntries(Array.from(options.entries()).map(([prop, {options}]) => [prop, Array.from(options)]))
+    }
+
     public static get state(): NullOr<State> {
       return Main.instance?.state ?? null
     }
@@ -824,7 +829,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static get options() {
-      return Processor.options
+      return Main.options
     }
 
     public static subscribe<E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) {

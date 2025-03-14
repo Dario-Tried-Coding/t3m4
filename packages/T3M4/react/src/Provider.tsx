@@ -16,7 +16,7 @@ export const T3M4Provider = <Ps extends Props, C extends Config<Ps>>({ children,
   useEffect(() => {
     setState(Object.fromEntries(window.T3M4.state) as State<Ps, C>)
     setResolvedMode(window.T3M4.resolvedMode)
-    options.current = Object.fromEntries(Array.from(window.T3M4.options.entries(), ([key, { options }]) => [key, Array.from(options)])) as T3M4Context<Ps, C>['options']
+    options.current = window.T3M4.options as T3M4Context<Ps, C>['options']
 
     window.T3M4.subscribe('State:update', 'React:state:update', (values) => setState(Object.fromEntries(values) as State<Ps, C>))
     window.T3M4.subscribe('ResolvedMode:update', 'React:resolvedMode:update', (RM) => setResolvedMode(RM))
