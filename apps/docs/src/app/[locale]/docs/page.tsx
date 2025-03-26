@@ -1,3 +1,5 @@
 export default function Page() {
-  return <div>docs</div>
+  return <div data-force-color='red'>
+    docs
+  </div>
 }
