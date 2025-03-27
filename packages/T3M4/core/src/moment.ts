@@ -454,7 +454,7 @@ export function script(args: ScriptArgs) {
 
     public static get options() {
       const options = Processor.options
-      return Object.fromEntries(Array.from(options.entries()).map(([prop, {options}]) => [prop, Array.from(options)]))
+      return Object.fromEntries(Array.from(options.entries()).map(([prop, { options }]) => [prop, Array.from(options)]))
     }
 
     public static get state(): NullOr<State> {
@@ -492,13 +492,9 @@ export function script(args: ScriptArgs) {
         Main.instance.forced = state
         EventManager.emit('Forced:update', state)
       }
-
-      
     }
 
-    public static force(prop: string, value: string) {
-
-    }
+    public static force(prop: string, value: string) {}
 
     public static get resolvedMode(): UndefinedOr<RESOLVED_MODE> {
       return Main.instance?.resolvedMode
@@ -703,14 +699,14 @@ export function script(args: ScriptArgs) {
       findEverythingWithAttrs(el: HTMLElement, attrs: string[]) {
         const mathedElements: HTMLElement[] = []
 
-        if (attrs.some(attr => el.hasAttribute(attr))) mathedElements.push(el)
-        
-        el.querySelectorAll('*').forEach(child => {
-          if (child instanceof HTMLElement && attrs.some(attr => child.hasAttribute(attr))) mathedElements.push(child)
+        if (attrs.some((attr) => el.hasAttribute(attr))) mathedElements.push(el)
+
+        el.querySelectorAll('*').forEach((child) => {
+          if (child instanceof HTMLElement && attrs.some((attr) => child.hasAttribute(attr))) mathedElements.push(child)
         })
-        
+
         return mathedElements
-      }
+      },
     }
 
     private static apply = {
@@ -898,7 +894,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static terminate() {
-      Object.values(DOMManager.observers).forEach(o => o.disconnect())
+      Object.values(DOMManager.observers).forEach((o) => o.disconnect())
 
       Main.state?.forEach((_, prop) => {
         if (DOMManager.target.getAttribute(`data-${prop}`)) DOMManager.target.removeAttribute(`data-${prop}`)

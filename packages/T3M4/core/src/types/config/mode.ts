@@ -1,27 +1,25 @@
 import { UndefinedOr } from '@t3m4/utils/nullables'
-import { SystemValues } from './props'
 import { RESOLVED_MODE, STRATS } from '../constants'
+import { System_Values } from './props'
 
-export type ModeMono<V extends string = string> = { strategy: STRATS['MONO']; preferred: V; colorScheme: RESOLVED_MODE }
+export type Mode_Mono_Strat_Obj<V extends string = string> = { strategy: STRATS['MONO']; preferred: V; colorScheme: RESOLVED_MODE }
 
-export type ModeMulti<V extends string[] = string[]> = { strategy: STRATS['MULTI']; preferred: V[number]; colorSchemes: { [K in V[number]]: RESOLVED_MODE } }
+export type Mode_Multi_Strat_Obj<V extends string[] = string[]> = { strategy: STRATS['MULTI']; preferred: V[number]; colorSchemes: { [K in V[number]]: RESOLVED_MODE } }
 
-type ColorSchemes<CustomV extends UndefinedOr<string[]>> = [CustomV] extends [undefined]
-  ? {
-      colorSchemes?: Record<string, RESOLVED_MODE>
-    }
-  : CustomV extends string[]
-    ? { colorSchemes: Record<CustomV[number], RESOLVED_MODE> }
+type Color_Schemes<Custom_Values extends UndefinedOr<string[]>> = Custom_Values extends [undefined]
+  ? { colorSchemes?: Record<string, RESOLVED_MODE> }
+  : Custom_Values extends string[]
+    ? { colorSchemes: Record<Custom_Values[number], RESOLVED_MODE> }
     : {}
 
-export type ModeLightDark<V extends Omit<SystemValues, 'system'> = { light: undefined; dark: undefined; custom: undefined }> = {
+export type Mode_Light_Dark_Strat_Obj<V extends Omit<System_Values, 'system'> = { light: undefined; dark: undefined; custom: undefined }> = {
   strategy: STRATS['LIGHT_DARK']
   preferred: [V['light'], V['dark'], V['custom']] extends [undefined, undefined, undefined]
     ? string
     : (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
-} & ColorSchemes<V['custom']>
+} & Color_Schemes<V['custom']>
 
-export type ModeSystem<V extends SystemValues = { light: undefined; dark: undefined; system: undefined; custom: undefined }> = {
+export type Mode_System_Strat_Obj<V extends System_Values = { light: undefined; dark: undefined; system: undefined; custom: undefined }> = {
   strategy: STRATS['SYSTEM']
   preferred: [V['light'], V['dark'], V['system'], V['custom']] extends [undefined, undefined, undefined, undefined]
     ? string
@@ -29,6 +27,6 @@ export type ModeSystem<V extends SystemValues = { light: undefined; dark: undefi
   fallback: [V['light'], V['dark'], V['system'], V['custom']] extends [undefined, undefined, undefined, undefined]
     ? string
     : (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
-} & ColorSchemes<V['custom']>
+} & Color_Schemes<V['custom']>
 
-export type ModeProp = ModeMono | ModeMulti | ModeLightDark | ModeSystem
+export type Mode_Strat_Obj = Mode_Mono_Strat_Obj | Mode_Multi_Strat_Obj | Mode_Light_Dark_Strat_Obj | Mode_System_Strat_Obj

@@ -1,42 +1,61 @@
-import { Config, ExplicitProp, ExtractProps, Prop, Props, SystemValues } from './config/index'
-
-type ExtractProp<Ps extends Props, P extends Prop> = P extends string ? (P extends ExtractProps<Ps> ? P : never) : P extends ExplicitProp ? (P['prop'] extends ExtractProps<Ps> ? P['prop'] : never) : never
+import { Config, Props } from './config/index'
+import { Mode_Light_Dark_Strat_Obj, Mode_Mono_Strat_Obj, Mode_Multi_Strat_Obj, Mode_System_Strat_Obj } from './config/mode'
+import { Explicit_Generic_Prop, Explicit_Mode_Prop, Generic_Prop, Implicit_Generic_Prop, Light_Dark_Opt, Mono_Opt, Multi_Opt, System_Opt } from './config/props'
+import { DEFAULT } from './constants'
+import { MODES } from './constants/modes'
 
 export type State<Ps extends Props, C extends Config<Ps>> = {
-  [P in Ps[number] as P extends string ? P : P extends ExplicitProp ? P['prop'] : never]: ExtractProp<Ps, P> extends keyof C
-    ? C[ExtractProp<Ps, P>]['strategy'] extends 'mono'
-      ? P extends string
-        ? 'default'
-        : P extends ExplicitProp
-          ? P['options']
-          : never
-      : C[ExtractProp<Ps, P>]['strategy'] extends 'multi'
-        ? P extends ExplicitProp
-          ? P['options'] extends string[]
-            ? P['options'][number]
-            : never
-          : never
-        : C[ExtractProp<Ps, P>]['strategy'] extends 'light&dark'
-          ? P extends string
-            ? 'light' | 'dark'
-            : P extends ExplicitProp
-              ? P['options'] extends SystemValues
-                ? (P['options']['light'] extends string ? P['options']['light'] : 'light') | (P['options']['dark'] extends string ? P['options']['dark'] : 'dark') | (P['options']['custom'] extends string[] ? P['options']['custom'][number] : never)
+  [I in keyof C]: I extends keyof Ps
+    ? (Ps[I]['props'] extends Generic_Prop[]
+        ? {
+            [P in Ps[I]['props'][number] as P extends Explicit_Generic_Prop ? P['prop'] : P]: P extends Implicit_Generic_Prop
+              ? DEFAULT
+              : P extends Explicit_Generic_Prop
+                ? P['options'] extends Mono_Opt
+                  ? P['options']
+                  : P['options'] extends Multi_Opt
+                    ? P['options'][number]
+                    : DEFAULT
                 : never
-              : never
-          : C[ExtractProp<Ps, P>]['strategy'] extends 'system'
-            ? P extends string
-              ? 'light' | 'dark' | 'system'
-              : P extends ExplicitProp
-                ? P['options'] extends SystemValues
-                  ?
-                      | (P['options']['light'] extends string ? P['options']['light'] : 'light')
-                      | (P['options']['dark'] extends string ? P['options']['dark'] : 'dark')
-                      | (P['options']['system'] extends string ? P['options']['system'] : 'system')
-                      | (P['options']['custom'] extends string[] ? P['options']['custom'][number] : never)
-                  : never
-                : never
-            : never
+          }
+        : {}) &
+        (C[I] extends { mode: any }
+          ? {
+              [K in C[I]['mode'] extends { prop: string } ? C[I]['mode']['prop'] : 'mode']: C[I]['mode'] extends Mode_Mono_Strat_Obj
+                ? Ps[I]['mode'] extends Explicit_Mode_Prop
+                  ? Ps[I]['mode']['options'] extends Mono_Opt
+                    ? Ps[I]['mode']['options']
+                    : DEFAULT
+                  : DEFAULT
+                : C[I]['mode'] extends Mode_Multi_Strat_Obj
+                  ? Ps[I]['mode'] extends Explicit_Mode_Prop
+                    ? Ps[I]['mode']['options'] extends Multi_Opt
+                      ? Ps[I]['mode']['options'][number]
+                      : never
+                    : never
+                  : C[I]['mode'] extends Mode_Light_Dark_Strat_Obj
+                    ? Ps[I]['mode'] extends Explicit_Mode_Prop
+                      ? Ps[I]['mode']['options'] extends Light_Dark_Opt
+                        ?
+                            | (Ps[I]['mode']['options']['light'] extends string ? Ps[I]['mode']['options']['light'] : 'light')
+                            | (Ps[I]['mode']['options']['dark'] extends string ? Ps[I]['mode']['options']['dark'] : 'dark')
+                            | (Ps[I]['mode']['options']['custom'] extends string[] ? Ps[I]['mode']['options']['custom'][number] : never)
+                        : MODES['LIGHT'] | MODES['DARK']
+                      : MODES['LIGHT'] | MODES['DARK']
+                    : C[I]['mode'] extends Mode_System_Strat_Obj
+                      ? Ps[I]['mode'] extends Explicit_Mode_Prop
+                        ? Ps[I]['mode']['options'] extends System_Opt
+                          ?
+                              | (Ps[I]['mode']['options']['light'] extends string ? Ps[I]['mode']['options']['light'] : 'light')
+                              | (Ps[I]['mode']['options']['dark'] extends string ? Ps[I]['mode']['options']['dark'] : 'dark')
+                              | (Ps[I]['mode']['options']['system'] extends string ? Ps[I]['mode']['options']['system'] : 'system')
+                              | (Ps[I]['mode']['options']['custom'] extends string[] ? Ps[I]['mode']['options']['custom'][number] : never)
+                          : MODES['LIGHT'] | MODES['DARK'] | MODES['SYSTEM']
+                        : MODES['LIGHT'] | MODES['DARK'] | MODES['SYSTEM']
+                      : never
+            }
+          : {})
     : never
 }
-export type Unsafe_State = Map<string, string>
+
+export type Unsafe_State = Map<string, Map<string, string>>

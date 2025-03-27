@@ -4,7 +4,7 @@ import { PROP_TYPES } from './props'
 import { SELECTORS, SELECTOR } from './selectors'
 import { STRATS, STRAT } from './strats'
 
-type DEFAULT = 'default'
+export type DEFAULT = 'default'
 
 export type CONSTANTS = {
   DEFAULT: DEFAULT
