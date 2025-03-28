@@ -1,5 +1,5 @@
 import { UndefinedOr } from '@t3m4/utils/nullables'
-import { System_Values } from '../options'
+import { System_Values } from '../schema'
 import { SELECTOR } from '../../constants/selectors'
 import { STRATS } from '../../constants/strats'
 import { RESOLVED_MODE } from '../../constants/modes'

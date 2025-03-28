@@ -6,9 +6,9 @@ import { State } from './subscribers/state'
 import { Options } from './subscribers/options'
 
 export interface T3M4 {
-  state: State.Static
+  state: State
   resolvedMode: UndefinedOr<RESOLVED_MODE>
-  options: Options.Static
+  options: Options
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
   reboot: (args: ScriptArgs) => void
 }

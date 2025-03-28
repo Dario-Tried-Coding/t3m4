@@ -1,14 +1,14 @@
 'use client'
 
-import { PropsWithChildren } from 'react'
 import { T3M4Provider as Provider, Script } from '@t3m4/react'
-import { Config, Options, ScriptArgs } from '@t3m4/react/types'
+import { Config, Schema, ScriptArgs } from '@t3m4/react/types'
+import { PropsWithChildren } from 'react'
 
-interface T3M4Props<O extends Options.Schema, C extends Config.Dynamic<O>> extends PropsWithChildren, ScriptArgs {
-  options: O
+interface T3M4Props<Sc extends Schema, C extends Config<Sc>> extends PropsWithChildren, ScriptArgs {
+  schema: Sc
   config: C
 }
-export const T3M4Provider = <O extends Options.Schema, C extends Config.Dynamic<O>>({ children, ...scriptArgs }: T3M4Props<O, C>) => {
+export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4Props<Sc, C>) => {
   return (
     <Provider {...scriptArgs}>
       <Script scriptArgs={scriptArgs} />

@@ -179,7 +179,7 @@ export function script(args: ScriptArgs) {
       options(args: ScriptArgs) {
         const options_map: Processor['_options'] = new Map()
 
-        for (const [island, facets] of Object.entries(args.options)) {
+        for (const [island, facets] of Object.entries(args.schema)) {
           const facets_map: NonNullable<ReturnType<Options['get']>> = new Map()
 
           for (const [facet, opt] of Object.entries(facets)) {
@@ -233,7 +233,7 @@ export function script(args: ScriptArgs) {
               case (STRATS.MULTI): Object.entries(strat_obj.colorSchemes).forEach(([mode, cs]) => resolvedModes.set(mode, cs)); break;
               case (STRATS.LIGHT_DARK):
               case (STRATS.SYSTEM): {
-                const opt = args.options[island]![facet]!
+                const opt = args.schema[island]![facet]!
 
                 if (opt === true) {
                   resolvedModes.set(MODES.LIGHT, MODES.LIGHT)
@@ -251,7 +251,7 @@ export function script(args: ScriptArgs) {
             // systemMode
             let systemMode: Mode['systemMode'] = undefined
             if (strat === STRATS.SYSTEM) {
-              const opt = args.options[island]![facet]!
+              const opt = args.schema[island]![facet]!
               if (opt === true || (typeof opt === 'object' && !Array.isArray(opt))) {
                 systemMode = {
                   name: opt === true ? MODES.SYSTEM : ((opt as { system: string }).system ?? MODES.SYSTEM),

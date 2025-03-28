@@ -4,12 +4,12 @@ import { MODES } from './constants/modes'
 import { SELECTOR, SELECTORS } from './constants/selectors'
 import { STRATS } from './constants/strats'
 import { Config } from './subscribers/config'
-import { Options } from './subscribers/options'
+import { Schema } from './subscribers/schema'
 
 export type ScriptArgs = {
   storageKey?: string
-  options: Options.Schema
-  config: Config.Static
+  schema: Schema
+  config: Config
   mode?: {
     storageKey?: string
     store?: boolean

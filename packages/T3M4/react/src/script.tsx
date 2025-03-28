@@ -1,13 +1,13 @@
 import { script as unsafeScript } from '@t3m4/core'
 import { ScriptArgs as UnsafeScriptArgs } from '@t3m4/core/types'
-import { Options, Config } from '@t3m4/core/types/subscribers'
+import { Options, Config, Schema } from '@t3m4/core/types/subscribers'
 import { ScriptHTMLAttributes } from 'react'
 
-interface ScriptArgs<O extends Options.Schema, C extends Config.Dynamic<O>> extends UnsafeScriptArgs {
-  options: O
+interface ScriptArgs<Sc extends Schema, C extends Config<Sc>> extends UnsafeScriptArgs {
+  schema: Sc
   config: C
 }
-export const script = <O extends Options.Schema, C extends Config.Dynamic<O>>(scriptArgs: ScriptArgs<O, C>) => unsafeScript(scriptArgs)
+export const script = <Sc extends Schema, C extends Config<Sc>>(scriptArgs: ScriptArgs<Sc, C>) => unsafeScript(scriptArgs)
 
 interface ScriptProps extends Omit<ScriptHTMLAttributes<HTMLScriptElement>, 'nonce'> {
   scriptArgs: UnsafeScriptArgs
