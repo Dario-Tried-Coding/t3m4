@@ -1,4 +1,4 @@
-import { T3M4 } from "./interface"
+import { T3M4 } from './interface'
 
 declare global {
   interface Window {

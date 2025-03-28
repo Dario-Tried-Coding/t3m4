@@ -37,15 +37,15 @@
       "types": "./dist/types/index.d.ts",
       "default": "./dist/types/index.js"
     },
-    "./types/config": {
-      "import": "./dist/types/config/index.mjs",
-      "types": "./dist/types/config/index.d.ts",
-      "default": "./dist/types/config/index.js"
+    "./types/subscribers": {
+      "import": "./dist/types/subscribers/index.mjs",
+      "types": "./dist/types/subscribers/index.d.ts",
+      "default": "./dist/types/subscribers/index.js"
     },
     "./types/constants": {
-      "import": "./dist/types/constants/exports.mjs",
-      "types": "./dist/types/constants/exports.d.ts",
-      "default": "./dist/types/constants/exports.js"
+      "import": "./dist/types/constants/index.mjs",
+      "types": "./dist/types/constants/index.d.ts",
+      "default": "./dist/types/constants/index.js"
     }
   },
   "dependencies": {

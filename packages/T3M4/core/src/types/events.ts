@@ -1,8 +1,8 @@
-import { RESOLVED_MODE } from './constants'
-import { Unsafe_State as State } from './state'
+import { RESOLVED_MODE } from './constants/modes'
+import { T3M4 } from './interface'
 
 export type EventMap = {
-  'State:update': State
+  'State:update': T3M4['state']
   'State:reset': void
   'ResolvedMode:update': RESOLVED_MODE
 }

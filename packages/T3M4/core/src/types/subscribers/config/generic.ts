@@ -1,6 +1,6 @@
-import { STRATS } from '../constants'
+import { STRATS } from '../../constants/strats'
 
-export type Generic_Strat = { type: 'facet'}
+export type Generic_Strat = { type: 'facet' }
 
 export type Generic_Mono_Strat_Obj<V extends string = string> = Generic_Strat & { strategy: STRATS['MONO']; preferred: V }
 

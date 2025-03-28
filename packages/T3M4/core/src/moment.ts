@@ -5,9 +5,9 @@ import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOpt
 import { CONSTANTS, OBSERVABLE, RESOLVED_MODE, STRAT } from './types/constants'
 import { STRATS } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
-import { Mapped_Options as Options } from './types/options'
-import { Unsafe_State as State } from './types/state'
-import { ModeProp } from './types/config/mode'
+import { Mapped_Options as Options } from './types/subscribers/options'
+import { Unsafe_State as State } from './types/subscribers/state'
+import { ModeProp } from './types/subscribers/config/mode'
 
 type Mode = {
   prop: string

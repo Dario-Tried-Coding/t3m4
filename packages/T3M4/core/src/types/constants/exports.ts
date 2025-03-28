@@ -1,1 +1,0 @@
-export type { RESOLVED_MODE as ResolvedMode } from './modes'
