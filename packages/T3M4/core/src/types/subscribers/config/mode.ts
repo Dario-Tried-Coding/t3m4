@@ -10,7 +10,7 @@ type Color_Schemes<Custom_Values extends UndefinedOr<string[]>> = [Custom_Values
     ? { colorSchemes: Record<Custom_Values[number], RESOLVED_MODE> }
     : {}
 
-export type Mode_Strat = { type: 'mode'; selector?: SELECTOR[]; store?: boolean }
+export type Mode_Strat = { type: 'mode'; selector?: SELECTOR | SELECTOR[]; store?: boolean }
 
 export type Mode_Mono_Strat_Obj<V extends string = string> = Mode_Strat & { strategy: STRATS['MONO']; preferred: V; colorScheme: RESOLVED_MODE }
 

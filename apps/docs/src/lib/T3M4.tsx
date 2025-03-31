@@ -17,7 +17,8 @@ const config = {
       type: 'mode',
       strategy: 'system',
       preferred: 'dark',
-      fallback: 'custom-light'
+      fallback: 'custom-light',
+      selector: 'data-attribute'
     },
     color: {
       type: 'facet',
