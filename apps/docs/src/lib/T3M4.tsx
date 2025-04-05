@@ -4,10 +4,10 @@ import { FC, PropsWithChildren } from 'react'
 
 const schema = {
   root: {
-    mode: {light: 'custom-light'},
+    mode: { light: 'custom-light' },
     radius: ['0', '0.3', '0.5', '0.75', '1'],
-    color: ['zinc', 'red', 'rose', 'orange', 'green', 'blue', 'yellow', 'violet']
-  }
+    color: ['zinc', 'red', 'rose', 'orange', 'green', 'blue', 'yellow', 'violet'],
+  },
 } as const satisfies Schema
 type TSchema = typeof schema
 
@@ -16,26 +16,26 @@ const config = {
     mode: {
       type: 'mode',
       strategy: 'system',
-      preferred: 'dark',
+      preferred: 'custom-light',
       fallback: 'custom-light',
-      selector: 'data-attribute'
+      selector: 'data-attribute',
     },
     color: {
       type: 'facet',
       strategy: 'multi',
-      preferred: 'orange'
+      preferred: 'orange',
     },
     radius: {
       type: 'facet',
       strategy: 'multi',
-      preferred: '0.3'
-    }
+      preferred: '0.3',
+    },
   },
 } as const satisfies Config<TSchema>
 type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} >
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} mode={{ store: true }}>
     {children}
   </ThemingProvider>
 )

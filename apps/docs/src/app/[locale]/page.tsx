@@ -23,7 +23,7 @@ export default function Home({ params }: Props) {
         <Link href='/docs' className={buttonVariants({ size: 'sm' })}>
           {t('get-started')}
         </Link>
-        <ThemeSwitch />
+        {/* <ThemeSwitch /> */}
       </div>
     </div>
   )

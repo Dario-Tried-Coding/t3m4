@@ -1,1 +1,1 @@
-export type {Schema, Config, Options} from "@t3m4/react/types"
+export type { Schema, Config, Options } from '@t3m4/react/types'
