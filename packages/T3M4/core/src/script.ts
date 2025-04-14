@@ -4,6 +4,7 @@ import { CallbackID, EventMap } from './types/events'
 import { STRAT } from './types/constants/strats'
 import { RESOLVED_MODE } from './types/constants/modes'
 import { State as State_Obj } from './types/subscribers/state'
+import { T3M4 as T_T3M4 } from './types/interface'
 
 type NestedMap<T> = Map<string, NestedMap<T> | T>
 type NestedObj<T> = { [key: string]: NestedObj<T> | T }
@@ -11,6 +12,8 @@ type NestedObj<T> = { [key: string]: NestedObj<T> | T }
 type State = Map<string, Map<string, string>>
 type Modes_State = Map<string, string>
 type Schema = Map<string, Map<string, { options: Set<string>; preferred: string }>>
+
+type Resolved_Modes = Map<string, RESOLVED_MODE>
 
 type Mode_Handling = {
   modes: Map<
@@ -86,26 +89,28 @@ export function script(args: ScriptArgs) {
 
       return result as T[number] extends null ? null : State
     },
-    deepMapToObj(map: NestedMap<string>): NestedObj<string> {
-      const obj: NestedObj<string> = {}
+    deepConvert: {
+      mapToObj(map: NestedMap<string>): NestedObj<string> {
+        const obj: NestedObj<string> = {}
 
-      map.forEach((value, key) => {
-        if (value instanceof Map) obj[key] = this.deepMapToObj(value as NestedMap<string>)
-        else obj[key] = value
-      })
+        map.forEach((value, key) => {
+          if (value instanceof Map) obj[key] = this.mapToObj(value as NestedMap<string>)
+          else obj[key] = value
+        })
 
-      return obj
-    },
-    deepObjToMap(obj: Nullable<NestedObj<string>>): NestedMap<string> {
-      const map = new Map<string, any>()
-      if (!obj) return map
+        return obj
+      },
+      objToMap(obj: Nullable<NestedObj<string>>): NestedMap<string> {
+        const map = new Map<string, any>()
+        if (!obj) return map
 
-      for (const [key, value] of Object.entries(obj)) {
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) map.set(key, this.deepObjToMap(value as NestedObj<string>))
-        else map.set(key, value)
-      }
+        for (const [key, value] of Object.entries(obj)) {
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) map.set(key, this.objToMap(value as NestedObj<string>))
+          else map.set(key, value)
+        }
 
-      return map
+        return map
+      },
     },
     deepEqual: {
       objects<T>(obj1: T, obj2: T): boolean {
@@ -126,7 +131,7 @@ export function script(args: ScriptArgs) {
 
         return true
       },
-      maps<K, V>(map1: NullOr<Map<K, V>>, map2: NullOr<Map<K, V>>): boolean {
+      maps<K, V>(map1: Nullable<Map<K, V>>, map2: Nullable<Map<K, V>>): boolean {
         if (!map1 || !map2) return false
         if (map1 === map2) return true
         if (map1.size !== map2.size) return false
@@ -149,7 +154,7 @@ export function script(args: ScriptArgs) {
     },
     isPlainObject(val: any) {
       return val !== null && typeof val === 'object' && !Array.isArray(val) && Object.prototype.toString.call(val) === '[object Object]'
-    }
+    },
   }
 
   // #region EVENT MANAGER
@@ -353,7 +358,7 @@ export function script(args: ScriptArgs) {
   class Normalizer {
     private values: State = new Map()
 
-    private constructor() { }
+    private constructor() {}
 
     static ofJSON(json: NullOr<string>) {
       const parsed = utils.parse(json)
@@ -361,8 +366,8 @@ export function script(args: ScriptArgs) {
 
       const isPlainObj = utils.isPlainObject(parsed)
       if (!isPlainObj) return Normalizer.of(new Map() as State)
-      
-      return Normalizer.of(utils.deepObjToMap(parsed) as State)
+
+      return Normalizer.of(utils.deepConvert.objToMap(parsed) as State)
     }
 
     static ofMap(values: State) {
@@ -451,7 +456,7 @@ export function script(args: ScriptArgs) {
     normalize(provFallbacks?: Nullable<string | State>) {
       const normalized: State = new Map()
 
-      const fallbacks = typeof provFallbacks === 'string' ? (utils.deepObjToMap(JSON.parse(provFallbacks)) as State) : (provFallbacks ?? (new Map() as State))
+      const fallbacks = typeof provFallbacks === 'string' ? (utils.deepConvert.objToMap(JSON.parse(provFallbacks)) as State) : (provFallbacks ?? (new Map() as State))
 
       for (const [island, facets] of Processor.schema) {
         normalized.set(island, new Map())
@@ -532,8 +537,8 @@ export function script(args: ScriptArgs) {
         const newState = utils.deepMerge(currState, state)
 
         const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
-        const storageNeedsUpdate = currStorageState !== JSON.stringify(utils.deepMapToObj(newState))
-        if (storageNeedsUpdate) StorageManager.utils.store(Processor.storageKey, JSON.stringify(utils.deepMapToObj(newState)))
+        const storageNeedsUpdate = currStorageState !== JSON.stringify(utils.deepConvert.mapToObj(newState))
+        if (storageNeedsUpdate) StorageManager.utils.store(Processor.storageKey, JSON.stringify(utils.deepConvert.mapToObj(newState)))
 
         const stateNeedsUpdate = !utils.deepEqual.maps(currState, newState)
         if (stateNeedsUpdate) Main.state = newState
@@ -553,7 +558,7 @@ export function script(args: ScriptArgs) {
           }
         }
 
-        const stringModes = JSON.stringify(utils.deepMapToObj(modes))
+        const stringModes = JSON.stringify(utils.deepConvert.mapToObj(modes))
         const storageCurrMode = StorageManager.utils.retrieve(Processor.mode.storageKey)
 
         const storageNeedsUpdate = stringModes !== storageCurrMode
@@ -586,8 +591,8 @@ export function script(args: ScriptArgs) {
 
     private constructor() {
       EventManager.on('State:update', 'StorageManager:state:update', (state) => {
-        StorageManager.state = utils.deepObjToMap(state) as State
-        StorageManager.modes = StorageManager.utils.construct.modes(utils.deepObjToMap(state) as State)
+        StorageManager.state = utils.deepConvert.objToMap(state) as State
+        StorageManager.modes = StorageManager.utils.construct.modes(utils.deepConvert.objToMap(state) as State)
       })
 
       StorageManager.controller = new AbortController()
@@ -604,10 +609,10 @@ export function script(args: ScriptArgs) {
               if (!Processor.mode.store) return
               
               const parsedNew = utils.parse(newValue)
-              const newModes = utils.isPlainObject(parsedNew) ? utils.deepObjToMap(parsedNew) as Modes_State : null
+              const newModes = utils.isPlainObject(parsedNew) ? utils.deepConvert.objToMap(parsedNew) as Modes_State : null
 
               const parsedOld = utils.parse(oldValue)
-              const oldModes = utils.isPlainObject(parsedOld) ? utils.deepObjToMap(utils.parse(oldValue)) as Modes_State : null
+              const oldModes = utils.isPlainObject(parsedOld) ? utils.deepConvert.objToMap(utils.parse(oldValue)) as Modes_State : null
 
               const normalized = Normalizer.normalizeModes(newModes, oldModes)
               StorageManager.modes = normalized
@@ -616,6 +621,176 @@ export function script(args: ScriptArgs) {
         },
         { signal: StorageManager.controller.signal }
       )
+    }
+  }
+
+  class DomManager {
+    private static instance: UndefinedOr<DomManager>
+    private static systemPref: UndefinedOr<RESOLVED_MODE>
+    private static observers: {
+      attrs: MutationObserver
+    }
+
+    private static utils = {
+      disableTransitions() {
+        const css = document.createElement('style')
+        if (Processor.nonce) css.setAttribute('nonce', Processor.nonce)
+        css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
+        document.head.appendChild(css)
+
+        return () => {
+          ;(() => window.getComputedStyle(document.body))()
+          setTimeout(() => document.head.removeChild(css), 1)
+        }
+      },
+      getSystemPref() {
+        if (!DomManager.systemPref) {
+          const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
+          DomManager.systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
+        }
+
+        return DomManager.systemPref
+      },
+      findIslands(island: string, scopes?: Set<HTMLElement>) {
+        const selector = `[data-island="${island}"]`
+
+        if (scopes) {
+          const results: Set<HTMLElement> = new Set()
+
+          scopes.forEach(scope => {
+            if (scope.matches(selector)) results.add(scope)
+            
+            const matches = scope.querySelectorAll<HTMLElement>(selector)
+            matches.forEach(el => results.add(el))
+          })
+
+          return results
+        }
+
+        return new Set(document.querySelectorAll<HTMLElement>(selector))
+      },
+      resolveMode(island: string, mode: string) {
+        if (!Processor.mode.modes.has(island)) return
+
+        const isSystemStrat = Processor.mode.modes.get(island)!.strategy === STRATS.SYSTEM
+        const isSystemMode = Processor.mode.modes.get(island)!.systemMode?.name === mode
+        const isSystem = isSystemStrat && isSystemMode
+        const fallbackMode = Processor.mode.modes.get(island)!.systemMode?.fallback
+        if (isSystem) return DomManager.utils.getSystemPref() ?? Processor.mode.modes.get(island)?.resolvedModes.get(fallbackMode!)
+
+        return Processor.mode.modes.get(island)!.resolvedModes.get(mode)
+      },
+    }
+
+    private static apply = {
+      state(state: NullOr<State>, nodes?: Set<HTMLElement>) {
+        if (!state) return
+
+        state.forEach((facets, island) => {
+          const targets = DomManager.utils.findIslands(island, nodes)
+
+          facets.forEach((value, facet) => {
+            targets.forEach((n) => {
+              const currValue = n.getAttribute(`data-${facet}`)
+              const needsUpdate = currValue !== value
+              if (needsUpdate) n.setAttribute(`data-${facet}`, value)
+            })
+          })
+        })
+
+        const currState = Main.state
+        const newState = utils.deepMerge(currState, state)
+
+        const needsUpdate = !utils.deepEqual.maps(currState, newState)
+        if (needsUpdate) Main.state = newState
+      },
+      resolvedModes(modes: Resolved_Modes) {
+        modes.forEach((mode, island) => {
+          if (!Processor.mode.modes.has(island)) return
+          if (!mode) return
+
+          const islands = DomManager.utils.findIslands(island)
+
+          if (Processor.mode.modes.get(island)!.selectors.includes(SELECTORS.COLOR_SCHEME)) {
+            islands.forEach((i) => {
+              const currValue = i.style.colorScheme
+              const needsUpdate = currValue !== mode
+              if (needsUpdate) i.style.colorScheme = mode
+            })
+          }
+
+          if (Processor.mode.modes.get(island)!.selectors.includes(SELECTORS.CLASS)) {
+            islands.forEach((i) => {
+              const isSet = i.classList.contains(MODES.LIGHT) ? MODES.LIGHT : i.classList.contains(MODES.DARK) ? MODES.DARK : undefined
+              if (isSet === mode) return
+
+              const other = mode === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
+              i.classList.replace(other, mode) || i.classList.add(mode)
+            })
+          }
+
+          if (Processor.mode.modes.get(island)!.selectors.includes(SELECTORS.DATA_ATTRIBUTE)) {
+            islands.forEach((i) => {
+              const currValue = i.getAttribute('data-color-scheme')
+              const needsUpdate = currValue !== mode
+              if (needsUpdate) i.setAttribute('data-color-scheme', mode)
+            })
+          }
+        })
+
+        const currModes = Main.resolvedModes
+        const needsUpdate = utils.deepEqual.maps(currModes, modes)
+        if (needsUpdate) Main.resolvedModes = modes
+      },
+    }
+
+    private static initObservers = {
+      attrs() {
+        const handler = (mutations: MutationRecord[]) => {
+          for (const mutation of mutations) {
+            const nodes = new Set<HTMLElement>(mutation.addedNodes as NodeListOf<HTMLElement>)
+
+            for (const node of nodes) {
+              if (!(node instanceof HTMLElement)) continue
+
+              const island = node.getAttribute('data-island')
+              if (!island) continue
+              if (!Processor.islands.has(island)) continue
+
+              const state = Main.state
+              DomManager.apply.state(state, nodes)
+            }
+          }
+        }
+
+        DomManager.observers.attrs = new MutationObserver(handler)
+      },
+    }
+
+    private static set state(state: State) {
+      const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
+      DomManager.apply.state(state)
+      enableTransitions?.()
+    }
+
+    private static set resolvedModes(modes: Resolved_Modes) {
+      if (Array.from(modes.keys()).length === 0) return
+
+      const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
+      DomManager.apply.resolvedModes(modes)
+      enableTransitions?.()
+    }
+
+    public static init() {
+      if (!DomManager.instance) DomManager.instance = new DomManager()
+    }
+
+    private constructor() {
+      EventManager.on('State:update', 'DOMManager:state:update', (state) => (DomManager.state = utils.deepConvert.objToMap(state) as State))
+      EventManager.on('ResolvedModes:update', 'DOMManager:resolvedMode:update', (modes) => (DomManager.resolvedModes = utils.deepConvert.objToMap(modes) as Resolved_Modes))
+
+      DomManager.initObservers.attrs()
+      // DomManager.initForceAttrsHandling()
     }
   }
 
@@ -640,39 +815,55 @@ export function script(args: ScriptArgs) {
       const needsUpdate = !utils.deepEqual.maps(currState, newState)
       if (needsUpdate) {
         Main.instance.state = newState
-        EventManager.emit('State:update', utils.deepMapToObj(newState) as State_Obj)
+        EventManager.emit('State:update', utils.deepConvert.mapToObj(newState) as State_Obj)
       }
 
       // const resolvedMode = DOMManager.resolveMode(newState)
       // Main.resolvedMode = resolvedMode
     }
 
+    public static get resolvedModes() {
+      return Main.instance?.resolvedModes
+    }
+
+    public static set resolvedModes(modes) {
+      if (!Main.instance) return
+      if (!modes) return
+
+      const currModes = Main.resolvedModes
+
+      const needsUpdate = utils.deepEqual.maps(currModes, modes)
+      if (!needsUpdate) return
+
+      Main.instance.resolvedModes = modes
+      EventManager.emit('ResolvedModes:update', utils.deepConvert.mapToObj(modes) as T_T3M4['resolvedModes'])
+    }
+
     private forcedState: UndefinedOr<State>
     private state: UndefinedOr<State>
-    private resolvedMode: UndefinedOr<string>
+    private resolvedModes: UndefinedOr<Resolved_Modes>
 
     private constructor() {
       StorageManager.init()
 
       const state = StorageManager.state
       this.state = state
-      EventManager.emit('State:update', utils.deepMapToObj(state) as State_Obj)
+      EventManager.emit('State:update', utils.deepConvert.mapToObj(state) as T_T3M4['state'])
     }
   }
 
   // #region T3M4
   class T3M4 {
     public static get state() {
-      return utils.deepMapToObj(Main.state!) as State_Obj
+      return utils.deepConvert.mapToObj(Main.state!) as T_T3M4['state']
     }
 
     // public static set state(values: State) {
     //   Main.state = values
     // }
 
-    public static get resolvedMode() {
-      // return Main.resolvedMode
-      return undefined
+    public static get resolvedModes() {
+      return utils.deepConvert.mapToObj(Main.resolvedModes!) as T_T3M4['resolvedModes']
     }
 
     public static get options() {

@@ -1,13 +1,12 @@
-import { UndefinedOr } from '@t3m4/utils/nullables'
 import { RESOLVED_MODE } from './constants/modes'
 import { CallbackID, EventMap } from './events'
 import { ScriptArgs } from './script'
-import { State } from './subscribers/state'
 import { Options } from './subscribers/options'
+import { State } from './subscribers/state'
 
 export interface T3M4 {
   state: State
-  resolvedMode: UndefinedOr<RESOLVED_MODE>
+  resolvedModes: Record<string, RESOLVED_MODE>
   options: Options
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
   reboot: (args: ScriptArgs) => void
