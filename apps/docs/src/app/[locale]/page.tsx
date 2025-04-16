@@ -1,3 +1,4 @@
+import { Moment } from '@/components/Moment'
 import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { buttonVariants } from '@/components/ui/Button'
 import { Link } from '@/lib/next-intl/navigation'
@@ -24,6 +25,7 @@ export default function Home({ params }: Props) {
           {t('get-started')}
         </Link>
         {/* <ThemeSwitch /> */}
+        <Moment />
       </div>
     </div>
   )

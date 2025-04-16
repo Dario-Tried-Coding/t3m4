@@ -1,5 +1,5 @@
-import { LinientAutoComplete } from "@t3m4/utils";
-import { DEFAULT } from "../constants/miscellaneous";
+import { LinientAutoComplete } from '@t3m4/utils';
+import { DEFAULT } from '../constants/miscellaneous';
 
 export type System_Values = Partial<{ light: string; dark: string; system: string; custom: string[] }>
 
@@ -18,3 +18,5 @@ export type Schema = {
     [facet: string]: Opt
   }
 }
+
+export type Pick_Island_Schema<S extends Schema, I extends keyof S> = S[I] extends Schema[keyof Schema] ? S[I] : never

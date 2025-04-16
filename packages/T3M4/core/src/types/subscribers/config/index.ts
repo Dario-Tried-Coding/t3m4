@@ -25,3 +25,49 @@ export type Config<S extends UndefinedOr<Schema> = undefined> = S extends Schema
         [facet: string]: Generic_Strat_Obj | Mode_Strat_Obj
       }
     }
+
+export type Pick_Island_Config<Sc extends Schema, C extends Config<Sc>, I extends keyof Sc> = I extends keyof C ? (C[I] extends Config<Sc>[keyof Config<Sc>] ? C[I] : never) : never
+
+const schema = {
+  root: {
+    mode: { light: 'custom-light' },
+    radius: ['0', '0.3', '0.5', '0.75', '1'],
+    color: ['zinc', 'red', 'rose', 'orange', 'green', 'blue', 'yellow', 'violet'],
+  },
+  test: {
+    mode: true,
+  },
+} as const satisfies Schema
+type TSchema = typeof schema
+
+const config = {
+  root: {
+    mode: {
+      type: 'mode',
+      strategy: 'system',
+      preferred: 'custom-light',
+      fallback: 'custom-light',
+      selector: 'data-attribute',
+    },
+    color: {
+      type: 'facet',
+      strategy: 'multi',
+      preferred: 'orange',
+    },
+    radius: {
+      type: 'facet',
+      strategy: 'multi',
+      preferred: '0.3',
+    },
+  },
+  test: {
+    mode: {
+      type: 'facet',
+      strategy: 'mono',
+      preferred: 'default'
+    }
+  },
+} as const satisfies Config<TSchema>
+type TConfig = typeof config
+
+type test = Pick_Island_Config<TSchema, TConfig, 'test'>

@@ -21,7 +21,7 @@ const Icon: FC<IconProps> = ({ mode, ...rest }) => {
 }
 
 export const ModeSwitch: FC = ({}) => {
-  const { state, updateState, resolvedMode } = useT3M4()
+  const { state, updateState, colorScheme, options } = useT3M4('root')
   const t = useTranslations('ThemeSwitch')
 
   return (

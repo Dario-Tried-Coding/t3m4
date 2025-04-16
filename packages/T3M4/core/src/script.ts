@@ -10,10 +10,11 @@ type NestedMap<T> = Map<string, NestedMap<T> | T>
 type NestedObj<T> = { [key: string]: NestedObj<T> | T }
 
 type State = Map<string, Map<string, string>>
-type Modes_State = Map<string, string>
-type Schema = Map<string, Map<string, { options: Set<string>; preferred: string }>>
-
+type State_Modes = Map<string, string>
 type Resolved_Modes = Map<string, RESOLVED_MODE>
+
+type Schema = Map<string, Map<string, { options: Set<string>; preferred: string }>>
+type Options = Map<string, Map<string, string[]>>
 
 type Mode_Handling = {
   modes: Map<
@@ -72,22 +73,42 @@ export function script(args: ScriptArgs) {
 
   // #region UTILS
   const utils = {
-    deepMerge<T extends NullOr<State>[]>(...maps: T): T[number] extends null ? null : State {
-      const result = new Map()
+    deepMerge: {
+      maps<T extends NullOr<State>[]>(...maps: T): T[number] extends null ? null : State {
+        const result = new Map()
 
-      for (const map of maps) {
-        if (!map) continue
+        for (const map of maps) {
+          if (!map) continue
 
-        for (const [key, value] of map.entries()) {
-          if (result.has(key) && value instanceof Map && result.get(key) instanceof Map) {
-            result.set(key, this.deepMerge(result.get(key), value))
-          } else {
-            result.set(key, value)
+          for (const [key, value] of map.entries()) {
+            if (result.has(key) && value instanceof Map && result.get(key) instanceof Map) {
+              result.set(key, this.maps(result.get(key), value))
+            } else {
+              result.set(key, value)
+            }
           }
         }
-      }
 
-      return result as T[number] extends null ? null : State
+        return result as T[number] extends null ? null : State
+      },
+      objs(...states: T_T3M4['state'][]): T_T3M4['state'] {
+        const result: T_T3M4['state'] = {}
+
+        for (const state of states) {
+          for (const island in state) {
+            if (!result[island]) {
+              result[island] = { ...state[island] }
+            } else {
+              result[island] = {
+                ...result[island],
+                ...state[island],
+              }
+            }
+          }
+        }
+
+        return result
+      },
     },
     deepConvert: {
       mapToObj(map: NestedMap<string>): NestedObj<string> {
@@ -154,6 +175,32 @@ export function script(args: ScriptArgs) {
     },
     isPlainObject(val: any) {
       return val !== null && typeof val === 'object' && !Array.isArray(val) && Object.prototype.toString.call(val) === '[object Object]'
+    },
+    construct: {
+      modes(state: NullOr<State>) {
+        const modes: State_Modes = new Map()
+
+        for (const [island, facets] of state ?? []) {
+          const modeFacet = Processor.mode.modes.get(island)?.facet
+          if (modeFacet && facets.has(modeFacet)) {
+            modes.set(island, facets.get(modeFacet)!)
+          }
+        }
+
+        return modes
+      },
+      state(modes: State_Modes) {
+        const partialState: State = new Map()
+
+        for (const [island, value] of modes) {
+          partialState.set(island, new Map())
+
+          const modeFacet = Processor.mode.modes.get(island)?.facet
+          if (modeFacet) partialState.get(island)!.set(modeFacet, value)
+        }
+
+        return partialState
+      },
     },
   }
 
@@ -298,6 +345,17 @@ export function script(args: ScriptArgs) {
 
         return mode
       },
+      options(args: ScriptArgs) {
+        const options: Options = new Map()
+
+        for (const [island, facets] of Object.entries(args.config)) {
+          const facetsOptions: NonNullable<ReturnType<Options['get']>> = new Map()
+
+          for (const [facet, stratObj] of Object.entries(facets)) {
+            
+          }
+        }
+      }
     }
 
     public static getInstance() {
@@ -409,8 +467,8 @@ export function script(args: ScriptArgs) {
       return { isIsland: true, isFacet: true, isOption, normalized }
     }
 
-    static normalizeModes(modes: NullOr<Modes_State>, fallbacks?: Nullable<Modes_State>) {
-      const normalized: Modes_State = new Map()
+    static normalizeModes(modes: NullOr<State_Modes>, fallbacks?: Nullable<State_Modes>) {
+      const normalized: State_Modes = new Map()
 
       for (const [island, facets] of Processor.schema) {
         for (const [facet, { preferred }] of facets) {
@@ -503,38 +561,12 @@ export function script(args: ScriptArgs) {
         window.localStorage.setItem(storageKey, string)
         StorageManager.isInternalChange = false
       },
-      construct: {
-        modes(state: NullOr<State>) {
-          const modes: Modes_State = new Map()
-
-          for (const [island, facets] of state ?? []) {
-            const modeFacet = Processor.mode.modes.get(island)?.facet
-            if (modeFacet && facets.has(modeFacet)) {
-              modes.set(island, facets.get(modeFacet)!)
-            }
-          }
-
-          return modes
-        },
-        state(modes: Modes_State) {
-          const partialState: State = new Map()
-
-          for (const [island, value] of modes) {
-            partialState.set(island, new Map())
-
-            const modeFacet = Processor.mode.modes.get(island)?.facet
-            if (modeFacet) partialState.get(island)!.set(modeFacet, value)
-          }
-
-          return partialState
-        },
-      },
     }
 
     private static store = {
       state(state: State) {
         const currState = Main.state
-        const newState = utils.deepMerge(currState, state)
+        const newState = utils.deepMerge.maps(currState, state)
 
         const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
         const storageNeedsUpdate = currStorageState !== JSON.stringify(utils.deepConvert.mapToObj(newState))
@@ -549,7 +581,7 @@ export function script(args: ScriptArgs) {
         if (!Processor.mode.store) return
 
         const currState = Main.state
-        const currStateModes: Modes_State = new Map()
+        const currStateModes: State_Modes = new Map()
 
         for (const [island, facets] of currState ?? []) {
           const modeFacet = Processor.mode.modes.get(island)?.facet
@@ -564,7 +596,7 @@ export function script(args: ScriptArgs) {
         const storageNeedsUpdate = stringModes !== storageCurrMode
         if (storageNeedsUpdate) StorageManager.utils.store(Processor.mode!.storageKey, stringModes)
 
-        const partialState = StorageManager.utils.construct.state(modes)
+        const partialState = utils.construct.state(modes)
 
         const stateNeedsUpdate = !utils.deepEqual.maps(currState, partialState)
         if (stateNeedsUpdate) Main.state = partialState
@@ -581,7 +613,7 @@ export function script(args: ScriptArgs) {
       StorageManager.store.state(state)
     }
 
-    private static set modes(modes: UndefinedOr<Modes_State>) {
+    private static set modes(modes: UndefinedOr<State_Modes>) {
       StorageManager.store.modes(modes)
     }
 
@@ -592,7 +624,7 @@ export function script(args: ScriptArgs) {
     private constructor() {
       EventManager.on('State:update', 'StorageManager:state:update', (state) => {
         StorageManager.state = utils.deepConvert.objToMap(state) as State
-        StorageManager.modes = StorageManager.utils.construct.modes(utils.deepConvert.objToMap(state) as State)
+        StorageManager.modes = utils.construct.modes(utils.deepConvert.objToMap(state) as State)
       })
 
       StorageManager.controller = new AbortController()
@@ -609,10 +641,10 @@ export function script(args: ScriptArgs) {
               if (!Processor.mode.store) return
               
               const parsedNew = utils.parse(newValue)
-              const newModes = utils.isPlainObject(parsedNew) ? utils.deepConvert.objToMap(parsedNew) as Modes_State : null
+              const newModes = utils.isPlainObject(parsedNew) ? utils.deepConvert.objToMap(parsedNew) as State_Modes : null
 
               const parsedOld = utils.parse(oldValue)
-              const oldModes = utils.isPlainObject(parsedOld) ? utils.deepConvert.objToMap(utils.parse(oldValue)) as Modes_State : null
+              const oldModes = utils.isPlainObject(parsedOld) ? utils.deepConvert.objToMap(utils.parse(oldValue)) as State_Modes : null
 
               const normalized = Normalizer.normalizeModes(newModes, oldModes)
               StorageManager.modes = normalized
@@ -628,10 +660,12 @@ export function script(args: ScriptArgs) {
     private static instance: UndefinedOr<DomManager>
     private static systemPref: UndefinedOr<RESOLVED_MODE>
     private static observers: {
-      attrs: MutationObserver
+      attrs: UndefinedOr<MutationObserver>
+    } = {
+      attrs: undefined,
     }
 
-    private static utils = {
+    public static utils = {
       disableTransitions() {
         const css = document.createElement('style')
         if (Processor.nonce) css.setAttribute('nonce', Processor.nonce)
@@ -657,11 +691,11 @@ export function script(args: ScriptArgs) {
         if (scopes) {
           const results: Set<HTMLElement> = new Set()
 
-          scopes.forEach(scope => {
+          scopes.forEach((scope) => {
             if (scope.matches(selector)) results.add(scope)
-            
+
             const matches = scope.querySelectorAll<HTMLElement>(selector)
-            matches.forEach(el => results.add(el))
+            matches.forEach((el) => results.add(el))
           })
 
           return results
@@ -680,6 +714,16 @@ export function script(args: ScriptArgs) {
 
         return Processor.mode.modes.get(island)!.resolvedModes.get(mode)
       },
+      resolveModes(modes: State_Modes) {
+        const resolvedModes: Resolved_Modes = new Map()
+
+        for (const [island, mode] of modes) {
+          const resolvedMode = DomManager.utils.resolveMode(island, mode)
+          if (resolvedMode) resolvedModes.set(island, resolvedMode)
+        }
+        
+        return resolvedModes
+      }
     }
 
     private static apply = {
@@ -699,7 +743,7 @@ export function script(args: ScriptArgs) {
         })
 
         const currState = Main.state
-        const newState = utils.deepMerge(currState, state)
+        const newState = utils.deepMerge.maps(currState, state)
 
         const needsUpdate = !utils.deepEqual.maps(currState, newState)
         if (needsUpdate) Main.state = newState
@@ -748,28 +792,54 @@ export function script(args: ScriptArgs) {
       attrs() {
         const handler = (mutations: MutationRecord[]) => {
           for (const mutation of mutations) {
-            const nodes = new Set<HTMLElement>(mutation.addedNodes as NodeListOf<HTMLElement>)
+            const state = Main.state
 
-            for (const node of nodes) {
-              if (!(node instanceof HTMLElement)) continue
+            // const target = mutation.target as HTMLElement
+            // if (target) {
+            //   const islandName = target.getAttribute('data-island')
+            //   if (!islandName) continue
+            //   if (!Processor.islands.has(islandName)) continue
 
-              const island = node.getAttribute('data-island')
-              if (!island) continue
-              if (!Processor.islands.has(island)) continue
+            //   console.log(mutation)
+            //   DomManager.apply.state(state, new Set([target]))
+            // }
 
-              const state = Main.state
-              DomManager.apply.state(state, nodes)
+            const addedNodes = new Set<HTMLElement>(mutation.addedNodes as NodeListOf<HTMLElement>)
+            const islandNodes = new Set<HTMLElement>()
+            if (addedNodes.size !== 0) {
+              for (const node of addedNodes) {
+                if (!(node instanceof HTMLElement)) continue
+
+                const islandName = node.getAttribute('data-island')
+                if (!islandName) continue
+                if (!Processor.islands.has(islandName)) continue
+
+                islandNodes.add(node)
+              }
+
+              DomManager.apply.state(state, islandNodes)
             }
           }
         }
 
         DomManager.observers.attrs = new MutationObserver(handler)
+        DomManager.observers.attrs.observe(document.documentElement, { subtree: true, attributes: true, childList: true, attributeOldValue: true })
       },
     }
 
     private static set state(state: State) {
       const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
       DomManager.apply.state(state)
+
+      const modes = utils.construct.modes(state)
+
+      const resolvedModes: Resolved_Modes = new Map()
+      for (const [island, mode] of modes) {
+        const resolvedMode = DomManager.utils.resolveMode(island, mode)
+        if (resolvedMode) resolvedModes.set(island, resolvedMode)
+      }
+      DomManager.apply.resolvedModes(resolvedModes)
+
       enableTransitions?.()
     }
 
@@ -810,7 +880,7 @@ export function script(args: ScriptArgs) {
       if (!Main.instance) return
 
       const currState = Main.state
-      const newState = utils.deepMerge(currState, state)
+      const newState = utils.deepMerge.maps(currState, state)
 
       const needsUpdate = !utils.deepEqual.maps(currState, newState)
       if (needsUpdate) {
@@ -839,28 +909,43 @@ export function script(args: ScriptArgs) {
       EventManager.emit('ResolvedModes:update', utils.deepConvert.mapToObj(modes) as T_T3M4['resolvedModes'])
     }
 
+    public static get options() {
+      return Processor.options
+    }
+
     private forcedState: UndefinedOr<State>
     private state: UndefinedOr<State>
     private resolvedModes: UndefinedOr<Resolved_Modes>
 
     private constructor() {
       StorageManager.init()
+      DomManager.init()
 
       const state = StorageManager.state
       this.state = state
       EventManager.emit('State:update', utils.deepConvert.mapToObj(state) as T_T3M4['state'])
+
+      const stateModes = utils.construct.modes(state)
+      const resolvedModes = DomManager.utils.resolveModes(stateModes)
+      this.resolvedModes = resolvedModes
+      EventManager.emit('ResolvedModes:update', utils.deepConvert.mapToObj(resolvedModes) as T_T3M4['resolvedModes'])
     }
   }
 
   // #region T3M4
   class T3M4 {
-    public static get state() {
+    public static get state(): T_T3M4['state'] {
       return utils.deepConvert.mapToObj(Main.state!) as T_T3M4['state']
     }
 
-    // public static set state(values: State) {
-    //   Main.state = values
-    // }
+    public static update = {
+      state(island: string, state: T_T3M4['state'][keyof T_T3M4['state']]) {
+        const currState = T3M4.state
+        const newState = utils.deepMerge.objs(currState, { [island]: state })
+
+        Main.state = utils.deepConvert.objToMap(newState) as State
+      }
+    }
 
     public static get resolvedModes() {
       return utils.deepConvert.mapToObj(Main.resolvedModes!) as T_T3M4['resolvedModes']
