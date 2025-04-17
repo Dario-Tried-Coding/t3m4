@@ -1,6 +1,6 @@
 import { RESOLVED_MODE } from './constants/modes'
 import { CallbackID, EventMap } from './events'
-import { ScriptArgs } from './script'
+import { ConstructedScriptArgs } from './script'
 import { Options } from './subscribers/options'
 import { State } from './subscribers/state'
 
@@ -12,5 +12,5 @@ export interface T3M4 {
   resolvedModes: Record<string, RESOLVED_MODE>
   options: Options
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
-  reboot: (args: ScriptArgs) => void
+  reboot: (args: ConstructedScriptArgs) => void
 }

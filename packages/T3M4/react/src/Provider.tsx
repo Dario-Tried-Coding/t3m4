@@ -4,6 +4,7 @@ import { ScriptArgs, T3M4 } from '@t3m4/core/types'
 import { Config, Schema, State } from '@t3m4/core/types/subscribers'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { T3M4Context } from './context'
+import { constructScriptArgs } from '@t3m4/core'
 
 interface T3M4Props extends PropsWithChildren, ScriptArgs {}
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4Props) => {
@@ -17,7 +18,10 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
     options.current = window.T3M4.options as T3M4Context<Sc, C>['options']
 
     window.T3M4.subscribe('State:update', 'React:state:update', (values) => setState(values as State<Sc, C>))
-    window.T3M4.subscribe('ResolvedModes:update', 'React:resolvedMode:update', (RMs) => setColorSchemes(RMs as T3M4Context<Sc, C>['colorSchemes']))
+    window.T3M4.subscribe('ResolvedModes:update', 'React:resolvedMode:update', (RMs) => {
+      console.log('RMs', RMs)
+      setColorSchemes(RMs as T3M4Context<Sc, C>['colorSchemes'])
+    })
     window.T3M4.subscribe('State:reset', 'React:state:reset', () => {
       setState(null)
       setColorSchemes(undefined)
@@ -25,7 +29,7 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
     })
   }, [])
 
-  useEffect(() => window.T3M4.reboot(scriptArgs), [JSON.stringify(scriptArgs)])
+  useEffect(() => window.T3M4.reboot(constructScriptArgs(scriptArgs)), [JSON.stringify(scriptArgs)])
 
   const updateState: T3M4Context<Sc, C>['updateState'] = (island, state) => {
     const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }

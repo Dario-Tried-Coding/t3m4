@@ -1,20 +1,23 @@
 import { Nullable, NullOr, UndefinedOr } from '@t3m4/utils/nullables'
-import { Constants, Default_Config, ScriptArgs } from './types/script'
-import { CallbackID, EventMap } from './types/events'
-import { STRAT } from './types/constants/strats'
 import { RESOLVED_MODE } from './types/constants/modes'
-import { State as State_Obj } from './types/subscribers/state'
+import { STRAT } from './types/constants/strats'
+import { CallbackID, EventMap } from './types/events'
 import { T3M4 as T_T3M4 } from './types/interface'
+import { ConstructedScriptArgs as ScriptArgs } from './types/script'
+import { Opt } from './types/subscribers/schema'
+import { Strat_To_Opt } from './types/script/miscellaneous'
 
 type NestedMap<T> = Map<string, NestedMap<T> | T>
 type NestedObj<T> = { [key: string]: NestedObj<T> | T }
 
 type State = Map<string, Map<string, string>>
+type State_Obj = T_T3M4['state']
+
 type State_Modes = Map<string, string>
 type Resolved_Modes = Map<string, RESOLVED_MODE>
 
 type Schema = Map<string, Map<string, { options: Set<string>; preferred: string }>>
-type Options = Map<string, Map<string, string[]>>
+type Options = Map<string, Map<string, Set<string>>>
 
 type Mode_Handling = {
   modes: Map<
@@ -25,7 +28,7 @@ type Mode_Handling = {
       resolvedModes: Map<string, RESOLVED_MODE>
       systemMode: UndefinedOr<{ name: string; fallback: string }>
       store: boolean
-      selectors: Constants['SELECTORS'][keyof Constants['SELECTORS']][]
+      selectors: ScriptArgs['constants']['SELECTORS'][keyof ScriptArgs['constants']['SELECTORS']][]
     }
   >
   storageKey: string
@@ -34,42 +37,10 @@ type Mode_Handling = {
 type Mode = NonNullable<ReturnType<Mode_Handling['modes']['get']>>
 
 export function script(args: ScriptArgs) {
-  // #region CONSTANTS
-  const { DEFAULT, MODES, FACETS, STRATS, SELECTORS } = {
-    DEFAULT: 'default',
-    STRATS: {
-      MONO: 'mono',
-      MULTI: 'multi',
-      LIGHT_DARK: 'light-dark',
-      SYSTEM: 'system',
-    },
-    MODES: {
-      LIGHT: 'light',
-      DARK: 'dark',
-      SYSTEM: 'system',
-    },
-    FACETS: {
-      GENERIC: 'facet',
-      MODE: 'mode',
-    },
-    SELECTORS: {
-      CLASS: 'class',
-      COLOR_SCHEME: 'color-scheme',
-      DATA_ATTRIBUTE: 'data-attribute',
-    },
-  } as const satisfies Constants
-
-  // #region CONFIG
-  const DEFAULT_CONFIG = {
-    storageKey: 'T3M4',
-    mode: {
-      storageKey: 'theme',
-      store: false,
-      selector: [],
-    },
-    nonce: '',
-    disableTransitionOnChange: false,
-  } as const satisfies Default_Config
+  const {
+    constants: { DEFAULT, STRATS, FACETS, MODES, SELECTORS },
+    preset,
+  } = args
 
   // #region UTILS
   const utils = {
@@ -111,11 +82,12 @@ export function script(args: ScriptArgs) {
       },
     },
     deepConvert: {
-      mapToObj(map: NestedMap<string>): NestedObj<string> {
-        const obj: NestedObj<string> = {}
+      mapToObj(map: NestedMap<any>): NestedObj<any> {
+        const obj: any = {}
 
         map.forEach((value, key) => {
-          if (value instanceof Map) obj[key] = this.mapToObj(value as NestedMap<string>)
+          if (value instanceof Map) obj[key] = this.mapToObj(value)
+          else if (value instanceof Set) obj[key] = Array.from(value)
           else obj[key] = value
         })
 
@@ -126,7 +98,10 @@ export function script(args: ScriptArgs) {
         if (!obj) return map
 
         for (const [key, value] of Object.entries(obj)) {
-          if (typeof value === 'object' && value !== null && !Array.isArray(value)) map.set(key, this.objToMap(value as NestedObj<string>))
+          if (value === null || value === undefined) map.set(key, value)
+          else if (Array.isArray(value)) map.set(key, new Set(value))
+          else if (value instanceof Date) map.set(key, value.toISOString())
+          else if (typeof value === 'object') map.set(key, this.objToMap(value))
           else map.set(key, value)
         }
 
@@ -242,6 +217,21 @@ export function script(args: ScriptArgs) {
     private static instance: UndefinedOr<Processor> = undefined
     private static _args: ScriptArgs = args
 
+    private static utils = {
+      isOptStrat<S extends STRAT>(opt: Opt, strat: S): opt is S extends keyof Strat_To_Opt ? Strat_To_Opt[S] : never {
+        if (opt === true) return strat !== STRATS.MULTI
+        if (typeof opt === 'string') return strat === STRATS.MONO
+        if (typeof opt === 'object') {
+          if (Array.isArray(opt)) return strat === STRATS.MULTI
+          else {
+            if (MODES.SYSTEM in opt) return strat === STRATS.SYSTEM
+            return strat === STRATS.LIGHT_DARK || strat === STRATS.SYSTEM
+          }
+        }
+        return false
+      },
+    }
+
     private static process = {
       islands(args: ScriptArgs) {
         const islands: Processor['_islands'] = new Set(Object.keys(args.config))
@@ -288,8 +278,8 @@ export function script(args: ScriptArgs) {
       mode(args: ScriptArgs) {
         const mode = {
           modes: new Map(),
-          storageKey: args.mode?.storageKey ?? DEFAULT_CONFIG.mode.storageKey,
-          store: args.mode?.store ?? DEFAULT_CONFIG.mode.store,
+          storageKey: args.mode?.storageKey ?? preset.mode.storageKey,
+          store: args.mode?.store ?? preset.mode.store,
         } as Mode_Handling
 
         for (const [island, facets] of Object.entries(args.config)) {
@@ -338,7 +328,7 @@ export function script(args: ScriptArgs) {
               resolvedModes,
               systemMode,
               store: strat_obj.store ?? true,
-              selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? DEFAULT_CONFIG.mode.selector,
+              selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? preset.mode.selector,
             })
           }
         }
@@ -352,10 +342,52 @@ export function script(args: ScriptArgs) {
           const facetsOptions: NonNullable<ReturnType<Options['get']>> = new Map()
 
           for (const [facet, stratObj] of Object.entries(facets)) {
-            
+            const schemaItem = args.schema[island]?.[facet]
+            if (!schemaItem) continue
+
+            // prettier-ignore
+            switch (stratObj.strategy) {
+              case STRATS.MONO: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.MONO)) break
+
+                const facetOptions = new Set(schemaItem === true ? [DEFAULT] : [schemaItem])
+                facetsOptions.set(facet, facetOptions)
+              }; break
+              case STRATS.MULTI: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.MULTI)) break
+
+                const facetOptions = new Set(schemaItem)
+                facetsOptions.set(facet, facetOptions)
+              }; break
+              case STRATS.LIGHT_DARK: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.LIGHT_DARK)) break
+
+                const facetOptions = new Set([
+                  ...(schemaItem === true ? [MODES.LIGHT] : [schemaItem.light ?? MODES.LIGHT]),
+                  ...(schemaItem === true ? [MODES.DARK] : [schemaItem.dark ?? MODES.DARK]),
+                  ...(schemaItem === true ? [] : ('custom' in schemaItem ? schemaItem.custom ?? [] : [])),
+                ])
+                facetsOptions.set(facet, facetOptions)
+              }; break
+              case STRATS.SYSTEM: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.SYSTEM)) break
+
+                const facetOptions = new Set([
+                  ...(schemaItem === true ? [MODES.LIGHT] : [schemaItem.light ?? MODES.LIGHT]),
+                  ...(schemaItem === true ? [MODES.DARK] : [schemaItem.dark ?? MODES.DARK]),
+                  ...(schemaItem === true ? [MODES.SYSTEM] : [schemaItem.system ?? MODES.SYSTEM]),
+                  ...(schemaItem === true ? [] : 'custom' in schemaItem ? (schemaItem.custom ?? []) : []),
+                ])
+                facetsOptions.set(facet, facetOptions)
+              }
+            }
           }
+
+          options.set(island, facetsOptions)
         }
-      }
+
+        return options
+      },
     }
 
     public static getInstance() {
@@ -384,6 +416,10 @@ export function script(args: ScriptArgs) {
       return Processor.getInstance()._schema
     }
 
+    public static get options() {
+      return Processor.getInstance()._options
+    }
+
     public static get mode() {
       return Processor.getInstance()._mode
     }
@@ -399,17 +435,19 @@ export function script(args: ScriptArgs) {
     private _storageKey: string
     private _islands: Set<string>
     private _schema: Schema
+    private _options: Options
     private _mode: Mode_Handling
     private _nonce: string
     private _disableTransitionOnChange: boolean
 
     private constructor() {
-      this._storageKey = Processor._args.storageKey ?? DEFAULT_CONFIG.storageKey
+      this._storageKey = Processor._args.storageKey ?? preset.storageKey
       this._islands = Processor.process.islands(Processor._args)
       this._schema = Processor.process.schema(Processor._args)
+      this._options = Processor.process.options(Processor._args)
       this._mode = Processor.process.mode(Processor._args)
-      this._nonce = Processor._args.nonce ?? DEFAULT_CONFIG.nonce
-      this._disableTransitionOnChange = Processor._args.disableTransitionOnChange ?? DEFAULT_CONFIG.disableTransitionOnChange
+      this._nonce = Processor._args.nonce ?? preset.nonce
+      this._disableTransitionOnChange = Processor._args.disableTransitionOnChange ?? preset.disableTransitionOnChange
     }
   }
 
@@ -721,9 +759,9 @@ export function script(args: ScriptArgs) {
           const resolvedMode = DomManager.utils.resolveMode(island, mode)
           if (resolvedMode) resolvedModes.set(island, resolvedMode)
         }
-        
+
         return resolvedModes
-      }
+      },
     }
 
     private static apply = {
@@ -888,8 +926,9 @@ export function script(args: ScriptArgs) {
         EventManager.emit('State:update', utils.deepConvert.mapToObj(newState) as State_Obj)
       }
 
-      // const resolvedMode = DOMManager.resolveMode(newState)
-      // Main.resolvedMode = resolvedMode
+      const stateModes = utils.construct.modes(newState)
+      const resolvedModes = DomManager.utils.resolveModes(stateModes)
+      Main.resolvedModes = resolvedModes
     }
 
     public static get resolvedModes() {
@@ -902,7 +941,7 @@ export function script(args: ScriptArgs) {
 
       const currModes = Main.resolvedModes
 
-      const needsUpdate = utils.deepEqual.maps(currModes, modes)
+      const needsUpdate = !utils.deepEqual.maps(currModes, modes)
       if (!needsUpdate) return
 
       Main.instance.resolvedModes = modes
@@ -944,7 +983,7 @@ export function script(args: ScriptArgs) {
         const newState = utils.deepMerge.objs(currState, { [island]: state })
 
         Main.state = utils.deepConvert.objToMap(newState) as State
-      }
+      },
     }
 
     public static get resolvedModes() {
@@ -952,8 +991,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static get options() {
-      // return Main.options
-      return {}
+      return utils.deepConvert.mapToObj(Main.options) as T_T3M4['options']
     }
 
     public static subscribe<E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) {

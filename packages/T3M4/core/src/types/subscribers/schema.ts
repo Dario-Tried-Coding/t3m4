@@ -3,7 +3,7 @@ import { DEFAULT } from '../constants/miscellaneous';
 
 export type System_Values = Partial<{ light: string; dark: string; system: string; custom: string[] }>
 
-export type Implicit_Opt = boolean
+export type Implicit_Opt = true
 export type Mono_Opt = LinientAutoComplete<DEFAULT>
 export type Multi_Opt = string[]
 export type Light_Dark_Opt = Omit<System_Values, 'system'>
