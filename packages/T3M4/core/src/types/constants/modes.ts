@@ -1,10 +1,6 @@
-export type RESOLVED_MODES = {
-  LIGHT: 'light'
-  DARK: 'dark'
-}
-export type RESOLVED_MODE = RESOLVED_MODES[keyof RESOLVED_MODES]
+import { COLOR_SCHEMES } from "./color-schemes"
 
-export type MODES = RESOLVED_MODES & {
+export type MODES = COLOR_SCHEMES & {
   SYSTEM: 'system'
 }
 export type MODE = MODES[keyof MODES]

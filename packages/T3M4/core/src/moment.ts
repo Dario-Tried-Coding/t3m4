@@ -1,210 +1,182 @@
 import { Nullable, NullOr, UndefinedOr } from '@t3m4/utils/nullables'
-import { ScriptArgs } from './types'
-import { CONFIG } from './types/config'
-import { ImplicitProp, LightDarkOption, MonoOption, MultiOption, Prop, SystemOption, SystemValues } from './types/config/props'
-import { CONSTANTS, OBSERVABLE, RESOLVED_MODE, STRAT } from './types/constants'
-import { STRATS } from './types/constants/strats'
+import { RESOLVED_MODE } from './types/constants/modes'
+import { STRAT } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
-import { Mapped_Options as Options } from './types/subscribers/options'
-import { Unsafe_State as State } from './types/subscribers/state'
-import { ModeProp } from './types/subscribers/config/mode'
+import { T3M4 as T_T3M4 } from './types/interface'
+import { ConstructedScriptArgs as ScriptArgs } from './types/script'
+import { Opt } from './types/subscribers/schema'
+import { Strat_To_Opt } from './types/script/miscellaneous'
 
-type Mode = {
-  prop: string
-  strategy: STRAT
-  resolvedModes: Map<string, RESOLVED_MODE>
-  system: UndefinedOr<{ mode: string; fallback: string }>
-} & Required<ScriptArgs['mode']>
+type NestedMap<T> = Map<string, NestedMap<T> | T>
+type NestedObj<T> = { [key: string]: NestedObj<T> | T }
+
+type State = Map<string, Map<string, string>>
+type State_Obj = T_T3M4['state']
+
+type State_Modes = Map<string, string>
+type Resolved_Modes = Map<string, RESOLVED_MODE>
+
+type Schema = Map<string, Map<string, { options: Set<string>; preferred: string }>>
+type Options = Map<string, Map<string, Set<string>>>
+
+type Mode_Handling = {
+  modes: Map<
+    string,
+    {
+      facet: string
+      strategy: STRAT
+      resolvedModes: Map<string, RESOLVED_MODE>
+      systemMode: UndefinedOr<{ name: string; fallback: string }>
+      store: boolean
+      selectors: ScriptArgs['constants']['SELECTORS'][keyof ScriptArgs['constants']['SELECTORS']][]
+    }
+  >
+  storageKey: string
+  store: boolean
+}
+type Mode = NonNullable<ReturnType<Mode_Handling['modes']['get']>>
 
 export function script(args: ScriptArgs) {
-  // #region CONSTANTS
-  const { DEFAULT, MODES, PROP_TYPES, STRATS, OBSERVABLES, SELECTORS } = {
-    DEFAULT: 'default',
-    STRATS: {
-      MONO: 'mono',
-      MULTI: 'multi',
-      LIGHT_DARK: 'light&dark',
-      SYSTEM: 'system',
-    },
-    MODES: {
-      LIGHT: 'light',
-      DARK: 'dark',
-      SYSTEM: 'system',
-    },
-    PROP_TYPES: {
-      GENERIC: 'generic',
-      MODE: 'mode',
-    },
-    OBSERVABLES: {
-      DOM: 'DOM',
-      STORAGE: 'storage',
-    },
-    SELECTORS: {
-      CLASS: 'class',
-      COLOR_SCHEME: 'color-scheme',
-      DATA_ATTRIBUTE: 'data-attribute',
-    },
-  } as const satisfies CONSTANTS
-
-  // #region CONFIG
-  const CONFIG = {
-    storageKey: 'T3M4',
-    mode: {
-      storageKey: 'theme',
-      store: false,
-      selector: [],
-    },
-    observe: [],
-    nonce: '',
-    disableTransitionOnChange: false,
-  } as const satisfies CONFIG
+  const {
+    constants: { DEFAULT, STRATS, FACETS, MODES, SELECTORS },
+    preset,
+  } = args
 
   // #region UTILS
-  class Utils {
-    private constructor() {}
+  const utils = {
+    deepMerge: {
+      maps<T extends NullOr<State>[]>(...maps: T): T[number] extends null ? null : State {
+        const result = new Map()
 
-    public static merge<T extends NullOr<State>[]>(...maps: T): T[number] extends null ? null : State {
-      const merged = maps.reduce((acc, map) => {
-        if (!map) return acc
-        return new Map([...(acc ?? []), ...map])
-      }, new Map() as State)
+        for (const map of maps) {
+          if (!map) continue
 
-      return merged as T[number] extends null ? null : State
-    }
+          for (const [key, value] of map.entries()) {
+            if (result.has(key) && value instanceof Map && result.get(key) instanceof Map) {
+              result.set(key, this.maps(result.get(key), value))
+            } else {
+              result.set(key, value)
+            }
+          }
+        }
 
-    public static mapToJSON(map: State) {
-      return JSON.stringify(Object.fromEntries(map))
-    }
+        return result as T[number] extends null ? null : State
+      },
+      objs(...states: T_T3M4['state'][]): T_T3M4['state'] {
+        const result: T_T3M4['state'] = {}
 
-    public static jsonToMap(json: NullOr<string>): State {
-      if (!json?.trim()) return new Map()
-      try {
-        const parsed = JSON.parse(json)
-        if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') return new Map()
-        return new Map(Object.entries(parsed).filter(([key, value]) => typeof key === 'string' && typeof value === 'string') as [string, string][])
-      } catch {
-        return new Map()
-      }
-    }
+        for (const state of states) {
+          for (const island in state) {
+            if (!result[island]) {
+              result[island] = { ...state[island] }
+            } else {
+              result[island] = {
+                ...result[island],
+                ...state[island],
+              }
+            }
+          }
+        }
 
-    public static deepEqualObjects<T>(obj1: T, obj2: T): boolean {
-      if (obj1 === obj2) {
+        return result
+      },
+    },
+    deepConvert: {
+      mapToObj(map: NestedMap<any>): NestedObj<any> {
+        const obj: any = {}
+
+        map.forEach((value, key) => {
+          if (value instanceof Map) obj[key] = this.mapToObj(value)
+          else if (value instanceof Set) obj[key] = Array.from(value)
+          else obj[key] = value
+        })
+
+        return obj
+      },
+      objToMap(obj: Nullable<NestedObj<string>>): NestedMap<string> {
+        const map = new Map<string, any>()
+        if (!obj) return map
+
+        for (const [key, value] of Object.entries(obj)) {
+          if (value === null || value === undefined) map.set(key, value)
+          else if (Array.isArray(value)) map.set(key, new Set(value))
+          else if (value instanceof Date) map.set(key, value.toISOString())
+          else if (typeof value === 'object') map.set(key, this.objToMap(value))
+          else map.set(key, value)
+        }
+
+        return map
+      },
+    },
+    deepEqual: {
+      objects<T>(obj1: T, obj2: T): boolean {
+        if (obj1 === obj2) return true
+
+        if (obj1 instanceof Map && obj2 instanceof Map) return this.maps(obj1, obj2)
+
+        if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) return false
+
+        const keys1 = Object.keys(obj1) as (keyof T)[]
+        const keys2 = Object.keys(obj2) as (keyof T)[]
+
+        if (keys1.length !== keys2.length) return false
+
+        for (const key of keys1) {
+          if (!keys2.includes(key) || !this.objects(obj1[key], obj2[key])) return false
+        }
+
         return true
-      }
+      },
+      maps<K, V>(map1: Nullable<Map<K, V>>, map2: Nullable<Map<K, V>>): boolean {
+        if (!map1 || !map2) return false
+        if (map1 === map2) return true
+        if (map1.size !== map2.size) return false
 
-      if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) {
-        return false
-      }
-
-      const keys1 = Object.keys(obj1) as (keyof T)[]
-      const keys2 = Object.keys(obj2) as (keyof T)[]
-
-      if (keys1.length !== keys2.length) {
-        return false
-      }
-
-      for (const key of keys1) {
-        if (!keys2.includes(key) || !Utils.deepEqualObjects(obj1[key], obj2[key])) {
-          return false
+        for (const [key, value] of map1) {
+          if (!map2.has(key) || !this.objects(value, map2.get(key))) return false
         }
+
+        return true
+      },
+    },
+    parse<T = any>(json: NullOr<string>) {
+      if (!json?.trim()) return undefined
+
+      try {
+        return JSON.parse(json) as T
+      } catch (e) {
+        return undefined
       }
+    },
+    isPlainObject(val: any) {
+      return val !== null && typeof val === 'object' && !Array.isArray(val) && Object.prototype.toString.call(val) === '[object Object]'
+    },
+    construct: {
+      modes(state: NullOr<State>) {
+        const modes: State_Modes = new Map()
 
-      return true
-    }
-
-    public static deepEqualMaps<K, V>(map1: NullOr<Map<K, V>>, map2: NullOr<Map<K, V>>): boolean {
-      if (!map1 || !map2) return false
-      if (map1 === map2) return true
-      if (map1.size !== map2.size) return false
-
-      for (const [key, value] of map1) {
-        if (!map2.has(key) || !Utils.deepEqualObjects(value, map2.get(key))) return false
-      }
-
-      return true
-    }
-  }
-
-  // #region NORMALIZER
-  class Normalizer {
-    private values: State = new Map()
-
-    private constructor() {}
-
-    // Factory methods
-    static ofJSON(json: NullOr<string>) {
-      return Normalizer.of(Utils.jsonToMap(json))
-    }
-
-    static ofMap(values: State) {
-      return Normalizer.of(values)
-    }
-
-    private static of(values: State) {
-      const normalizer = new Normalizer()
-      normalizer.values = values
-      return normalizer
-    }
-
-    // Utility methods
-    private static isHandled(prop: string) {
-      return Processor.options.has(prop)
-    }
-
-    private static isAllowed(prop: string, value: Nullable<string>) {
-      return !!value && Normalizer.isHandled(prop) && Processor.options.get(prop)!.options.has(value)
-    }
-
-    // Normalize one prop's value
-    static normalize(prop: string, value: NullOr<string>, fallback?: NullOr<string>): { handled: false; passed: false; value: undefined } | { handled: true; passed: boolean; value: string } {
-      const isHandled = Normalizer.isHandled(prop)
-      if (!isHandled) return { handled: false, passed: false, value: undefined }
-
-      const isAllowed = Normalizer.isAllowed(prop, value)
-      const isAllowedFallback = Normalizer.isAllowed(prop, fallback)
-      const preferred = Processor.options.get(prop)!.preferred
-
-      const finalValue = isAllowed ? value! : isAllowedFallback ? fallback! : preferred
-
-      return { handled: true, passed: isAllowed, value: finalValue }
-    }
-
-    // Normalize an entire map of values
-    normalize(provFallbacks?: Nullable<string | State>): { passed: boolean; values: State; results: Map<string, { passed: boolean; value: string }> } {
-      const results: Map<string, { passed: boolean; value: string; reason?: string }> = new Map()
-      const normValues: State = new Map()
-
-      const fallbacks = typeof provFallbacks === 'string' ? Utils.jsonToMap(provFallbacks) : provFallbacks
-
-      for (const [prop, { preferred }] of Processor.options.entries()) {
-        results.set(prop, { passed: false, value: preferred })
-        normValues.set(prop, preferred)
-      }
-
-      for (const [prop, fallback] of fallbacks?.entries() ?? []) {
-        const { handled, value } = Normalizer.normalize(prop, fallback)
-        if (handled) {
-          results.set(prop, { passed: false, value })
-          normValues.set(prop, value)
+        for (const [island, facets] of state ?? []) {
+          const modeFacet = Processor.mode.modes.get(island)?.facet
+          if (modeFacet && facets.has(modeFacet)) {
+            modes.set(island, facets.get(modeFacet)!)
+          }
         }
-      }
 
-      for (const [prop, value] of this.values.entries()) {
-        const { handled, passed, value: normValue } = Normalizer.normalize(prop, value, fallbacks?.get(prop))
-        if (handled) {
-          results.set(prop, { passed, value: normValue })
-          normValues.set(prop, normValue)
+        return modes
+      },
+      state(modes: State_Modes) {
+        const partialState: State = new Map()
+
+        for (const [island, value] of modes) {
+          partialState.set(island, new Map())
+
+          const modeFacet = Processor.mode.modes.get(island)?.facet
+          if (modeFacet) partialState.get(island)!.set(modeFacet, value)
         }
-      }
 
-      const isFullyValid = Array.from(results.values()).every(({ passed }) => passed)
-
-      return {
-        passed: isFullyValid,
-        values: normValues,
-        results,
-      }
-    }
+        return partialState
+      },
+    },
   }
 
   // #region EVENT MANAGER
@@ -240,42 +212,182 @@ export function script(args: ScriptArgs) {
     }
   }
 
-  // #region MAIN
+  // #region PROCESSOR
   class Processor {
     private static instance: UndefinedOr<Processor> = undefined
     private static _args: ScriptArgs = args
 
-    private static isProp<Strat extends STRAT>(
-      prop: Prop,
-      strat: Strat
-    ): prop is Strat extends STRATS['MONO']
-      ? ImplicitProp | { prop: string; options: MonoOption }
-      : Strat extends STRATS['MULTI']
-        ? { prop: string; options: MultiOption }
-        : Strat extends STRATS['LIGHT_DARK']
-          ? ImplicitProp | { prop: string; options: LightDarkOption }
-          : Strat extends STRATS['SYSTEM']
-            ? ImplicitProp | { prop: string; options: SystemOption }
-            : never {
-      if (typeof prop === 'string') return strat !== STRATS.MULTI
-      if (typeof prop === 'object') {
-        if (typeof prop.options === 'string') return strat === STRATS.MONO
-        if (Array.isArray(prop.options)) return strat === STRATS.MULTI
-        if (typeof prop.options === 'object') {
-          if (MODES.SYSTEM in prop.options) return strat === STRATS.SYSTEM
-          return strat === STRATS.LIGHT_DARK || strat === STRATS.SYSTEM
+    private static utils = {
+      isOptStrat<S extends STRAT>(opt: Opt, strat: S): opt is S extends keyof Strat_To_Opt ? Strat_To_Opt[S] : never {
+        if (opt === true) return strat !== STRATS.MULTI
+        if (typeof opt === 'string') return strat === STRATS.MONO
+        if (typeof opt === 'object') {
+          if (Array.isArray(opt)) return strat === STRATS.MULTI
+          else {
+            if (MODES.SYSTEM in opt) return strat === STRATS.SYSTEM
+            return strat === STRATS.LIGHT_DARK || strat === STRATS.SYSTEM
+          }
         }
-      }
-      return false
+        return false
+      },
     }
 
-    public static needsReboot(args: ScriptArgs) {
-      if (Utils.deepEqualObjects(args, Processor._args)) return
+    private static process = {
+      islands(args: ScriptArgs) {
+        const islands: Processor['_islands'] = new Set(Object.keys(args.config))
+        return islands
+      },
+      schema(args: ScriptArgs) {
+        const options_map: Processor['_schema'] = new Map()
 
-      return () => {
-        Processor._args = args
-        Processor.instance = new Processor()
-      }
+        for (const [island, facets] of Object.entries(args.schema)) {
+          const facets_map: NonNullable<ReturnType<Schema['get']>> = new Map()
+
+          for (const [facet, opt] of Object.entries(facets)) {
+            const preferred: NonNullable<ReturnType<(typeof facets_map)['get']>>['preferred'] = args.config[island]![facet]!.preferred
+
+            const opt_set: NonNullable<ReturnType<(typeof facets_map)['get']>>['options'] = new Set()
+            const strat = args.config[island]![facet]!.strategy
+
+            if (opt === true) {
+              // prettier-ignore
+              switch (strat) {
+                case STRATS.MONO: opt_set.add(DEFAULT); break;
+                case STRATS.LIGHT_DARK: Object.values(MODES).filter((m) => m !== MODES.SYSTEM).forEach((m) => opt_set.add(m)); break;
+                case STRATS.SYSTEM: Object.values(MODES).forEach((m) => opt_set.add(m)); break;
+                default: break;
+              }
+            }
+            if (typeof opt === 'string') opt_set.add(opt)
+            if (Array.isArray(opt)) opt.forEach((o) => opt_set.add(o))
+            if (typeof opt === 'object' && !Array.isArray(opt)) {
+              opt_set.add(opt.light ?? MODES.LIGHT)
+              opt_set.add(opt.dark ?? MODES.DARK)
+              if (strat === STRATS.SYSTEM) opt_set.add((opt as { system: string }).system ?? MODES.SYSTEM)
+              if ('custom' in opt) opt.custom?.forEach((cm) => opt_set.add(cm))
+            }
+
+            facets_map.set(facet, { options: opt_set, preferred: preferred })
+          }
+
+          options_map.set(island, facets_map)
+        }
+
+        return options_map
+      },
+      mode(args: ScriptArgs) {
+        const mode = {
+          modes: new Map(),
+          storageKey: args.mode?.storageKey ?? preset.mode.storageKey,
+          store: args.mode?.store ?? preset.mode.store,
+        } as Mode_Handling
+
+        for (const [island, facets] of Object.entries(args.config)) {
+          for (const [facet, strat_obj] of Object.entries(facets)) {
+            if (strat_obj.type !== FACETS.MODE) continue
+
+            // resolvedModes
+            const resolvedModes: Mode['resolvedModes'] = new Map()
+            const strat = strat_obj.strategy
+            const opt = args.schema[island]![facet]!
+
+            // prettier-ignore
+            switch (strat) {
+              case (STRATS.MONO): resolvedModes.set(strat_obj.preferred, strat_obj.colorScheme); break;
+              case (STRATS.MULTI): Object.entries(strat_obj.colorSchemes).forEach(([mode, cs]) => resolvedModes.set(mode, cs)); break;
+              case (STRATS.LIGHT_DARK):
+              case (STRATS.SYSTEM): {
+
+                if (opt === true) {
+                  resolvedModes.set(MODES.LIGHT, MODES.LIGHT)
+                  resolvedModes.set(MODES.DARK, MODES.DARK)
+                }
+
+                if (typeof opt === 'object' && !Array.isArray(opt)) {
+                  resolvedModes.set(opt.light ?? MODES.LIGHT, MODES.LIGHT)
+                  resolvedModes.set(opt.dark ?? MODES.DARK, MODES.DARK)
+                  if ((strat_obj as {colorSchemes: Record<string, RESOLVED_MODE>}).colorSchemes) Object.entries(strat_obj.colorSchemes ?? []).forEach(([mode, cs]) => resolvedModes.set(mode, cs))
+                }
+              }
+            }
+
+            // systemMode
+            let systemMode: Mode['systemMode'] = undefined
+            if (strat === STRATS.SYSTEM) {
+              if (opt === true || (typeof opt === 'object' && !Array.isArray(opt))) {
+                systemMode = {
+                  name: opt === true ? MODES.SYSTEM : ((opt as { system: string }).system ?? MODES.SYSTEM),
+                  fallback: strat_obj.fallback,
+                }
+              }
+            }
+
+            mode.modes.set(island, {
+              facet,
+              strategy: strat,
+              resolvedModes,
+              systemMode,
+              store: strat_obj.store ?? true,
+              selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? preset.mode.selector,
+            })
+          }
+        }
+
+        return mode
+      },
+      options(args: ScriptArgs) {
+        const options: Options = new Map()
+
+        for (const [island, facets] of Object.entries(args.config)) {
+          const facetsOptions: NonNullable<ReturnType<Options['get']>> = new Map()
+
+          for (const [facet, stratObj] of Object.entries(facets)) {
+            const schemaItem = args.schema[island]?.[facet]
+            if (!schemaItem) continue
+
+            // prettier-ignore
+            switch (stratObj.strategy) {
+              case STRATS.MONO: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.MONO)) break
+
+                const facetOptions = new Set(schemaItem === true ? [DEFAULT] : [schemaItem])
+                facetsOptions.set(facet, facetOptions)
+              }; break
+              case STRATS.MULTI: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.MULTI)) break
+
+                const facetOptions = new Set(schemaItem)
+                facetsOptions.set(facet, facetOptions)
+              }; break
+              case STRATS.LIGHT_DARK: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.LIGHT_DARK)) break
+
+                const facetOptions = new Set([
+                  ...(schemaItem === true ? [MODES.LIGHT] : [schemaItem.light ?? MODES.LIGHT]),
+                  ...(schemaItem === true ? [MODES.DARK] : [schemaItem.dark ?? MODES.DARK]),
+                  ...(schemaItem === true ? [] : ('custom' in schemaItem ? schemaItem.custom ?? [] : [])),
+                ])
+                facetsOptions.set(facet, facetOptions)
+              }; break
+              case STRATS.SYSTEM: {
+                if (!Processor.utils.isOptStrat(schemaItem, STRATS.SYSTEM)) break
+
+                const facetOptions = new Set([
+                  ...(schemaItem === true ? [MODES.LIGHT] : [schemaItem.light ?? MODES.LIGHT]),
+                  ...(schemaItem === true ? [MODES.DARK] : [schemaItem.dark ?? MODES.DARK]),
+                  ...(schemaItem === true ? [MODES.SYSTEM] : [schemaItem.system ?? MODES.SYSTEM]),
+                  ...(schemaItem === true ? [] : 'custom' in schemaItem ? (schemaItem.custom ?? []) : []),
+                ])
+                facetsOptions.set(facet, facetOptions)
+              }
+            }
+          }
+
+          options.set(island, facetsOptions)
+        }
+
+        return options
+      },
     }
 
     public static getInstance() {
@@ -283,12 +395,25 @@ export function script(args: ScriptArgs) {
       return Processor.instance
     }
 
-    public static get target() {
-      return Processor.getInstance()._target
+    public static needsReboot(args: ScriptArgs) {
+      if (utils.deepEqual.objects(args, Processor._args)) return
+
+      return () => {
+        Processor._args = args
+        Processor.instance = new Processor()
+      }
     }
 
     public static get storageKey() {
       return Processor.getInstance()._storageKey
+    }
+
+    public static get islands() {
+      return Processor.getInstance()._islands
+    }
+
+    public static get schema() {
+      return Processor.getInstance()._schema
     }
 
     public static get options() {
@@ -299,10 +424,6 @@ export function script(args: ScriptArgs) {
       return Processor.getInstance()._mode
     }
 
-    public static get observe() {
-      return Processor.getInstance()._observe
-    }
-
     public static get nonce() {
       return Processor.getInstance()._nonce
     }
@@ -311,225 +432,155 @@ export function script(args: ScriptArgs) {
       return Processor.getInstance()._disableTransitionOnChange
     }
 
-    private _target: HTMLElement
     private _storageKey: string
-    private _options: Options = this.processOptions(Processor._args)
-    private _mode: UndefinedOr<Mode> = this.processMode(Processor._args)
-    private _observe: OBSERVABLE[]
+    private _islands: Set<string>
+    private _schema: Schema
+    private _options: Options
+    private _mode: Mode_Handling
     private _nonce: string
     private _disableTransitionOnChange: boolean
 
     private constructor() {
-      this._target = document.getElementById(Processor._args.target ?? '') ?? document.documentElement
-      this._storageKey = Processor._args.storageKey ?? CONFIG.storageKey
-      this._observe = Processor._args.observe ?? CONFIG.observe
-      this._nonce = Processor._args.nonce ?? CONFIG.nonce
-      this._disableTransitionOnChange = Processor._args.disableTransitionOnChange ?? CONFIG.disableTransitionOnChange
-    }
-
-    private processOptions(args: ScriptArgs) {
-      const options: Options = new Map()
-
-      for (const [prop, stratObj] of Object.entries(args.config)) {
-        const propsItem = args.props.find((i) => (typeof i === 'string' ? prop === i : prop === i.prop))
-        if (!propsItem) continue
-
-        // prettier-ignore
-        switch (stratObj.strategy) {
-          case STRATS.MONO: {
-              if (!Processor.isProp(propsItem, STRATS.MONO)) break
-
-              const propOptions = new Set(typeof propsItem === 'string' ? [DEFAULT] : [propsItem.options as string])
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-          case STRATS.MULTI: {
-              if (!Processor.isProp(propsItem, STRATS.MULTI)) break
-
-              const propOptions = new Set(propsItem.options)
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-          case STRATS.LIGHT_DARK: {
-              if (!Processor.isProp(propsItem, STRATS.LIGHT_DARK)) break
-
-              const propOptions = new Set([
-                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
-                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
-                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
-              ])
-
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-          case STRATS.SYSTEM: {
-              if (!Processor.isProp(propsItem, STRATS.SYSTEM)) break
-
-              const propOptions = new Set([
-                ...(typeof propsItem === 'string' ? [MODES.LIGHT] : [(propsItem.options as SystemValues).light ?? MODES.LIGHT]),
-                ...(typeof propsItem === 'string' ? [MODES.DARK] : [(propsItem.options as SystemValues).dark ?? MODES.DARK]),
-                ...(typeof propsItem === 'string' ? [MODES.SYSTEM] : [(propsItem.options as SystemValues).system ?? MODES.SYSTEM]),
-                ...(typeof propsItem !== 'string' ? ((propsItem.options as SystemValues).custom ?? []) : []),
-              ])
-
-              options.set(prop, { preferred: stratObj.preferred, options: propOptions })
-            }; break
-        }
-      }
-
-      return options
-    }
-
-    private processMode(args: ScriptArgs) {
-      const [modeProp, stratObj] = (Object.entries(args.config).find(([, { type }]) => type === PROP_TYPES.MODE) ?? []) as [string?, ModeProp?]
-      if (!modeProp || !stratObj) return
-
-      // Corresponding mode prop from "props" array
-      const propsItem = args.props.find((i) => (typeof i === 'string' ? i === modeProp : i.prop === modeProp))
-      if (!propsItem) return
-
-      const resolvedModes: NonNullable<Processor['_mode']>['resolvedModes'] = new Map()
-      // prettier-ignore
-      switch (stratObj.strategy) {
-        case STRATS.MONO: {
-          if (!Processor.isProp(propsItem, STRATS.MONO)) break;
-
-          const mode = typeof propsItem === 'string' ? DEFAULT : propsItem?.options
-          resolvedModes.set(mode, stratObj.colorScheme)
-        }; break
-        case STRATS.MULTI: {
-          Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => {
-            resolvedModes.set(key, colorScheme)
-          })
-        }; break
-        case STRATS.LIGHT_DARK:
-        case STRATS.SYSTEM: {
-          if (!Processor.isProp(propsItem, STRATS.LIGHT_DARK) && !Processor.isProp(propsItem, STRATS.SYSTEM)) break;
-
-          resolvedModes.set(typeof propsItem === 'object' ? propsItem.options.light ?? MODES.LIGHT : MODES.LIGHT, MODES.LIGHT)
-          resolvedModes.set(typeof propsItem === 'object' ? propsItem.options.dark ?? MODES.DARK : MODES.DARK, MODES.DARK)
-          if (stratObj.colorSchemes) Object.entries(stratObj.colorSchemes).forEach(([key, colorScheme]) => resolvedModes.set(key, colorScheme))
-        }; break
-        default: break
-      }
-
-      const systemMode = Processor.isProp(propsItem, STRATS.SYSTEM) ? (typeof propsItem !== 'string' ? (propsItem.options.system ?? MODES.SYSTEM) : STRATS.SYSTEM) : undefined
-
-      return {
-        prop: modeProp,
-        strategy: stratObj.strategy,
-        resolvedModes,
-        system:
-          stratObj.strategy === STRATS.SYSTEM
-            ? {
-                mode: systemMode!,
-                fallback: stratObj.fallback,
-              }
-            : undefined,
-        selector: args.mode?.selector ?? CONFIG.mode.selector,
-        store: args.mode?.store ?? CONFIG.mode.store,
-        storageKey: args.mode?.storageKey ?? CONFIG.mode.storageKey,
-      }
+      this._storageKey = Processor._args.storageKey ?? preset.storageKey
+      this._islands = Processor.process.islands(Processor._args)
+      this._schema = Processor.process.schema(Processor._args)
+      this._options = Processor.process.options(Processor._args)
+      this._mode = Processor.process.mode(Processor._args)
+      this._nonce = Processor._args.nonce ?? preset.nonce
+      this._disableTransitionOnChange = Processor._args.disableTransitionOnChange ?? preset.disableTransitionOnChange
     }
   }
 
-  // #region MAIN
-  class Main {
-    private static instance: UndefinedOr<Main>
+  class Normalizer {
+    private values: State = new Map()
 
-    public static init() {
-      if (!Main.instance) Main.instance = new Main()
+    private constructor() {}
+
+    static ofJSON(json: NullOr<string>) {
+      const parsed = utils.parse(json)
+      if (!parsed) return Normalizer.of(new Map() as State)
+
+      const isPlainObj = utils.isPlainObject(parsed)
+      if (!isPlainObj) return Normalizer.of(new Map() as State)
+
+      return Normalizer.of(utils.deepConvert.objToMap(parsed) as State)
     }
 
-    public static reboot(args: ScriptArgs) {
-      const rebootProcessor = Processor.needsReboot(args)
-      if (!rebootProcessor) return
-
-      EventManager.emit('State:reset')
-
-      StorageManager.terminate()
-      DOMManager.terminate()
-
-      rebootProcessor()
-
-      Main.instance = new Main()
+    static ofMap(values: State) {
+      return Normalizer.of(values)
     }
 
-    public static get options() {
-      const options = Processor.options
-      return Object.fromEntries(Array.from(options.entries()).map(([prop, { options }]) => [prop, Array.from(options)]))
+    private static of(values: State) {
+      const normalizer = new Normalizer()
+      normalizer.values = values
+      return normalizer
     }
 
-    public static get state(): NullOr<State> {
-      return Main.instance?.state ?? null
+    public static utils = {
+      isIsland(value: string) {
+        return Processor.islands.has(value)
+      },
+      isFacet(island: string, value: string) {
+        return Processor.schema.get(island)?.has(value) ?? false
+      },
+      isOption(island: string, facet: string, value?: NullOr<string>) {
+        if (!value) return false
+        return Processor.schema.get(island)?.get(facet)?.options?.has(value) ?? false
+      },
     }
 
-    public static set state(state: State) {
-      if (!Main.instance) return
+    static normalize({ island, facet, value, fallback }: { island: string; facet: string; value: NullOr<string>; fallback?: NullOr<string> }) {
+      const isIsland = Normalizer.utils.isIsland(island)
+      if (!isIsland) return { isIsland: false, isFacet: undefined, isOption: undefined, normalized: undefined }
 
-      const currState = Main.state
-      const newState = Utils.merge(currState, state)
+      const isFacet = Normalizer.utils.isFacet(island, facet)
+      if (!isFacet) return { isIsland: false, isFacet: false, isOption: undefined, normalized: undefined }
 
-      const needsUpdate = !Utils.deepEqualMaps(currState, newState)
-      if (needsUpdate) {
-        Main.instance.state = newState
-        EventManager.emit('State:update', newState)
+      const isOption = Normalizer.utils.isOption(island, facet, value)
+      const isFallbackOption = Normalizer.utils.isOption(island, facet, fallback)
+      const preferred = Processor.schema.get(island)!.get(facet)!.preferred
+
+      const normalized = isOption ? value! : isFallbackOption ? fallback! : preferred
+
+      return { isIsland: true, isFacet: true, isOption, normalized }
+    }
+
+    static normalizeModes(modes: NullOr<State_Modes>, fallbacks?: Nullable<State_Modes>) {
+      const normalized: State_Modes = new Map()
+
+      for (const [island, facets] of Processor.schema) {
+        for (const [facet, { preferred }] of facets) {
+          const isModeFacet = facet === Processor.mode.modes.get(island)?.facet
+          if (!isModeFacet) continue
+
+          const { store } = Processor.mode.modes.get(island)!
+          if (!store) continue
+
+          normalized.set(island, preferred)
+        }
       }
 
-      const resolvedMode = DOMManager.resolveMode(newState)
-      Main.resolvedMode = resolvedMode
-    }
+      for (const [island, value] of fallbacks ?? []) {
+        const isIsland = Normalizer.utils.isIsland(island)
+        if (!isIsland) continue
 
-    public static get forced(): NullOr<State> {
-      if (!Main.instance) return null
-      return Main.instance.forced
-    }
+        const { facet, store } = Processor.mode.modes.get(island)!
 
-    public static set forced(state: State) {
-      if (!Main.instance) return
+        const isOption = Normalizer.utils.isOption(island, facet, value)
+        if (!isOption) continue
+        if (!store) continue
 
-      const curr = Main.forced
-
-      const needsUpdate = !Utils.deepEqualMaps(curr, state)
-      if (needsUpdate) {
-        Main.instance.forced = state
-        EventManager.emit('Forced:update', state)
+        normalized.set(island, value)
       }
-    }
 
-    public static force(prop: string, value: string) {}
+      for (const [island, value] of modes ?? []) {
+        const isIsland = Normalizer.utils.isIsland(island)
+        if (!isIsland) continue
 
-    public static get resolvedMode(): UndefinedOr<RESOLVED_MODE> {
-      return Main.instance?.resolvedMode
-    }
+        const { facet, store } = Processor.mode.modes.get(island)!
 
-    public static set resolvedMode(RM: UndefinedOr<RESOLVED_MODE>) {
-      if (!Main.instance) return
-      if (!RM) return
+        const isOption = Normalizer.utils.isOption(island, facet, value)
+        if (!isOption) continue
+        if (!store) continue
 
-      const currRM = Main.resolvedMode
-
-      const needsUpdate = currRM !== RM
-      if (!needsUpdate) return
-
-      Main.instance.resolvedMode = RM
-      EventManager.emit('ResolvedMode:update', RM)
-    }
-
-    private state: NullOr<State> = null
-    private forced: State = new Map()
-    private resolvedMode: UndefinedOr<RESOLVED_MODE> = undefined
-
-    private constructor() {
-      StorageManager.init()
-      DOMManager.init()
-
-      const state = StorageManager.state
-      this.state = state
-      EventManager.emit('State:update', state)
-
-      const resolvedMode = DOMManager.resolveMode(state)
-      if (resolvedMode) {
-        this.resolvedMode = resolvedMode
-        EventManager.emit('ResolvedMode:update', resolvedMode)
+        normalized.set(island, value)
       }
+
+      return normalized
+    }
+
+    normalize(provFallbacks?: Nullable<string | State>) {
+      const normalized: State = new Map()
+
+      const fallbacks = typeof provFallbacks === 'string' ? (utils.deepConvert.objToMap(JSON.parse(provFallbacks)) as State) : (provFallbacks ?? (new Map() as State))
+
+      for (const [island, facets] of Processor.schema) {
+        normalized.set(island, new Map())
+
+        for (const [facet, { preferred }] of facets) {
+          normalized.get(island)!.set(facet, preferred)
+        }
+      }
+
+      for (const [island, facets] of fallbacks) {
+        for (const [facet, fallback] of facets) {
+          const { isOption, normalized: normValue } = Normalizer.normalize({ island, facet, value: fallback })
+          if (isOption) {
+            normalized.get(island)!.set(facet, normValue)
+          }
+        }
+      }
+
+      for (const [island, facets] of this.values) {
+        for (const [facet, value] of facets) {
+          const { isOption, normalized: normValue } = Normalizer.normalize({ island, facet, value, fallback: fallbacks.get(island)?.get(facet) })
+          if (isOption) {
+            normalized.get(island)!.set(facet, normValue)
+          }
+        }
+      }
+
+      return normalized
     }
   }
 
@@ -553,127 +604,106 @@ export function script(args: ScriptArgs) {
     private static store = {
       state(state: State) {
         const currState = Main.state
-        const newState = Utils.merge(currState, state)
+        const newState = utils.deepMerge.maps(currState, state)
 
         const currStorageState = StorageManager.utils.retrieve(Processor.storageKey)
-        const storageNeedsUpdate = currStorageState !== Utils.mapToJSON(newState)
-        if (storageNeedsUpdate) StorageManager.utils.store(Processor.storageKey, Utils.mapToJSON(newState))
+        const storageNeedsUpdate = currStorageState !== JSON.stringify(utils.deepConvert.mapToObj(newState))
+        if (storageNeedsUpdate) StorageManager.utils.store(Processor.storageKey, JSON.stringify(utils.deepConvert.mapToObj(newState)))
 
-        const stateNeedsUpdate = !Utils.deepEqualMaps(currState, newState)
+        const stateNeedsUpdate = !utils.deepEqual.maps(currState, newState)
         if (stateNeedsUpdate) Main.state = newState
       },
-      mode(mode: UndefinedOr<string>) {
-        if (!mode) return
+      modes(modes: UndefinedOr<Map<string, string>>) {
+        if (!modes) return
         if (!Processor.mode) return
         if (!Processor.mode.store) return
 
         const currState = Main.state
-        const stateCurrMode = currState?.get(Processor.mode.prop)
+        const currStateModes: State_Modes = new Map()
+
+        for (const [island, facets] of currState ?? []) {
+          const modeFacet = Processor.mode.modes.get(island)?.facet
+          if (modeFacet && facets.has(modeFacet)) {
+            currStateModes.set(island, facets.get(modeFacet)!)
+          }
+        }
+
+        const stringModes = JSON.stringify(utils.deepConvert.mapToObj(modes))
         const storageCurrMode = StorageManager.utils.retrieve(Processor.mode.storageKey)
 
-        const storageNeedsUpdate = storageCurrMode !== mode
-        if (storageNeedsUpdate) StorageManager.utils.store(Processor.mode!.storageKey, mode)
+        const storageNeedsUpdate = stringModes !== storageCurrMode
+        if (storageNeedsUpdate) StorageManager.utils.store(Processor.mode!.storageKey, stringModes)
 
-        const stateNeedsUpdate = stateCurrMode !== mode
-        if (stateNeedsUpdate) Main.state = new Map([[Processor.mode.prop, mode]])
+        const partialState = utils.construct.state(modes)
+
+        const stateNeedsUpdate = !utils.deepEqual.maps(currState, partialState)
+        if (stateNeedsUpdate) Main.state = partialState
       },
+    }
+
+    public static get state() {
+      const stateString = StorageManager.utils.retrieve(Processor.storageKey)
+      const normalized = Normalizer.ofJSON(stateString).normalize()
+      return normalized
     }
 
     private static set state(state: State) {
       StorageManager.store.state(state)
     }
 
-    private static set mode(mode: UndefinedOr<string>) {
-      StorageManager.store.mode(mode)
+    private static set modes(modes: UndefinedOr<State_Modes>) {
+      StorageManager.store.modes(modes)
     }
 
     public static init() {
       if (!StorageManager.instance) StorageManager.instance = new StorageManager()
     }
 
-    public static terminate(): void {
-      StorageManager.controller.abort()
-
-      localStorage.removeItem(Processor.storageKey)
-      if (Processor.mode) localStorage.removeItem(Processor.mode.storageKey)
-
-      StorageManager.instance = undefined
-    }
-
-    public static get state() {
-      const stateString = StorageManager.utils.retrieve(Processor.storageKey)
-      const { values } = Normalizer.ofJSON(stateString).normalize()
-      return values
-    }
-
     private constructor() {
       EventManager.on('State:update', 'StorageManager:state:update', (state) => {
-        StorageManager.state = state
-        StorageManager.mode = state.get(Processor.mode?.prop ?? '')
+        StorageManager.state = utils.deepConvert.objToMap(state) as State
+        StorageManager.modes = utils.construct.modes(utils.deepConvert.objToMap(state) as State)
       })
 
-      if (Processor.observe.includes(OBSERVABLES.STORAGE)) {
-        StorageManager.controller = new AbortController()
-        window.addEventListener(
-          'storage',
-          ({ key, newValue, oldValue }) => {
-            // prettier-ignore
-            switch (key) {
-              case Processor.storageKey: {
-                const { values } = Normalizer.ofJSON(newValue).normalize(oldValue)
-                StorageManager.state = values
-              }; break;
-              case Processor.mode?.storageKey: {
-                if (!Processor.mode?.store) return
+      StorageManager.controller = new AbortController()
+      window.addEventListener(
+        'storage',
+        ({ key, newValue, oldValue }) => {
+          // prettier-ignore
+          switch (key) {
+            case Processor.storageKey: {
+              const normalized = Normalizer.ofJSON(newValue).normalize(oldValue)
+              StorageManager.state = normalized
+            }; break
+            case Processor.mode.storageKey: {
+              if (!Processor.mode.store) return
+              
+              const parsedNew = utils.parse(newValue)
+              const newModes = utils.isPlainObject(parsedNew) ? utils.deepConvert.objToMap(parsedNew) as State_Modes : null
 
-                const { value } = Normalizer.normalize(Processor.mode.prop, newValue, oldValue)
-                if (!value) return
-                
-                StorageManager.mode = value
-              }; break;
-              default: break;
-            }
-          },
-          { signal: StorageManager.controller.signal }
-        )
-      }
+              const parsedOld = utils.parse(oldValue)
+              const oldModes = utils.isPlainObject(parsedOld) ? utils.deepConvert.objToMap(utils.parse(oldValue)) as State_Modes : null
+
+              const normalized = Normalizer.normalizeModes(newModes, oldModes)
+              StorageManager.modes = normalized
+            }; break
+          }
+        },
+        { signal: StorageManager.controller.signal }
+      )
     }
   }
 
-  // #region DOM MANAGER
-  class DOMManager {
-    private static instance: UndefinedOr<DOMManager>
-    private static target = Processor.target
+  class DomManager {
+    private static instance: UndefinedOr<DomManager>
     private static systemPref: UndefinedOr<RESOLVED_MODE>
-    private static observers: Partial<{
-      attrs: MutationObserver
-      forceAttrs: MutationObserver
-    }> = {}
+    private static observers: {
+      attrs: UndefinedOr<MutationObserver>
+    } = {
+      attrs: undefined,
+    }
 
-    private static utils = {
-      getSystemPref() {
-        if (!DOMManager.systemPref) {
-          const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
-          DOMManager.systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
-        }
-
-        return DOMManager.systemPref
-      },
-      resolveMode(state: NullOr<State>) {
-        if (!state) return
-        if (!Processor.mode) return
-
-        const mode = state.get(Processor.mode.prop)
-        if (!mode) return
-
-        const isSystemStrat = Processor.mode.strategy === STRATS.SYSTEM
-        const isSystemMode = Processor.mode.system?.mode === mode
-        const isSystem = isSystemStrat && isSystemMode
-        const fallbackMode = Processor.mode.system?.fallback
-        if (isSystem) return DOMManager.utils.getSystemPref() ?? Processor.mode.resolvedModes.get(fallbackMode!)
-
-        return Processor.mode.resolvedModes.get(mode)
-      },
+    public static utils = {
       disableTransitions() {
         const css = document.createElement('style')
         if (Processor.nonce) css.setAttribute('nonce', Processor.nonce)
@@ -685,258 +715,323 @@ export function script(args: ScriptArgs) {
           setTimeout(() => document.head.removeChild(css), 1)
         }
       },
-      getDepth(el: HTMLElement) {
-        let depth = 0
-        let currEl: NullOr<HTMLElement> = el
-
-        while (currEl && el.parentElement) {
-          depth++
-          currEl = currEl.parentElement
+      getSystemPref() {
+        if (!DomManager.systemPref) {
+          const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
+          DomManager.systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
         }
 
-        return depth
+        return DomManager.systemPref
       },
-      findEverythingWithAttrs(el: HTMLElement, attrs: string[]) {
-        const mathedElements: HTMLElement[] = []
+      findIslands(island: string, scope?: HTMLElement) {
+        const selector = `[data-island="${island}"]`
 
-        if (attrs.some((attr) => el.hasAttribute(attr))) mathedElements.push(el)
+        if (scope) {
+          const results: Set<HTMLElement> = new Set()
 
-        el.querySelectorAll('*').forEach((child) => {
-          if (child instanceof HTMLElement && attrs.some((attr) => child.hasAttribute(attr))) mathedElements.push(child)
-        })
+          if (scope.matches(selector)) results.add(scope)
 
-        return mathedElements
+          const matches = scope.querySelectorAll<HTMLElement>(selector)
+          matches.forEach((el) => results.add(el))
+
+          return results
+        }
+
+        return new Set(document.querySelectorAll<HTMLElement>(selector))
+      },
+      resolveMode(island: string, mode: string) {
+        if (!Processor.mode.modes.has(island)) return
+
+        const isSystemStrat = Processor.mode.modes.get(island)!.strategy === STRATS.SYSTEM
+        const isSystemMode = Processor.mode.modes.get(island)!.systemMode?.name === mode
+        const isSystem = isSystemStrat && isSystemMode
+        const fallbackMode = Processor.mode.modes.get(island)!.systemMode?.fallback
+        if (isSystem) return DomManager.utils.getSystemPref() ?? Processor.mode.modes.get(island)?.resolvedModes.get(fallbackMode!)
+
+        return Processor.mode.modes.get(island)!.resolvedModes.get(mode)
+      },
+      resolveModes(modes: State_Modes) {
+        const resolvedModes: Resolved_Modes = new Map()
+
+        for (const [island, mode] of modes) {
+          const resolvedMode = DomManager.utils.resolveMode(island, mode)
+          if (resolvedMode) resolvedModes.set(island, resolvedMode)
+        }
+
+        return resolvedModes
       },
     }
 
     private static apply = {
-      state(state: State) {
-        state.forEach((value, prop) => {
-          const currValue = DOMManager.target.getAttribute(`data-${prop}`)
-          const needsUpdate = currValue !== value
-          if (needsUpdate) DOMManager.target.setAttribute(`data-${prop}`, value)
+      state(state: NullOr<State>, node?: HTMLElement) {
+        if (!state) return
+
+        state.forEach((facets, island) => {
+          const targets = DomManager.utils.findIslands(island, node)
+
+          facets.forEach((value, facet) => {
+            targets.forEach((n) => {
+              const currValue = n.getAttribute(`data-${facet}`)
+              const needsUpdate = currValue !== value
+              if (needsUpdate) n.setAttribute(`data-${facet}`, value)
+            })
+          })
         })
 
         const currState = Main.state
-        const newState = Utils.merge(currState, state)
+        const newState = utils.deepMerge.maps(currState, state)
 
-        const needsUpdate = !Utils.deepEqualMaps(currState, newState)
+        const needsUpdate = !utils.deepEqual.maps(currState, newState)
         if (needsUpdate) Main.state = newState
       },
-      resolvedMode(RM: UndefinedOr<RESOLVED_MODE>) {
-        if (!RM) return
-        if (!Processor.mode) return
+      resolvedModes(modes: Resolved_Modes) {
+        modes.forEach((mode, island) => {
+          if (!Processor.mode.modes.has(island)) return
+          if (!mode) return
 
-        if (Processor.mode.selector.includes(SELECTORS.COLOR_SCHEME)) {
-          const DomCurrRM = DOMManager.target.style.colorScheme
-          const DomNeedsUpdate = DomCurrRM !== RM
-          if (DomNeedsUpdate) DOMManager.target.style.colorScheme = RM
-        }
+          const islands = DomManager.utils.findIslands(island)
 
-        if (Processor.mode.selector.includes(SELECTORS.CLASS)) {
-          const isSet = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
-          if (isSet === RM) return
+          if (Processor.mode.modes.get(island)!.selectors.includes(SELECTORS.COLOR_SCHEME)) {
+            islands.forEach((i) => {
+              const currValue = i.style.colorScheme
+              const needsUpdate = currValue !== mode
+              if (needsUpdate) i.style.colorScheme = mode
+            })
+          }
 
-          const other = RM === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
-          DOMManager.target.classList.replace(other, RM) || DOMManager.target.classList.add(RM)
-        }
+          if (Processor.mode.modes.get(island)!.selectors.includes(SELECTORS.CLASS)) {
+            islands.forEach((i) => {
+              const isSet = i.classList.contains(MODES.LIGHT) ? MODES.LIGHT : i.classList.contains(MODES.DARK) ? MODES.DARK : undefined
+              if (isSet === mode) return
 
-        if (Processor.mode.selector.includes(SELECTORS.DATA_ATTRIBUTE)) {
-          const DomCurrRM = DOMManager.target.getAttribute('data-color-scheme')
-          const DomNeedsUpdate = DomCurrRM !== RM
-          if (DomNeedsUpdate) DOMManager.target.setAttribute('data-color-scheme', RM)
-        }
+              const other = mode === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
+              i.classList.replace(other, mode) || i.classList.add(mode)
+            })
+          }
 
-        const stateCurrRM = Main.resolvedMode
-        const stateNeedsUpdate = stateCurrRM !== RM
-        if (stateNeedsUpdate) Main.resolvedMode = RM
+          if (Processor.mode.modes.get(island)!.selectors.includes(SELECTORS.DATA_ATTRIBUTE)) {
+            islands.forEach((i) => {
+              const currValue = i.getAttribute('data-color-scheme')
+              const needsUpdate = currValue !== mode
+              if (needsUpdate) i.setAttribute('data-color-scheme', mode)
+            })
+          }
+        })
+
+        const currModes = Main.resolvedModes
+        const needsUpdate = utils.deepEqual.maps(currModes, modes)
+        if (needsUpdate) Main.resolvedModes = modes
       },
     }
 
-    private static initAttrsObserver() {
-      if (!Processor.observe.includes(OBSERVABLES.DOM)) return
+    private static initObservers = {
+      attrs() {
+        const constructObservedAttrs = () => {
+          const observedAttrs: Set<string> = new Set(['data-island'])
 
-      const handleMutations = (mutations: MutationRecord[]) => {
-        const updates = new Map() as State
-        for (const { attributeName, oldValue } of mutations) {
-          // prettier-ignore
-          switch (attributeName) {
-              case 'style': {
-                if (!Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME)) return
+          Processor.schema.forEach((facets) => {
+            facets.forEach((_, facet) => {
+              const attr = `data-${facet}`
+              if (!observedAttrs.has(attr)) observedAttrs.add(attr)
+            })
+          })
 
-                const currRM = Main.resolvedMode!
-                const newRM = DOMManager.target.style.colorScheme
+          return observedAttrs
+        }
+        const observedAttrs = constructObservedAttrs()
 
-                const needsUpdate = currRM !== newRM
-                if (needsUpdate) DOMManager.target.style.colorScheme = currRM
-              }; break;
-              case 'class': {
-                if (!Processor.mode?.selector.includes(SELECTORS.CLASS)) return
+        const processNode = (node: Node, state?: State) => {
+          if (!(node instanceof HTMLElement)) return
 
-                const currRM = Main.resolvedMode!
-                const newRM = DOMManager.target.classList.contains(MODES.LIGHT) ? MODES.LIGHT : DOMManager.target.classList.contains(MODES.DARK) ? MODES.DARK : undefined
+          const currState = Main.state
+          const newState = state ? utils.deepMerge.maps(currState, state) : currState
 
-                if (currRM !== newRM) {
-                  const other = currRM === MODES.LIGHT ? MODES.DARK : MODES.LIGHT
-                  DOMManager.target.classList.replace(other, currRM) || DOMManager.target.classList.add(currRM)
-                }
-              }; break;
-              case 'data-color-scheme': {
-                if (!Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE)) return
+          DomManager.set.state(newState, node)
+          node.querySelectorAll<HTMLElement>('[data-island]').forEach((child) => {
+            const islandName = child.getAttribute('data-island')
+            const isIsland = islandName && Normalizer.utils.isIsland(islandName)
+            if (!isIsland) return
 
-                const currRM = Main.resolvedMode!
-                const newRM = DOMManager.target.getAttribute('data-color-scheme')
+            DomManager.set.state(newState, node)
+          })
+          if (node.hasChildNodes()) node.childNodes.forEach(node => processNode(node))
+        }
 
-                const needsUpdate = currRM !== newRM
-                if (needsUpdate) DOMManager.target.setAttribute('data-color-scheme', currRM)
-              }; break;
-              default: {
-                if (!attributeName) return
+        const handler = (mutations: MutationRecord[]) => {
+          for (const mutation of mutations) {
+            const node = mutation.target
+            const islandName = node instanceof HTMLElement && node.getAttribute('data-island')
+            const isIsland = islandName && (Normalizer.utils.isIsland(islandName) || Normalizer.utils.isIsland(mutation.oldValue ?? ''))
+            console.log({islandName, isIsland})
+            if (!isIsland) return
 
-                const prop = attributeName.replace('data-', '')
-                const newValue = DOMManager.target.getAttribute(attributeName)
+            if (mutation.type === 'childList') mutation.addedNodes.forEach(node => processNode(node))
 
-                const { value: normValue } = Normalizer.normalize(prop, newValue, oldValue)
-                updates.set(prop, normValue!)
+            if (mutation.type === 'attributes' && mutation.target instanceof HTMLElement) {
+              const attrName = mutation.attributeName
+              const oldValue = mutation.oldValue
+              const isObservedAttr = attrName && observedAttrs.has(attrName)
+              if (!isObservedAttr) return
+
+              const isIslandAttr = attrName === 'data-island'
+              if (isIslandAttr) {
+                const currValue = mutation.target.getAttribute('data-island')
+                const oldValue = mutation.oldValue
+                const needsReset = currValue !== oldValue && !Normalizer.utils.isIsland(currValue!)
+                if (needsReset) mutation.target.setAttribute('data-island', oldValue!)
+                return
+              }
+
+              const {normalized} = Normalizer.normalize({ island: islandName, facet: attrName.replace('data-', ''), value: mutation.target.getAttribute(attrName), fallback: oldValue })
+              if (normalized) {
+                const partialState = new Map([[islandName, new Map([[attrName.replace('data-', ''), normalized]])]])
+                if (isObservedAttr) processNode(mutation.target, partialState)
               }
             }
+          }
         }
-        if (updates.size > 0) DOMManager.state = updates
-      }
-      DOMManager.observers.attrs = new MutationObserver(handleMutations)
-      DOMManager.observers.attrs.observe(DOMManager.target, {
-        attributes: true,
-        attributeOldValue: true,
-        attributeFilter: [
-          ...Array.from(Processor.options.keys()).map((prop) => `data-${prop}`),
-          ...(Processor.mode?.selector.includes(SELECTORS.COLOR_SCHEME) ? ['style'] : []),
-          ...(Processor.mode?.selector.includes(SELECTORS.CLASS) ? ['class'] : []),
-          ...(Processor.mode?.selector.includes(SELECTORS.DATA_ATTRIBUTE) ? ['data-color-scheme'] : []),
-        ],
-      })
+
+        DomManager.observers.attrs = new MutationObserver(handler)
+        DomManager.observers.attrs.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: Array.from(observedAttrs), attributeOldValue: true })
+      },
     }
 
-    private static initForceAttrsHandling() {
-      const attributes = Array.from(Processor.options.keys()).map((prop) => `data-force-${prop}`)
-      const handler = (mutationsList: MutationRecord[]) => {
-        const elMap: Map<string, HTMLElement> = new Map()
+    private static set = {
+      state(state: NullOr<State>, node?: HTMLElement) {
+        const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
+        DomManager.apply.state(state, node)
 
-        for (const mutation of mutationsList) {
-          if (mutation.type === 'attributes') {
-            console.log(`Attribute '${mutation.attributeName}' changed on:`, mutation.target)
-          }
+        const modes = utils.construct.modes(state)
 
-          if (mutation.type === 'childList') {
-            const addedElements = Array.from(mutation.addedNodes).filter((node) => node instanceof HTMLElement) as HTMLElement[]
-
-            addedElements.forEach((el) => {
-              const matchedElements = DOMManager.utils.findEverythingWithAttrs(el, attributes)
-
-              matchedElements.forEach((matchedEl) => {
-                const priority = parseInt(matchedEl.getAttribute('data-priority') ?? '0', 10)
-                const depth = DOMManager.utils.getDepth(matchedEl)
-                const key = attributes.find((attr) => matchedEl.hasAttribute(attr))!
-
-                const priorityValue = priority * 1000 + depth
-
-                if (!elMap.has(key) || (elMap.get(key)?.priorityValue ?? 0) < priorityValue) {
-                  matchedEl.priorityValue = priorityValue
-                  elMap.set(key, matchedEl)
-                }
-              })
-            })
-
-            elMap.forEach((el, key) => console.log(`Max priority element with attribute '${key}':`, el))
-
-            const removedElementsMap: Record<string, HTMLElement[]> = {}
-
-            Array.from(mutation.removedNodes).forEach((node) => {
-              if (!(node instanceof HTMLElement)) return
-
-              const matchedElements = DOMManager.utils.findEverythingWithAttrs(node, attributes)
-
-              matchedElements.forEach((matchedEl) => {
-                attributes.forEach((attr) => {
-                  if (!matchedEl.hasAttribute(attr)) return
-
-                  if (!removedElementsMap[attr]) removedElementsMap[attr] = []
-                  removedElementsMap[attr].push(matchedEl)
-                })
-              })
-            })
-
-            Object.keys(removedElementsMap).forEach((key) => console.log(`Removed elements with attribute '${key}':`, ...(removedElementsMap[key] ?? [])))
-          }
+        const resolvedModes: Resolved_Modes = new Map()
+        for (const [island, mode] of modes) {
+          const resolvedMode = DomManager.utils.resolveMode(island, mode)
+          if (resolvedMode) resolvedModes.set(island, resolvedMode)
         }
+        DomManager.apply.resolvedModes(resolvedModes)
+
+        enableTransitions?.()
+      },
+      resolvedModes(modes: Resolved_Modes) {
+        if (Array.from(modes.keys()).length === 0) return
+
+        const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
+        DomManager.apply.resolvedModes(modes)
+        enableTransitions?.()
       }
-      DOMManager.observers.forceAttrs = new MutationObserver(handler)
-      DOMManager.observers.forceAttrs.observe(Processor.target, { attributes: true, childList: true, subtree: true, attributeFilter: attributes })
     }
 
     private static set state(state: State) {
-      const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.utils.disableTransitions() : undefined
-
-      DOMManager.apply.state(state)
-
-      enableTransitions?.()
+      DomManager.set.state(state)
     }
 
-    private static set resolvedMode(RM: RESOLVED_MODE) {
-      const enableTransitions = Processor.disableTransitionOnChange ? DOMManager.utils.disableTransitions() : undefined
-
-      DOMManager.apply.resolvedMode(RM)
-
-      enableTransitions?.()
+    private static set resolvedModes(modes: Resolved_Modes) {
+      DomManager.set.resolvedModes(modes)
     }
 
     public static init() {
-      if (!DOMManager.instance) DOMManager.instance = new DOMManager()
-    }
-
-    public static terminate() {
-      Object.values(DOMManager.observers).forEach((o) => o.disconnect())
-
-      Main.state?.forEach((_, prop) => {
-        if (DOMManager.target.getAttribute(`data-${prop}`)) DOMManager.target.removeAttribute(`data-${prop}`)
-      })
-      if (DOMManager.target.style.colorScheme) DOMManager.target.style.colorScheme = ''
-      if (DOMManager.target.classList.contains(MODES.LIGHT)) DOMManager.target.classList.remove(MODES.LIGHT)
-      if (DOMManager.target.classList.contains(MODES.DARK)) DOMManager.target.classList.remove(MODES.DARK)
-      if (DOMManager.target.getAttribute('data-color-scheme')) DOMManager.target.removeAttribute('data-color-scheme')
-
-      DOMManager.target = Processor.target
-      DOMManager.instance = undefined
-    }
-
-    public static resolveMode(state: State) {
-      return DOMManager.utils.resolveMode(state)
+      if (!DomManager.instance) DomManager.instance = new DomManager()
     }
 
     private constructor() {
-      EventManager.on('State:update', 'DOMManager:state:update', (state) => (DOMManager.state = state))
-      EventManager.on('ResolvedMode:update', 'DOMManager:resolvedMode:update', (RM) => (DOMManager.resolvedMode = RM))
+      EventManager.on('State:update', 'DOMManager:state:update', (state) => (DomManager.state = utils.deepConvert.objToMap(state) as State))
+      EventManager.on('ResolvedModes:update', 'DOMManager:resolvedMode:update', (modes) => (DomManager.resolvedModes = utils.deepConvert.objToMap(modes) as Resolved_Modes))
 
-      DOMManager.initAttrsObserver()
-      DOMManager.initForceAttrsHandling()
+      DomManager.initObservers.attrs()
+      // DomManager.initForceAttrsHandling()
+    }
+  }
+
+  // #region MAIN
+  class Main {
+    private static instance: UndefinedOr<Main>
+
+    public static init() {
+      if (!Main.instance) Main.instance = new Main()
+    }
+
+    public static get state(): NullOr<State> {
+      return Main.instance?.state ?? null
+    }
+
+    public static set state(state: State) {
+      if (!Main.instance) return
+
+      const currState = Main.state
+      const newState = utils.deepMerge.maps(currState, state)
+
+      const needsUpdate = !utils.deepEqual.maps(currState, newState)
+      if (needsUpdate) {
+        Main.instance.state = newState
+        EventManager.emit('State:update', utils.deepConvert.mapToObj(newState) as State_Obj)
+      }
+
+      const stateModes = utils.construct.modes(newState)
+      const resolvedModes = DomManager.utils.resolveModes(stateModes)
+      Main.resolvedModes = resolvedModes
+    }
+
+    public static get resolvedModes() {
+      return Main.instance?.resolvedModes
+    }
+
+    public static set resolvedModes(modes) {
+      if (!Main.instance) return
+      if (!modes) return
+
+      const currModes = Main.resolvedModes
+
+      const needsUpdate = !utils.deepEqual.maps(currModes, modes)
+      if (!needsUpdate) return
+
+      Main.instance.resolvedModes = modes
+      EventManager.emit('ResolvedModes:update', utils.deepConvert.mapToObj(modes) as T_T3M4['resolvedModes'])
+    }
+
+    public static get options() {
+      return Processor.options
+    }
+
+    private forcedState: UndefinedOr<State>
+    private state: UndefinedOr<State>
+    private resolvedModes: UndefinedOr<Resolved_Modes>
+
+    private constructor() {
+      StorageManager.init()
+      DomManager.init()
+
+      const state = StorageManager.state
+      this.state = state
+      EventManager.emit('State:update', utils.deepConvert.mapToObj(state) as T_T3M4['state'])
+
+      const stateModes = utils.construct.modes(state)
+      const resolvedModes = DomManager.utils.resolveModes(stateModes)
+      this.resolvedModes = resolvedModes
+      EventManager.emit('ResolvedModes:update', utils.deepConvert.mapToObj(resolvedModes) as T_T3M4['resolvedModes'])
     }
   }
 
   // #region T3M4
   class T3M4 {
-    public static get state() {
-      return Main.state!
+    public static get state(): T_T3M4['state'] {
+      return utils.deepConvert.mapToObj(Main.state!) as T_T3M4['state']
     }
 
-    public static set state(values: State) {
-      Main.state = values
+    public static update = {
+      state(island: string, state: T_T3M4['state'][keyof T_T3M4['state']]) {
+        const currState = T3M4.state
+        const newState = utils.deepMerge.objs(currState, { [island]: state })
+
+        Main.state = utils.deepConvert.objToMap(newState) as State
+      },
     }
 
-    public static get resolvedMode() {
-      return Main.resolvedMode
+    public static get resolvedModes() {
+      return utils.deepConvert.mapToObj(Main.resolvedModes!) as T_T3M4['resolvedModes']
     }
 
     public static get options() {
-      return Main.options
+      return utils.deepConvert.mapToObj(Main.options) as T_T3M4['options']
     }
 
     public static subscribe<E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) {
@@ -944,7 +1039,7 @@ export function script(args: ScriptArgs) {
     }
 
     public static reboot(args: ScriptArgs) {
-      Main.reboot(args)
+      // Main.reboot(args)
     }
   }
 

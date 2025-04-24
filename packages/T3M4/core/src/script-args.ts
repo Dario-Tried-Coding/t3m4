@@ -1,5 +1,5 @@
 import { CONSTANTS as constants } from './constants'
 import { PRESET as preset } from './preset'
-import { ConstructedScriptArgs, ScriptArgs } from './types/script'
+import { Constructed_Script_Args, Script_Args } from './types/script'
 
-export const constructScriptArgs = (args: ScriptArgs) => ({ ...args, constants, preset }) as ConstructedScriptArgs
+export const constructScriptArgs = (args: Script_Args) => ({ ...args, constants, preset }) as Constructed_Script_Args

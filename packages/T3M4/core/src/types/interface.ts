@@ -1,6 +1,6 @@
-import { RESOLVED_MODE } from './constants/modes'
+import { COLOR_SCHEME } from './constants/color-schemes'
 import { CallbackID, EventMap } from './events'
-import { ConstructedScriptArgs } from './script'
+import { Constructed_Script_Args } from './script'
 import { Options } from './subscribers/options'
 import { State } from './subscribers/state'
 
@@ -9,8 +9,8 @@ export interface T3M4 {
   update: {
     state: (island: string, state: State[keyof State]) => void
   }
-  resolvedModes: Record<string, RESOLVED_MODE>
+  colorSchemes: Record<string, COLOR_SCHEME>
   options: Options
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
-  reboot: (args: ConstructedScriptArgs) => void
+  reboot: (args: Constructed_Script_Args) => void
 }

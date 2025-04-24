@@ -25,7 +25,7 @@ export type PRESET = {
   disableTransitionOnChange: boolean
 }
 
-export type ScriptArgs = {
+export type Script_Args = {
   storageKey?: string
   schema: Schema
   config: Config
@@ -37,7 +37,7 @@ export type ScriptArgs = {
   disableTransitionOnChange?: boolean
 }
 
-export type ConstructedScriptArgs = ScriptArgs & {
+export type Constructed_Script_Args = Script_Args & {
   constants: CONSTANTS
   preset: PRESET
 }
