@@ -6,6 +6,7 @@ import { State } from './subscribers/state'
 
 export interface T3M4 {
   state: State
+  forcedState: State
   update: {
     state: (island: string, state: State[keyof State]) => void
   }

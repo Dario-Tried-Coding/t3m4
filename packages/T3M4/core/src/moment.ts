@@ -139,11 +139,11 @@ export function script(args: ScriptArgs) {
         return true
       },
     },
-    parse<T = any>(json: NullOr<string>) {
+    parse(json: NullOr<string>) {
       if (!json?.trim()) return undefined
 
       try {
-        return JSON.parse(json) as T
+        return JSON.parse(json)
       } catch (e) {
         return undefined
       }

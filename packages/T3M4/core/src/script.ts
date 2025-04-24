@@ -197,6 +197,99 @@ export function script(args: Constructed_Script_Args) {
       const systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? MODES.DARK : MODES.LIGHT) : undefined
       return systemPref
     },
+    isPlainObject(val: any) {
+      return val !== null && typeof val === 'object' && !Array.isArray(val) && Object.prototype.toString.call(val) === '[object Object]'
+    },
+    parse(json: string | null) {
+      if (!json?.trim()) return undefined
+
+      try {
+        return JSON.parse(json)
+      } catch (e) {
+        return undefined
+      }
+    },
+    isValid: {
+      island(value: string) {
+        return Processor.islands.has(value)
+      },
+      facet(island: string, value: string) {
+        return Processor.options.get(island)?.has(value) ?? false
+      },
+      option(island: string, facet: string, value: string) {
+        return Processor.options.get(island)?.get(facet)?.has(value) ?? false
+      },
+    },
+    sanitize: {
+      facet(island: string, facet: string, value: string, fallback?: string) {
+        const isIsland = utils.isValid.island(island)
+        if (!isIsland) return
+
+        const isFacet = utils.isValid.facet(island, facet)
+        if (!isFacet) return
+
+        const isOption = utils.isValid.option(island, facet, value)
+        const isFallbackOption = fallback ? utils.isValid.option(island, facet, fallback) : false
+        const preferred = Processor.preferred.get(island)!.get(facet)!
+
+        return isOption ? value : isFallbackOption ? fallback! : preferred
+      },
+      island(island: string, facets: Island_State, fallbacks?: Island_State) {
+        const sanFacets: Island_State = new Map()
+
+        const isIsland = utils.isValid.island(island)
+        if (!isIsland) return
+
+        for (const [facet, value] of facets) {
+          const sanValue = this.facet(island, facet, value, fallbacks?.get(facet))
+          if (!sanValue) continue
+
+          sanFacets.set(facet, sanValue)
+        }
+
+        return sanFacets
+      },
+      state(state: State, fallbacks?: State) {
+        const sanState: State = new Map()
+
+        for (const [island, facets] of state) {
+          const sanFacets = this.island(island, facets, fallbacks?.get(island))
+          if (!sanFacets) continue
+          
+          sanState.set(island, sanFacets)
+        }
+
+        return sanState
+      }
+    },
+    normalize: {
+      island(island: string, facets: Island_State, fallbacks?: Island_State) {
+        const sanFacets = utils.sanitize.island(island, facets, fallbacks)
+        if (!sanFacets) return
+
+        const normFacets = sanFacets
+
+        for (const [facet, preferred] of Processor.preferred.get(island)!) {
+          if (!normFacets.has(facet)) normFacets.set(facet, preferred)
+        }
+        
+        return normFacets
+      },
+      state(state: State, fallbacks?: State) {
+        const sanState = utils.sanitize.state(state, fallbacks)
+
+        const normState = sanState
+        
+        for (const [island, facets] of Processor.preferred) {
+          for (const [facet, preferred] of facets) {
+            if (!normState.has(island)) normState.set(island, new Map())
+            if (!normState.get(island)!.has(facet)) normState.get(island)!.set(facet, preferred)
+          }
+        }
+
+        return normState
+      }
+    }
   }
 
   // #region EVENT MANAGER
@@ -441,12 +534,43 @@ export function script(args: Constructed_Script_Args) {
 
     public static get = {
       state: {
-        all() {
-          return Main.instance.state
+        base: {
+          all() {
+            return Main.instance.state
+          },
+          island(island: string) {
+            return this.all()?.get(island)
+          },
+          facet(island: string, facet: string) {
+            return this.island(island)?.get(facet)
+          },
         },
-        island(island: string) {
-          return this.all()?.get(island)
+        forced: {
+          all() {
+            return Main.instance.forcedState
+          },
+          island(island: string) {
+            return this.all()?.get(island)
+          },
+          facet(island: string, facet: string) {
+            return this.island(island)?.get(facet)
+          },
         },
+        computed: {
+          all() {
+            const currState = Main.get.state.base.all()
+            const currForcedState = Main.get.state.forced.all()
+          
+            const computedState = utils.deepMerge.maps(currState, currForcedState) as State
+            return computedState
+          },
+          island(island: string) {
+            return this.all()?.get(island)
+          },
+          facet(island: string, facet: string) {
+            return this.island(island)?.get(facet)
+          }
+        }
       },
       colorSchemes: {
         all() {
@@ -460,19 +584,40 @@ export function script(args: Constructed_Script_Args) {
 
     public static set = {
       state: {
-        /** Accepts both complete or even deep-partials instances of state; merges partial with the current instance. */
-        all(state: State) {
-          const currState = Main.get.state.all()
-          const newState = utils.deepMerge.maps(currState, state) as State
+        base: {
+          /** Accepts both complete or even deep-partials instances of state; merges partial with the current instance. */
+          all(state: State) {
+            const currState = Main.get.state.base.all()
+            const newState = utils.deepMerge.maps(currState, state) as State
 
-          Main.smartUpdate.state(newState)
+            Main.smartUpdate.state(newState)
 
-          const colorSchemes = utils.construct.colorSchemes(newState)
-          Main.set.colorSchemes.all(colorSchemes)
+            const colorSchemes = utils.construct.colorSchemes(newState)
+            Main.set.colorSchemes.all(colorSchemes)
+          },
+          /** Accepts both complete or partial instances of island state; merges partial with the current island instance. */
+          island(island: string, state: Island_State) {
+            this.all(new Map([[island, state]]))
+          },
+          facet(island: string, facet: string, state: string) {
+            this.island(island, new Map([[facet, state]]))
+          },
         },
-        /** Accepts both complete or partial instances of island state; merges partial with the current island instance. */
-        island(island: string, state: Island_State) {
-          this.all(new Map([[island, state]]))
+        forced: {
+          /** Accepts both complete or even deep-partials instances of state; merges partial with the current instance. */
+          all(state: State) {
+            const currState = Main.get.state.forced.all()
+            const newState = utils.deepMerge.maps(currState, state) as State
+
+            Main.smartUpdate.forcedState(newState)
+          },
+          /** Accepts both complete or partial instances of island state; merges partial with the current island instance. */
+          island(island: string, state: Island_State) {
+            this.all(new Map([[island, state]]))
+          },
+          facet(island: string, facet: string, state: string) {
+            this.island(island, new Map([[facet, state]]))
+          },
         },
       },
       colorSchemes: {
@@ -491,9 +636,17 @@ export function script(args: Constructed_Script_Args) {
     }
 
     private static smartUpdate = {
+      forcedState(newState: State) {
+        const currState = Main.get.state.forced.all()
+        const needsUpdate = !utils.deepEqual.maps(currState, newState)
+        if (!needsUpdate) return
+
+        Main.instance.forcedState = newState
+        EventManager.emit('ForcedState:update', utils.deepConvert.mapToObj(newState) as State_Obj)
+      },
       /** ATTENTION!!! newState must be a complete instance of State, not just a partial one. */
       state(newState: State) {
-        const currState = Main.get.state.all()
+        const currState = Main.get.state.base.all()
         const needsUpdate = !utils.deepEqual.maps(currState, newState)
         if (!needsUpdate) return
 
@@ -514,5 +667,7 @@ export function script(args: Constructed_Script_Args) {
     private forcedState: State | undefined
     private state: State | undefined
     private colorSchemes: State_Color_Schemes | undefined
+
+    private constructor() {}
   }
 }
