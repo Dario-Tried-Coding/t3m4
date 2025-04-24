@@ -476,7 +476,7 @@ export function script(args: ScriptArgs) {
       return normalizer
     }
 
-    private static utils = {
+    public static utils = {
       isIsland(value: string) {
         return Processor.islands.has(value)
       },
@@ -723,18 +723,16 @@ export function script(args: ScriptArgs) {
 
         return DomManager.systemPref
       },
-      findIslands(island: string, scopes?: Set<HTMLElement>) {
+      findIslands(island: string, scope?: HTMLElement) {
         const selector = `[data-island="${island}"]`
 
-        if (scopes) {
+        if (scope) {
           const results: Set<HTMLElement> = new Set()
 
-          scopes.forEach((scope) => {
-            if (scope.matches(selector)) results.add(scope)
+          if (scope.matches(selector)) results.add(scope)
 
-            const matches = scope.querySelectorAll<HTMLElement>(selector)
-            matches.forEach((el) => results.add(el))
-          })
+          const matches = scope.querySelectorAll<HTMLElement>(selector)
+          matches.forEach((el) => results.add(el))
 
           return results
         }
@@ -765,11 +763,11 @@ export function script(args: ScriptArgs) {
     }
 
     private static apply = {
-      state(state: NullOr<State>, nodes?: Set<HTMLElement>) {
+      state(state: NullOr<State>, node?: HTMLElement) {
         if (!state) return
 
         state.forEach((facets, island) => {
-          const targets = DomManager.utils.findIslands(island, nodes)
+          const targets = DomManager.utils.findIslands(island, node)
 
           facets.forEach((value, facet) => {
             targets.forEach((n) => {
@@ -828,65 +826,107 @@ export function script(args: ScriptArgs) {
 
     private static initObservers = {
       attrs() {
+        const constructObservedAttrs = () => {
+          const observedAttrs: Set<string> = new Set(['data-island'])
+
+          Processor.schema.forEach((facets) => {
+            facets.forEach((_, facet) => {
+              const attr = `data-${facet}`
+              if (!observedAttrs.has(attr)) observedAttrs.add(attr)
+            })
+          })
+
+          return observedAttrs
+        }
+        const observedAttrs = constructObservedAttrs()
+
+        const processNode = (node: Node, state?: State) => {
+          if (!(node instanceof HTMLElement)) return
+
+          const currState = Main.state
+          const newState = state ? utils.deepMerge.maps(currState, state) : currState
+
+          DomManager.set.state(newState, node)
+          node.querySelectorAll<HTMLElement>('[data-island]').forEach((child) => {
+            const islandName = child.getAttribute('data-island')
+            const isIsland = islandName && Normalizer.utils.isIsland(islandName)
+            if (!isIsland) return
+
+            DomManager.set.state(newState, node)
+          })
+          if (node.hasChildNodes()) node.childNodes.forEach(node => processNode(node))
+        }
+
         const handler = (mutations: MutationRecord[]) => {
           for (const mutation of mutations) {
-            const state = Main.state
+            const node = mutation.target
+            const islandName = node instanceof HTMLElement && node.getAttribute('data-island')
+            const isIsland = islandName && (Normalizer.utils.isIsland(islandName) || Normalizer.utils.isIsland(mutation.oldValue ?? ''))
+            console.log({islandName, isIsland})
+            if (!isIsland) return
 
-            // const target = mutation.target as HTMLElement
-            // if (target) {
-            //   const islandName = target.getAttribute('data-island')
-            //   if (!islandName) continue
-            //   if (!Processor.islands.has(islandName)) continue
+            if (mutation.type === 'childList') mutation.addedNodes.forEach(node => processNode(node))
 
-            //   console.log(mutation)
-            //   DomManager.apply.state(state, new Set([target]))
-            // }
+            if (mutation.type === 'attributes' && mutation.target instanceof HTMLElement) {
+              const attrName = mutation.attributeName
+              const oldValue = mutation.oldValue
+              const isObservedAttr = attrName && observedAttrs.has(attrName)
+              if (!isObservedAttr) return
 
-            const addedNodes = new Set<HTMLElement>(mutation.addedNodes as NodeListOf<HTMLElement>)
-            const islandNodes = new Set<HTMLElement>()
-            if (addedNodes.size !== 0) {
-              for (const node of addedNodes) {
-                if (!(node instanceof HTMLElement)) continue
-
-                const islandName = node.getAttribute('data-island')
-                if (!islandName) continue
-                if (!Processor.islands.has(islandName)) continue
-
-                islandNodes.add(node)
+              const isIslandAttr = attrName === 'data-island'
+              if (isIslandAttr) {
+                const currValue = mutation.target.getAttribute('data-island')
+                const oldValue = mutation.oldValue
+                const needsReset = currValue !== oldValue && !Normalizer.utils.isIsland(currValue!)
+                if (needsReset) mutation.target.setAttribute('data-island', oldValue!)
+                return
               }
 
-              DomManager.apply.state(state, islandNodes)
+              const {normalized} = Normalizer.normalize({ island: islandName, facet: attrName.replace('data-', ''), value: mutation.target.getAttribute(attrName), fallback: oldValue })
+              if (normalized) {
+                const partialState = new Map([[islandName, new Map([[attrName.replace('data-', ''), normalized]])]])
+                if (isObservedAttr) processNode(mutation.target, partialState)
+              }
             }
           }
         }
 
         DomManager.observers.attrs = new MutationObserver(handler)
-        DomManager.observers.attrs.observe(document.documentElement, { subtree: true, attributes: true, childList: true, attributeOldValue: true })
+        DomManager.observers.attrs.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: Array.from(observedAttrs), attributeOldValue: true })
       },
     }
 
-    private static set state(state: State) {
-      const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
-      DomManager.apply.state(state)
+    private static set = {
+      state(state: NullOr<State>, node?: HTMLElement) {
+        const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
+        DomManager.apply.state(state, node)
 
-      const modes = utils.construct.modes(state)
+        const modes = utils.construct.modes(state)
 
-      const resolvedModes: Resolved_Modes = new Map()
-      for (const [island, mode] of modes) {
-        const resolvedMode = DomManager.utils.resolveMode(island, mode)
-        if (resolvedMode) resolvedModes.set(island, resolvedMode)
+        const resolvedModes: Resolved_Modes = new Map()
+        for (const [island, mode] of modes) {
+          const resolvedMode = DomManager.utils.resolveMode(island, mode)
+          if (resolvedMode) resolvedModes.set(island, resolvedMode)
+        }
+        DomManager.apply.resolvedModes(resolvedModes)
+
+        enableTransitions?.()
+      },
+      resolvedModes(modes: Resolved_Modes) {
+        if (Array.from(modes.keys()).length === 0) return
+
+        const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
+        DomManager.apply.resolvedModes(modes)
+        enableTransitions?.()
       }
-      DomManager.apply.resolvedModes(resolvedModes)
+    }
 
-      enableTransitions?.()
+    private static set state(state: State) {
+      DomManager.set.state(state)
     }
 
     private static set resolvedModes(modes: Resolved_Modes) {
-      if (Array.from(modes.keys()).length === 0) return
-
-      const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
-      DomManager.apply.resolvedModes(modes)
-      enableTransitions?.()
+      DomManager.set.resolvedModes(modes)
     }
 
     public static init() {

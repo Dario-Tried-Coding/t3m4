@@ -6,23 +6,23 @@
   --nav-height: theme('spacing.14');
 }
 
-[data-radius='0'] {
+[data-island="root"][data-radius='0'] {
   --radius: 0rem;
 }
-[data-radius='0.3'] {
+[data-island="root"][data-radius='0.3'] {
   --radius: 0.3rem;
 }
-[data-radius='0.5'] {
+[data-island="root"][data-radius='0.5'] {
   --radius: 0.5rem;
 }
-[data-radius='0.75'] {
+[data-island="root"][data-radius='0.75'] {
   --radius: 0.75rem;
 }
-[data-radius='1'] {
+[data-island="root"][data-radius='1'] {
   --radius: 1rem;
 }
 
-[data-color='zinc'][data-color-scheme='light'] {
+[data-island="root"][data-color='zinc'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 240, 10%, 3.9%;
   --card: 0, 0%, 100%;
@@ -49,7 +49,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='zinc'][data-color-scheme='dark'] {
+[data-island="root"][data-color='zinc'][data-color-scheme='dark'] {
   --background: 240, 10%, 3.9%;
   --foreground: 0, 0%, 98%;
   --card: 240, 10%, 3.9%;
@@ -76,7 +76,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='blue'][data-color-scheme='light'] {
+[data-island="root"][data-color='blue'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 222.2, 84%, 4.9%;
   --card: 0, 0%, 100%;
@@ -103,7 +103,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='blue'][data-color-scheme='dark'] {
+[data-island="root"][data-color='blue'][data-color-scheme='dark'] {
   --background: 222.2, 84%, 4.9%;
   --foreground: 210, 40%, 98%;
   --card: 222.2, 84%, 4.9%;
@@ -130,7 +130,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='red'][data-color-scheme='light'] {
+[data-island="root"][data-color='red'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 0, 0%, 3.9%;
   --card: 0, 0%, 100%;
@@ -157,7 +157,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='red'][data-color-scheme='dark'] {
+[data-island="root"][data-color='red'][data-color-scheme='dark'] {
   --background: 0, 0%, 3.9%;
   --foreground: 0, 0%, 98%;
   --card: 0, 0%, 3.9%;
@@ -184,7 +184,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='rose'][data-color-scheme='light'] {
+[data-island="root"][data-color='rose'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 240, 10%, 3.9%;
   --card: 0, 0%, 100%;
@@ -211,7 +211,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='rose'][data-color-scheme='dark'] {
+[data-island="root"][data-color='rose'][data-color-scheme='dark'] {
   --background: 20, 14.3%, 4.1%;
   --foreground: 0, 0%, 95%;
   --card: 24, 9.8%, 10%;
@@ -238,7 +238,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='orange'][data-color-scheme='light'] {
+[data-island="root"][data-color='orange'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 20, 14.3%, 4.1%;
   --card: 0, 0%, 100%;
@@ -265,7 +265,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='orange'][data-color-scheme='dark'] {
+[data-island="root"][data-color='orange'][data-color-scheme='dark'] {
   --background: 20, 14.3%, 4.1%;
   --foreground: 60, 9.1%, 97.8%;
   --card: 20, 14.3%, 4.1%;
@@ -292,7 +292,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='green'][data-color-scheme='light'] {
+[data-island="root"][data-color='green'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 240, 10%, 3.9%;
   --card: 0, 0%, 100%;
@@ -319,7 +319,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='green'][data-color-scheme='dark'] {
+[data-island="root"][data-color='green'][data-color-scheme='dark'] {
   --background: 20, 14.3%, 4.1%;
   --foreground: 0, 0%, 95%;
   --card: 24, 9.8%, 10%;
@@ -346,7 +346,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='yellow'][data-color-scheme='light'] {
+[data-island="root"][data-color='yellow'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 20, 14.3%, 4.1%;
   --card: 0, 0%, 100%;
@@ -373,7 +373,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='yellow'][data-color-scheme='dark'] {
+[data-island="root"][data-color='yellow'][data-color-scheme='dark'] {
   --background: 20, 14.3%, 4.1%;
   --foreground: 60, 9.1%, 97.8%;
   --card: 20, 14.3%, 4.1%;
@@ -400,7 +400,7 @@
   --chart-5: 340, 75%, 55%;
 }
 
-[data-color='violet'][data-color-scheme='light'] {
+[data-island="root"][data-color='violet'][data-color-scheme='light'] {
   --background: 0, 0%, 100%;
   --foreground: 224, 71.4%, 4.1%;
   --card: 0, 0%, 100%;
@@ -427,7 +427,7 @@
   --chart-5: 27, 87%, 67%;
 }
 
-[data-color='violet'][data-color-scheme='dark'] {
+[data-island="root"][data-color='violet'][data-color-scheme='dark'] {
   --background: 224, 71.4%, 4.1%;
   --foreground: 210, 20%, 98%;
   --card: 224, 71.4%, 4.1%;
@@ -452,4 +452,9 @@
   --chart-3: 30, 80%, 55%;
   --chart-4: 280, 65%, 60%;
   --chart-5: 340, 75%, 55%;
+}
+
+[data-island="test"][data-mode="light"] {
+  --background: 0, 0%, 100%;
+  --foreground: 240, 10%, 3.9%;
 }
