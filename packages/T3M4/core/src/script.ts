@@ -166,27 +166,49 @@ export function script(args: Constructed_Script_Args) {
       },
     },
     construct: {
-      /** ATTENTION!!! To get back the entirety of modes, provide a complete State instance. Not a partial. */
-      modes(state: State) {
-        const modes: State_Modes = new Map()
+      modes: {
+        /** ATTENTION!!! To get back the entirety of modes, provide a complete State instance. Not a partial. */
+        fromState(state: State) {
+          const modes: State_Modes = new Map()
 
-        for (const [island, facets] of state) {
-          const islandMode = Processor.mode.modes.get(island)?.facet
-          if (!islandMode) continue
+          for (const [island, facets] of state) {
+            const islandMode = Processor.mode.modes.get(island)?.facet
+            if (!islandMode) continue
 
-          const stateIslandHasMode = facets.has(islandMode)
-          if (!stateIslandHasMode) continue
+            const stateIslandHasMode = facets.has(islandMode)
+            if (!stateIslandHasMode) continue
 
-          modes.set(island, islandMode)
-        }
+            modes.set(island, islandMode)
+          }
 
-        return modes
+          return modes
+        },
+        preferred() {
+          const modes: State_Modes = new Map()
+
+          for (const [island, facets] of Processor.preferred) {
+            const islandModeFacet = Processor.mode.modes.get(island)?.facet
+            if (!islandModeFacet) continue
+
+            const preferredMode = facets.get(islandModeFacet)!
+            modes.set(island, preferredMode)
+          }
+
+          return modes
+        },
       },
-      /** ATTENTION!!! To get back the entitirety of color schemes, provide a complete State instance. Not a partial. */
-      colorSchemes(state: State) {
-        const modes = this.modes(state)
-        const colorSchemes = utils.resolve.colorSchemes(modes)
-        return colorSchemes
+      colorSchemes: {
+        /** ATTENTION!!! To get back the entitirety of color schemes, provide a complete State instance. Not a partial. */
+        fromState(state: State) {
+          const modes = utils.construct.modes.fromState(state)
+          const colorSchemes = utils.resolve.colorSchemes(modes)
+          return colorSchemes
+        },
+        preferred() {
+          const prefModes = utils.construct.modes.preferred()
+          const colorSchemes = utils.resolve.colorSchemes(prefModes)
+          return colorSchemes
+        }
       },
     },
     resolve: {
@@ -224,6 +246,12 @@ export function script(args: Constructed_Script_Args) {
         option(island: string, facet: string, value: string) {
           return Processor.options.get(island)?.get(facet)?.has(value) ?? false
         },
+        mode(island: string, value: string) {
+          const facetName = Processor.mode.modes.get(island)?.facet
+          if (!facetName) return false
+
+          return Processor.options.get(island)!.get(facetName)!.has(value)
+        },
       },
       structure: {
         serializedState(obj: Record<string, unknown>): obj is State_Obj {
@@ -255,73 +283,116 @@ export function script(args: Constructed_Script_Args) {
       },
     },
     sanitize: {
-      facet(island: string, facet: string, value: string, fallback?: string) {
-        const isIsland = utils.isValid.value.island(island)
-        if (!isIsland) return
+      state: {
+        facet(island: string, facet: string, value: string, fallback?: string) {
+          const isIsland = utils.isValid.value.island(island)
+          if (!isIsland) return
 
-        const isFacet = utils.isValid.value.facet(island, facet)
-        if (!isFacet) return
+          const isFacet = utils.isValid.value.facet(island, facet)
+          if (!isFacet) return
 
-        const isOption = utils.isValid.value.option(island, facet, value)
-        const isFallbackOption = fallback ? utils.isValid.value.option(island, facet, fallback) : false
-        const preferred = Processor.preferred.get(island)!.get(facet)!
+          const isOption = utils.isValid.value.option(island, facet, value)
+          const isFallbackOption = fallback ? utils.isValid.value.option(island, facet, fallback) : false
+          const preferred = Processor.preferred.get(island)!.get(facet)!
 
-        return isOption ? value : isFallbackOption ? fallback! : preferred
+          return isOption ? value : isFallbackOption ? fallback! : preferred
+        },
+        island(island: string, facets: Island_State, fallbacks?: Island_State) {
+          const sanFacets: Island_State = new Map()
+
+          const isIsland = utils.isValid.value.island(island)
+          if (!isIsland) return
+
+          for (const [facet, value] of facets) {
+            const sanValue = this.facet(island, facet, value, fallbacks?.get(facet))
+            if (!sanValue) continue
+
+            sanFacets.set(facet, sanValue)
+          }
+
+          return sanFacets
+        },
+        all(state: State, fallbacks?: State) {
+          const sanState: State = new Map()
+
+          for (const [island, facets] of state) {
+            const sanFacets = this.island(island, facets, fallbacks?.get(island))
+            if (!sanFacets) continue
+
+            sanState.set(island, sanFacets)
+          }
+
+          return sanState
+        },
       },
-      island(island: string, facets: Island_State, fallbacks?: Island_State) {
-        const sanFacets: Island_State = new Map()
+      modes: {
+        island(island: string, mode: string, fallback?: string) {
+          const isMode = utils.isValid.value.mode(island, mode)
+          const isFallbackMode = fallback ? utils.isValid.value.mode(island, fallback) : false
 
-        const isIsland = utils.isValid.value.island(island)
-        if (!isIsland) return
+          const facetName = Processor.mode.modes.get(island)?.facet
+          if (!facetName) return
 
-        for (const [facet, value] of facets) {
-          const sanValue = this.facet(island, facet, value, fallbacks?.get(facet))
-          if (!sanValue) continue
+          const preferred = Processor.preferred.get(island)!.get(facetName)!
 
-          sanFacets.set(facet, sanValue)
-        }
+          return isMode ? mode : isFallbackMode ? fallback! : preferred
+        },
+        all(modes: State_Modes, fallbacks?: State_Modes) {
+          const sanModes: State_Modes = new Map()
 
-        return sanFacets
-      },
-      state(state: State, fallbacks?: State) {
-        const sanState: State = new Map()
+          for (const [island, mode] of modes) {
+            const sanMode = this.island(island, mode, fallbacks?.get(island))
+            if (!sanMode) continue
 
-        for (const [island, facets] of state) {
-          const sanFacets = this.island(island, facets, fallbacks?.get(island))
-          if (!sanFacets) continue
+            sanModes.set(island, sanMode)
+          }
 
-          sanState.set(island, sanFacets)
-        }
-
-        return sanState
+          return sanModes
+        },
       },
     },
     normalize: {
-      island(island: string, facets: Island_State, fallbacks?: Island_State) {
-        const sanFacets = utils.sanitize.island(island, facets, fallbacks)
-        if (!sanFacets) return
+      state: {
+        island(island: string, facets: Island_State, fallbacks?: Island_State) {
+          const sanFacets = utils.sanitize.state.island(island, facets, fallbacks)
+          if (!sanFacets) return
 
-        const normFacets = sanFacets
+          const normFacets = sanFacets
 
-        for (const [facet, preferred] of Processor.preferred.get(island)!) {
-          if (!normFacets.has(facet)) normFacets.set(facet, preferred)
-        }
-
-        return normFacets
-      },
-      state(state: State, fallbacks?: State) {
-        const sanState = utils.sanitize.state(state, fallbacks)
-
-        const normState = sanState
-
-        for (const [island, facets] of Processor.preferred) {
-          for (const [facet, preferred] of facets) {
-            if (!normState.has(island)) normState.set(island, new Map())
-            if (!normState.get(island)!.has(facet)) normState.get(island)!.set(facet, preferred)
+          for (const [facet, preferred] of Processor.preferred.get(island)!) {
+            if (!normFacets.has(facet)) normFacets.set(facet, preferred)
           }
-        }
 
-        return normState
+          return normFacets
+        },
+        all(state: State, fallbacks?: State) {
+          const sanState = utils.sanitize.state.all(state, fallbacks)
+
+          const normState = sanState
+
+          for (const [island, facets] of Processor.preferred) {
+            for (const [facet, preferred] of facets) {
+              if (!normState.has(island)) normState.set(island, new Map())
+              if (!normState.get(island)!.has(facet)) normState.get(island)!.set(facet, preferred)
+            }
+          }
+
+          return normState
+        },
+      },
+      modes: {
+        all(modes: State_Modes, fallbacks?: State_Modes) {
+          const sanModes = utils.sanitize.modes.all(modes, fallbacks)
+          const normModes = sanModes
+
+          const prefModes = utils.construct.modes.preferred()
+
+          for (const [island, prefMode] of prefModes) {
+            if (!normModes.has(island)) normModes.set(island, prefMode)
+          }
+          
+          return normModes
+        },
       },
     },
   }
@@ -611,7 +682,7 @@ export function script(args: Constructed_Script_Args) {
 
             StateManager.smartUpdate.state.base(newState)
 
-            const colorSchemes = utils.construct.colorSchemes(newState)
+            const colorSchemes = utils.construct.colorSchemes.fromState(newState)
             StateManager.set.colorSchemes.all(colorSchemes)
           },
           /** Accepts even partial instances of island state; merges partial with the current instance. */
@@ -631,7 +702,7 @@ export function script(args: Constructed_Script_Args) {
 
             StateManager.smartUpdate.state.forced(newState)
 
-            const colorSchemes = utils.construct.colorSchemes(newState)
+            const colorSchemes = utils.construct.colorSchemes.fromState(newState)
             StateManager.set.colorSchemes.all(colorSchemes)
           },
           /** Accepts even partial instances of island state; merges partial with the current instance. */
@@ -738,7 +809,9 @@ export function script(args: Constructed_Script_Args) {
           if (!isStateObj) return undefined
 
           const state = utils.deepConvert.objToMap(parsed) as State
-          return state
+          const normState = utils.normalize.state.all(state)
+
+          return normState
         },
         island(island: string) {
           return this.all()?.get(island)
@@ -766,22 +839,20 @@ export function script(args: Constructed_Script_Args) {
         },
         island(island: string) {
           return this.all()?.get(island)
-        }
+        },
       },
-      mode: {
-        byIsland(island: string) {
-          const mode = StorageManager.utils.retrieve.generic(`${island}-${Processor.mode.storageKey}`)
-          if (!mode) return undefined
+      mode(island: string) {
+        const mode = StorageManager.utils.retrieve.generic(`${island}-${Processor.mode.storageKey}`)
+        if (!mode) return undefined
 
-          const parsed = utils.miscellaneous.safeParse(mode)
-          if (!parsed) return undefined
+        const parsed = utils.miscellaneous.safeParse(mode)
+        if (!parsed) return undefined
 
-          const isString = utils.isValid.type.string(parsed)
-          if (!isString) return undefined
+        const isString = utils.isValid.type.string(parsed)
+        if (!isString) return undefined
 
-          return parsed
-        }
-      }
+        return parsed
+      },
     }
   }
 
