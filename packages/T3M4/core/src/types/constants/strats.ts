@@ -5,3 +5,9 @@ export type STRATS = {
   SYSTEM: 'system'
 }
 export type STRAT = STRATS[keyof STRATS]
+
+export type STORE_STRATS = {
+  UNIQUE: 'unique',
+  SPLIT: 'split'
+}
+export type STORE_STRAT = STORE_STRATS[keyof STORE_STRATS]

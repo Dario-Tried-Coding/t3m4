@@ -1,1 +1,1 @@
-export type { RESOLVED_MODE as ResolvedMode } from './modes'
+export type { COLOR_SCHEMES as ColorSchemes } from './color-schemes'

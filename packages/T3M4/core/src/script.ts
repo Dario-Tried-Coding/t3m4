@@ -1,18 +1,17 @@
 import { Nullable } from '@t3m4/utils/nullables'
 import { T3M4 as T_T3M4 } from './types'
+import { COLOR_SCHEME } from './types/constants/color-schemes'
+import { SELECTOR } from './types/constants/selectors'
+import { STORE_STRAT, STRAT } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Constructed_Script_Args } from './types/script'
-import { STRAT } from './types/constants/strats'
-import { Opt } from './types/subscribers/schema'
-import { Strat_To_Opt } from './types/script/miscellaneous'
-import { SELECTOR } from './types/constants/selectors'
-import { COLOR_SCHEME } from './types/constants/color-schemes'
 
 // #region TYPES
 type NestedMap<T> = Map<string, NestedMap<T> | T>
 type NestedObj<T> = { [key: string]: NestedObj<T> | T }
 
-type Island_State = Map<string, string>
+type Island_State_Facet = string
+type Island_State = Map<string, Island_State_Facet>
 type State = Map<string, Island_State>
 
 type State_Obj = NonNullable<ReturnType<T_T3M4['get']['state']['base']['all']>>
@@ -25,15 +24,16 @@ type State_Color_Schemes = Map<string, Island_State_Color_Scheme>
 type State_Color_Schemes_Obj = NonNullable<ReturnType<T_T3M4['get']['colorSchemes']['all']>>
 
 type State_Modes = Map<string, string>
-type State_Modes_Obj = Record<string, string>
 type State_Mode = State_Modes_Obj[keyof State_Modes_Obj]
+
+type State_Modes_Obj = Record<string, string>
+
+type Islands = Set<string>
 
 type Options = Map<string, Map<string, Set<string>>>
 type Options_Obj = NonNullable<ReturnType<T_T3M4['get']['options']['all']>>
 type Island_Options_Obj = Options_Obj[keyof Options_Obj]
 type Island_Options_Obj_Facet = Island_Options_Obj[keyof Island_Options_Obj]
-
-type Preferred = Map<string, Map<string, string>>
 
 type Mode_Handling = {
   facet: string
@@ -45,8 +45,27 @@ type Mode_Handling = {
 }
 type Modes_Handling = {
   modes: Map<string, Mode_Handling>
-  storageKey: string
   store: boolean
+  strategy: STORE_STRAT
+}
+
+type Engine = {
+  storageKeys: {
+    state: string
+    modes: string
+  }
+  values: {
+    islands: Islands
+    options: Options
+  }
+  preferred: {
+    state: State
+    modes: State_Modes
+    colorSchemes: State_Color_Schemes
+  }
+  nonce: string
+  disableTransitionOnChange: boolean
+  modesHandling: Modes_Handling
 }
 
 export function script(args: Constructed_Script_Args) {
@@ -166,49 +185,27 @@ export function script(args: Constructed_Script_Args) {
       },
     },
     construct: {
-      modes: {
-        /** ATTENTION!!! To get back the entirety of modes, provide a complete State instance. Not a partial. */
-        fromState(state: State) {
-          const modes: State_Modes = new Map()
+      /** ATTENTION!!! To get back the entirety of modes, provide a complete State instance. Not a partial. */
+      modes(state: State) {
+        const modes: State_Modes = new Map()
 
-          for (const [island, facets] of state) {
-            const islandMode = Processor.mode.modes.get(island)?.facet
-            if (!islandMode) continue
+        for (const [island, facets] of state) {
+          const islandMode = Engine.modesHandling.modes.get(island)?.facet
+          if (!islandMode) continue
 
-            const stateIslandHasMode = facets.has(islandMode)
-            if (!stateIslandHasMode) continue
+          const stateIslandHasMode = facets.has(islandMode)
+          if (!stateIslandHasMode) continue
 
-            modes.set(island, islandMode)
-          }
-
-          return modes
-        },
-        preferred() {
-          const modes: State_Modes = new Map()
-
-          for (const [island, facets] of Processor.preferred) {
-            const islandModeFacet = Processor.mode.modes.get(island)?.facet
-            if (!islandModeFacet) continue
-
-            const preferredMode = facets.get(islandModeFacet)!
-            modes.set(island, preferredMode)
-          }
-
-          return modes
-        },
-      },
-      colorSchemes: {
-        /** ATTENTION!!! To get back the entitirety of color schemes, provide a complete State instance. Not a partial. */
-        fromState(state: State) {
-          const modes = utils.construct.modes.fromState(state)
-          const colorSchemes = utils.resolve.colorSchemes(modes)
-          return colorSchemes
-        },
-        preferred() {
-          const prefModes = utils.construct.modes.preferred()
-          const colorSchemes = utils.resolve.colorSchemes(prefModes)
-          return colorSchemes
+          modes.set(island, islandMode)
         }
+
+        return modes
+      },
+      /** ATTENTION!!! To get back the entitirety of color schemes, provide a complete State instance. Not a partial. */
+      colorSchemes(state: State) {
+        const modes = this.modes(state)
+        const colorSchemes = utils.resolve.colorSchemes(modes)
+        return colorSchemes
       },
     },
     resolve: {
@@ -224,33 +221,33 @@ export function script(args: Constructed_Script_Args) {
         return colorSchemes
       },
       colorScheme(island: string, mode: string) {
-        if (!Processor.mode.modes.has(island)) return
+        if (!Engine.modesHandling.modes.has(island)) return
 
-        const isSystemStrat = Processor.mode.modes.get(island)!.strategy === STRATS.SYSTEM
-        const isSystemMode = Processor.mode.modes.get(island)!.systemMode?.name === mode
+        const isSystemStrat = Engine.modesHandling.modes.get(island)!.strategy === STRATS.SYSTEM
+        const isSystemMode = Engine.modesHandling.modes.get(island)!.systemMode?.name === mode
         const isSystem = isSystemStrat && isSystemMode
-        const fallbackMode = Processor.mode.modes.get(island)!.systemMode?.fallback
-        if (isSystem) return utils.miscellaneous.getSystemPref() ?? Processor.mode.modes.get(island)?.resolvedModes.get(fallbackMode!)
+        const fallbackMode = Engine.modesHandling.modes.get(island)!.systemMode?.fallback
+        if (isSystem) return utils.miscellaneous.getSystemPref() ?? Engine.modesHandling.modes.get(island)?.resolvedModes.get(fallbackMode!)
 
-        return Processor.mode.modes.get(island)!.resolvedModes.get(mode)
+        return Engine.modesHandling.modes.get(island)!.resolvedModes.get(mode)
       },
     },
     isValid: {
       value: {
         island(value: string) {
-          return Processor.islands.has(value)
+          return Engine.values.islands.has(value)
         },
         facet(island: string, value: string) {
-          return Processor.options.get(island)?.has(value) ?? false
+          return Engine.values.options.get(island)?.has(value) ?? false
         },
         option(island: string, facet: string, value: string) {
-          return Processor.options.get(island)?.get(facet)?.has(value) ?? false
+          return Engine.values.options.get(island)?.get(facet)?.has(value) ?? false
         },
         mode(island: string, value: string) {
-          const facetName = Processor.mode.modes.get(island)?.facet
+          const facetName = Engine.modesHandling.modes.get(island)?.facet
           if (!facetName) return false
 
-          return Processor.options.get(island)!.get(facetName)!.has(value)
+          return Engine.values.options.get(island)!.get(facetName)!.has(value)
         },
       },
       structure: {
@@ -293,7 +290,7 @@ export function script(args: Constructed_Script_Args) {
 
           const isOption = utils.isValid.value.option(island, facet, value)
           const isFallbackOption = fallback ? utils.isValid.value.option(island, facet, fallback) : false
-          const preferred = Processor.preferred.get(island)!.get(facet)!
+          const preferred = Engine.preferred.state.get(island)!.get(facet)!
 
           return isOption ? value : isFallbackOption ? fallback! : preferred
         },
@@ -330,10 +327,10 @@ export function script(args: Constructed_Script_Args) {
           const isMode = utils.isValid.value.mode(island, mode)
           const isFallbackMode = fallback ? utils.isValid.value.mode(island, fallback) : false
 
-          const facetName = Processor.mode.modes.get(island)?.facet
+          const facetName = Engine.modesHandling.modes.get(island)?.facet
           if (!facetName) return
 
-          const preferred = Processor.preferred.get(island)!.get(facetName)!
+          const preferred = Engine.preferred.state.get(island)!.get(facetName)!
 
           return isMode ? mode : isFallbackMode ? fallback! : preferred
         },
@@ -359,7 +356,7 @@ export function script(args: Constructed_Script_Args) {
 
           const normFacets = sanFacets
 
-          for (const [facet, preferred] of Processor.preferred.get(island)!) {
+          for (const [facet, preferred] of Engine.preferred.state.get(island)!) {
             if (!normFacets.has(facet)) normFacets.set(facet, preferred)
           }
 
@@ -370,7 +367,7 @@ export function script(args: Constructed_Script_Args) {
 
           const normState = sanState
 
-          for (const [island, facets] of Processor.preferred) {
+          for (const [island, facets] of Engine.preferred.state) {
             for (const [facet, preferred] of facets) {
               if (!normState.has(island)) normState.set(island, new Map())
               if (!normState.get(island)!.has(facet)) normState.get(island)!.set(facet, preferred)
@@ -385,17 +382,192 @@ export function script(args: Constructed_Script_Args) {
           const sanModes = utils.sanitize.modes.all(modes, fallbacks)
           const normModes = sanModes
 
-          const prefModes = utils.construct.modes.preferred()
+          const prefModes = Engine.preferred.modes
 
           for (const [island, prefMode] of prefModes) {
             if (!normModes.has(island)) normModes.set(island, prefMode)
           }
-          
+
           return normModes
         },
       },
     },
+    deserialize: {
+      state: {
+        all(string: string) {
+          const parsed = utils.miscellaneous.safeParse(string)
+          if (!parsed) return undefined
+
+          const isPlainObject = utils.isValid.type.plainObject(parsed)
+          if (!isPlainObject) return undefined
+
+          const isStateObj = utils.isValid.structure.serializedState(parsed)
+          if (!isStateObj) return undefined
+
+          const dirtyState = utils.deepConvert.objToMap(parsed) as State
+          return dirtyState
+        },
+        island(string: string, island: string) {
+          return this.all(string)?.get(island)
+        },
+        facet(string: string, island: string, facet: string) {
+          return this.island(string, island)?.get(facet)
+        },
+      },
+      modes: {
+        all(string: string) {},
+      },
+    },
   }
+
+  // #region ENGINE
+  function constructEngine(args: Constructed_Script_Args): Engine {
+    const storageKeys = {
+      state: args.storageKey ?? preset.storageKey,
+      modes: args.mode?.storageKey ?? preset.mode.storageKey,
+    }
+
+    const nonce = args.nonce ?? preset.nonce
+    const disableTransitionOnChange = args.disableTransitionOnChange ?? preset.disableTransitionOnChange
+
+    const constructValues = (): Engine['values'] => {
+      const islands = new Set(Object.keys(args.config))
+
+      const options: Engine['values']['options'] = new Map()
+      for (const [island, facets] of Object.entries(args.schema)) {
+        const island_options: NonNullable<ReturnType<(typeof options)['get']>> = new Map()
+
+        for (const [facet, opt] of Object.entries(facets)) {
+          const facet_options: NonNullable<ReturnType<(typeof island_options)['get']>> = new Set()
+          const strat = args.config[island]![facet]!.strategy
+
+          if (opt === true) {
+            // prettier-ignore
+            switch (strat) {
+                case STRATS.MONO: facet_options.add(DEFAULT); break;
+                case STRATS.LIGHT_DARK: Object.values(MODES).filter((m) => m !== MODES.SYSTEM).forEach((m) => facet_options.add(m)); break;
+                case STRATS.SYSTEM: Object.values(MODES).forEach((m) => facet_options.add(m)); break;
+                default: break;
+              }
+          }
+          if (typeof opt === 'string') facet_options.add(opt)
+          if (Array.isArray(opt)) opt.forEach((o) => facet_options.add(o))
+          if (typeof opt === 'object' && !Array.isArray(opt)) {
+            facet_options.add(opt.light ?? MODES.LIGHT)
+            facet_options.add(opt.dark ?? MODES.DARK)
+            if (strat === STRATS.SYSTEM) facet_options.add((opt as { system: string }).system ?? MODES.SYSTEM)
+            if ('custom' in opt) opt.custom?.forEach((cm) => facet_options.add(cm))
+          }
+
+          island_options.set(facet, facet_options)
+        }
+
+        options.set(island, island_options)
+      }
+
+      return { islands, options }
+    }
+    const values = constructValues()
+
+    const constructModes = (): Engine['modesHandling'] => {
+      const modes = {
+        modes: new Map(),
+        strategy: args.mode?.strategy ?? preset.mode.strategy,
+        store: args.mode?.store ?? preset.mode.store,
+      } satisfies Modes_Handling
+
+      for (const [island, facets] of Object.entries(args.config)) {
+        for (const [facet, strat_obj] of Object.entries(facets)) {
+          if (strat_obj.type !== FACETS.MODE) continue
+
+          // resolvedModes
+          const resolvedModes: Mode_Handling['resolvedModes'] = new Map()
+          const strat = strat_obj.strategy
+          const opt = args.schema[island]![facet]!
+
+          // prettier-ignore
+          switch (strat) {
+              case (STRATS.MONO): resolvedModes.set(strat_obj.preferred, strat_obj.colorScheme); break;
+              case (STRATS.MULTI): Object.entries(strat_obj.colorSchemes).forEach(([mode, cs]) => resolvedModes.set(mode, cs)); break;
+              case (STRATS.LIGHT_DARK):
+              case (STRATS.SYSTEM): {
+
+                if (opt === true) {
+                  resolvedModes.set(MODES.LIGHT, MODES.LIGHT)
+                  resolvedModes.set(MODES.DARK, MODES.DARK)
+                }
+
+                if (typeof opt === 'object' && !Array.isArray(opt)) {
+                  resolvedModes.set(opt.light ?? MODES.LIGHT, MODES.LIGHT)
+                  resolvedModes.set(opt.dark ?? MODES.DARK, MODES.DARK)
+                  if ((strat_obj as {colorSchemes: Record<string, COLOR_SCHEME>}).colorSchemes) Object.entries(strat_obj.colorSchemes ?? []).forEach(([mode, cs]) => resolvedModes.set(mode, cs))
+                }
+              }
+            }
+
+          // systemMode
+          let systemMode: Mode_Handling['systemMode'] = undefined
+          if (strat === STRATS.SYSTEM) {
+            if (opt === true || (typeof opt === 'object' && !Array.isArray(opt))) {
+              systemMode = {
+                name: opt === true ? MODES.SYSTEM : ((opt as { system: string }).system ?? MODES.SYSTEM),
+                fallback: strat_obj.fallback,
+              }
+            }
+          }
+
+          modes.modes.set(island, {
+            facet,
+            strategy: strat,
+            resolvedModes,
+            systemMode,
+            store: strat_obj.store ?? true,
+            selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? preset.mode.selector,
+          })
+        }
+      }
+
+      return modes
+    }
+    const modesHandling = constructModes()
+
+    const contructPreferred = (): Engine['preferred'] => {
+      const state: Engine['preferred']['state'] = new Map()
+      for (const [island, facets] of Object.entries(args.config)) {
+        const island_preferred: NonNullable<ReturnType<(typeof state)['get']>> = new Map()
+
+        for (const [facet, { preferred }] of Object.entries(facets)) {
+          island_preferred.set(facet, preferred)
+        }
+
+        state.set(island, island_preferred)
+      }
+
+      const modes: Engine['preferred']['modes'] = new Map()
+      for (const [island, facets] of state) {
+        const islandModeFacet = modesHandling.modes.get(island)?.facet
+        if (!islandModeFacet) continue
+
+        const preferredMode = facets.get(islandModeFacet)!
+        modes.set(island, preferredMode)
+      }
+
+      const colorSchemes = utils.resolve.colorSchemes(modes)
+
+      return { state, modes, colorSchemes }
+    }
+    const preferred = contructPreferred()
+
+    return {
+      storageKeys,
+      values,
+      modesHandling,
+      preferred,
+      nonce,
+      disableTransitionOnChange,
+    }
+  }
+  let Engine = constructEngine(args)
 
   // #region EVENT MANAGER
   class EventManager {
@@ -427,190 +599,6 @@ export function script(args: Constructed_Script_Args) {
     // Metodo per rimuovere tutti gli eventi
     public static dispose() {
       EventManager.events.clear()
-    }
-  }
-
-  // #region PROCESSOR
-  class Processor {
-    private static instance: Processor | undefined = undefined
-    private static _args: Constructed_Script_Args = args
-
-    private static process = {
-      islands(args: Constructed_Script_Args) {
-        const islands: Processor['_islands'] = new Set(Object.keys(args.config))
-        return islands
-      },
-      options(args: Constructed_Script_Args) {
-        const opts: Processor['_options'] = new Map()
-
-        for (const [island, facets] of Object.entries(args.schema)) {
-          const island_opts: NonNullable<ReturnType<Processor['_options']['get']>> = new Map()
-
-          for (const [facet, opt] of Object.entries(facets)) {
-            const facet_opts: NonNullable<ReturnType<(typeof island_opts)['get']>> = new Set()
-            const strat = args.config[island]![facet]!.strategy
-
-            if (opt === true) {
-              // prettier-ignore
-              switch (strat) {
-                case STRATS.MONO: facet_opts.add(DEFAULT); break;
-                case STRATS.LIGHT_DARK: Object.values(MODES).filter((m) => m !== MODES.SYSTEM).forEach((m) => facet_opts.add(m)); break;
-                case STRATS.SYSTEM: Object.values(MODES).forEach((m) => facet_opts.add(m)); break;
-                default: break;
-              }
-            }
-            if (typeof opt === 'string') facet_opts.add(opt)
-            if (Array.isArray(opt)) opt.forEach((o) => facet_opts.add(o))
-            if (typeof opt === 'object' && !Array.isArray(opt)) {
-              facet_opts.add(opt.light ?? MODES.LIGHT)
-              facet_opts.add(opt.dark ?? MODES.DARK)
-              if (strat === STRATS.SYSTEM) facet_opts.add((opt as { system: string }).system ?? MODES.SYSTEM)
-              if ('custom' in opt) opt.custom?.forEach((cm) => facet_opts.add(cm))
-            }
-
-            island_opts.set(facet, facet_opts)
-          }
-
-          opts.set(island, island_opts)
-        }
-
-        return opts
-      },
-      preferred(args: Constructed_Script_Args) {
-        const preferred: Processor['_preferred'] = new Map()
-
-        for (const [island, facets] of Object.entries(args.config)) {
-          const island_preferred: NonNullable<ReturnType<Processor['_preferred']['get']>> = new Map()
-
-          for (const [facet, { preferred }] of Object.entries(facets)) {
-            island_preferred.set(facet, preferred)
-          }
-
-          preferred.set(island, island_preferred)
-        }
-
-        return preferred
-      },
-      mode(args: Constructed_Script_Args) {
-        const mode = {
-          modes: new Map(),
-          storageKey: args.mode?.storageKey ?? preset.mode.storageKey,
-          store: args.mode?.store ?? preset.mode.store,
-        } as Modes_Handling
-
-        for (const [island, facets] of Object.entries(args.config)) {
-          for (const [facet, strat_obj] of Object.entries(facets)) {
-            if (strat_obj.type !== FACETS.MODE) continue
-
-            // resolvedModes
-            const resolvedModes: Mode_Handling['resolvedModes'] = new Map()
-            const strat = strat_obj.strategy
-            const opt = args.schema[island]![facet]!
-
-            // prettier-ignore
-            switch (strat) {
-              case (STRATS.MONO): resolvedModes.set(strat_obj.preferred, strat_obj.colorScheme); break;
-              case (STRATS.MULTI): Object.entries(strat_obj.colorSchemes).forEach(([mode, cs]) => resolvedModes.set(mode, cs)); break;
-              case (STRATS.LIGHT_DARK):
-              case (STRATS.SYSTEM): {
-
-                if (opt === true) {
-                  resolvedModes.set(MODES.LIGHT, MODES.LIGHT)
-                  resolvedModes.set(MODES.DARK, MODES.DARK)
-                }
-
-                if (typeof opt === 'object' && !Array.isArray(opt)) {
-                  resolvedModes.set(opt.light ?? MODES.LIGHT, MODES.LIGHT)
-                  resolvedModes.set(opt.dark ?? MODES.DARK, MODES.DARK)
-                  if ((strat_obj as {colorSchemes: Record<string, COLOR_SCHEME>}).colorSchemes) Object.entries(strat_obj.colorSchemes ?? []).forEach(([mode, cs]) => resolvedModes.set(mode, cs))
-                }
-              }
-            }
-
-            // systemMode
-            let systemMode: Mode_Handling['systemMode'] = undefined
-            if (strat === STRATS.SYSTEM) {
-              if (opt === true || (typeof opt === 'object' && !Array.isArray(opt))) {
-                systemMode = {
-                  name: opt === true ? MODES.SYSTEM : ((opt as { system: string }).system ?? MODES.SYSTEM),
-                  fallback: strat_obj.fallback,
-                }
-              }
-            }
-
-            mode.modes.set(island, {
-              facet,
-              strategy: strat,
-              resolvedModes,
-              systemMode,
-              store: strat_obj.store ?? true,
-              selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? preset.mode.selector,
-            })
-          }
-        }
-
-        return mode
-      },
-    }
-
-    public static getInstance() {
-      if (!Processor.instance) Processor.instance = new Processor()
-      return Processor.instance
-    }
-
-    public static needsReboot(args: Constructed_Script_Args) {
-      if (utils.deepEqual.objects(args, Processor._args)) return
-
-      return () => {
-        Processor._args = args
-        Processor.instance = new Processor()
-      }
-    }
-
-    public static get storageKey() {
-      return Processor.getInstance()._storageKey
-    }
-
-    public static get islands() {
-      return Processor.getInstance()._islands
-    }
-
-    public static get options() {
-      return Processor.getInstance()._options
-    }
-
-    public static get preferred() {
-      return Processor.getInstance()._preferred
-    }
-
-    public static get mode() {
-      return Processor.getInstance()._mode
-    }
-
-    public static get nonce() {
-      return Processor.getInstance()._nonce
-    }
-
-    public static get disableTransitionOnChange() {
-      return Processor.getInstance()._disableTransitionOnChange
-    }
-
-    private _storageKey: string
-    private _islands: Set<string>
-    private _options: Options
-    private _preferred: Preferred
-    private _mode: Modes_Handling
-    private _nonce: string
-    private _disableTransitionOnChange: boolean
-
-    private constructor() {
-      this._storageKey = Processor._args.storageKey ?? preset.storageKey
-      this._islands = Processor.process.islands(Processor._args)
-      this._options = Processor.process.options(Processor._args)
-      this._preferred = Processor.process.preferred(Processor._args)
-      this._mode = Processor.process.mode(Processor._args)
-      this._nonce = Processor._args.nonce ?? preset.nonce
-      this._disableTransitionOnChange = Processor._args.disableTransitionOnChange ?? preset.disableTransitionOnChange
     }
   }
 
@@ -672,6 +660,7 @@ export function script(args: Constructed_Script_Args) {
       },
     }
 
+    /** ATTENTION!!! No sanitization/normalization performed here. */
     public static set = {
       state: {
         base: {
@@ -682,7 +671,7 @@ export function script(args: Constructed_Script_Args) {
 
             StateManager.smartUpdate.state.base(newState)
 
-            const colorSchemes = utils.construct.colorSchemes.fromState(newState)
+            const colorSchemes = utils.construct.colorSchemes(newState)
             StateManager.set.colorSchemes.all(colorSchemes)
           },
           /** Accepts even partial instances of island state; merges partial with the current instance. */
@@ -702,7 +691,7 @@ export function script(args: Constructed_Script_Args) {
 
             StateManager.smartUpdate.state.forced(newState)
 
-            const colorSchemes = utils.construct.colorSchemes.fromState(newState)
+            const colorSchemes = utils.construct.colorSchemes(newState)
             StateManager.set.colorSchemes.all(colorSchemes)
           },
           /** Accepts even partial instances of island state; merges partial with the current instance. */
@@ -739,7 +728,10 @@ export function script(args: Constructed_Script_Args) {
           if (!needsUpdate) return
 
           StateManager.instance.state = newState
-          EventManager.emit('State:update', utils.deepConvert.mapToObj(newState) as State_Obj)
+          EventManager.emit('State:base:update', utils.deepConvert.mapToObj(newState) as State_Obj)
+
+          const compState = StateManager.get.state.computed.all()
+          if (compState) EventManager.emit('State:computed:update', utils.deepConvert.mapToObj(compState) as State_Obj)
         },
         /** ATTENTION!!! newState must be a complete instance of State, not just a partial one. */
         forced(newState: State) {
@@ -748,7 +740,10 @@ export function script(args: Constructed_Script_Args) {
           if (!needsUpdate) return
 
           StateManager.instance.forcedState = newState
-          EventManager.emit('ForcedState:update', utils.deepConvert.mapToObj(newState) as State_Obj)
+          EventManager.emit('State:forced:update', utils.deepConvert.mapToObj(newState) as State_Obj)
+
+          const compState = StateManager.get.state.computed.all()
+          if (compState) EventManager.emit('State:computed:update', utils.deepConvert.mapToObj(compState) as State_Obj)
         },
       },
       /** ATTENTION!!! newColorSchemes must be a complete instance of State_Color_Schemes, not just a partial one. */
@@ -766,13 +761,20 @@ export function script(args: Constructed_Script_Args) {
     private state: State | undefined
     private colorSchemes: State_Color_Schemes | undefined
 
-    private constructor() {}
+    private constructor() {
+      StorageManager.init()
+    }
   }
 
   // #region STORAGE MANAGER
   class StorageManager {
     private static instance: StorageManager | undefined = undefined
+    private static abortController: AbortController | undefined = undefined
     private static isInternalChange = false
+
+    public static init() {
+      if (!StorageManager.instance) StorageManager.instance = new StorageManager()
+    }
 
     private static utils = {
       retrieve: {
@@ -780,47 +782,63 @@ export function script(args: Constructed_Script_Args) {
           return window.localStorage.getItem(storageKey)
         },
         state() {
-          return this.generic(Processor.storageKey)
+          return this.generic(Engine.storageKeys.state)
         },
         modes() {
-          return this.generic(Processor.mode.storageKey)
+          return this.generic(Engine.storageKeys.modes)
         },
       },
-      store(storageKey: string, string: string) {
-        StorageManager.isInternalChange = true
-        window.localStorage.setItem(storageKey, string)
-        StorageManager.isInternalChange = false
+      store: {
+        /** Efficiently stores the provided string by checking if it's already set first. */
+        generic(storageKey: string, string: string) {
+          StorageManager.isInternalChange = true
+
+          const currValue = window.localStorage.getItem(storageKey)
+
+          const needsUpdate = currValue !== string
+          if (needsUpdate) window.localStorage.setItem(storageKey, string)
+
+          StorageManager.isInternalChange = false
+        },
+        /** Efficiently stores the provided state by checking if it's already set first. */
+        state(state: State) {
+          const stateObj = utils.deepConvert.mapToObj(state) as State_Obj
+          const stringified = JSON.stringify(stateObj)
+          this.generic(Engine.storageKeys.state, stringified)
+        },
+        /** Efficiently stores the provided modes by checking if they're already set first. */
+        modes(modes: State_Modes) {
+          const modesObj = utils.deepConvert.mapToObj(modes) as State_Modes_Obj
+          const stringified = JSON.stringify(modesObj)
+          this.generic(Engine.storageKeys.modes, stringified)
+        },
       },
     }
 
     public static get = {
       state: {
+        /** Returns a normalized state instance if present and with valid obj structure. */
         all() {
           const retrieved = StorageManager.utils.retrieve.state()
           if (!retrieved) return undefined
 
-          const parsed = utils.miscellaneous.safeParse(retrieved)
-          if (!parsed) return undefined
+          const deserializedState = utils.deserialize.state.all(retrieved)
+          if (!deserializedState) return undefined
 
-          const isPlainObject = utils.isValid.type.plainObject(parsed)
-          if (!isPlainObject) return undefined
-
-          const isStateObj = utils.isValid.structure.serializedState(parsed)
-          if (!isStateObj) return undefined
-
-          const state = utils.deepConvert.objToMap(parsed) as State
-          const normState = utils.normalize.state.all(state)
-
+          const normState = utils.normalize.state.all(deserializedState)
           return normState
         },
+        /** Returns a normalized island state instance if state's present and with valid obj structure. */
         island(island: string) {
           return this.all()?.get(island)
         },
+        /** Returns a normalized island state facet value if state's present and with valid obj structure. */
         facet(island: string, facet: string) {
           return this.island(island)?.get(facet)
         },
       },
       modes: {
+        /** Returns a normalized modes instance if present and with valid obj structure */
         all() {
           const retrieved = StorageManager.utils.retrieve.modes()
           if (!retrieved) return undefined
@@ -835,14 +853,17 @@ export function script(args: Constructed_Script_Args) {
           if (!isModesObj) return undefined
 
           const modes = utils.deepConvert.objToMap(parsed) as State_Modes
-          return modes
+          const normModes = utils.normalize.modes.all(modes)
+
+          return normModes
         },
+        /** Returns a normalized island mode instance if modes are present and with valid obj structure. */
         island(island: string) {
           return this.all()?.get(island)
         },
       },
       mode(island: string) {
-        const mode = StorageManager.utils.retrieve.generic(`${island}-${Processor.mode.storageKey}`)
+        const mode = StorageManager.utils.retrieve.generic(`${island}-${Engine.storageKeys.modes}`)
         if (!mode) return undefined
 
         const parsed = utils.miscellaneous.safeParse(mode)
@@ -853,6 +874,69 @@ export function script(args: Constructed_Script_Args) {
 
         return parsed
       },
+    }
+
+    /** ATTENTION!!! No sanitization/normalization performed here. */
+    public static set = {
+      state: {
+        /** Accepts even deep-partials instances of state; merges partial with the current/default (preferred) instance. */
+        all(state: State) {
+          const currState = StorageManager.get.state.all()
+          const prefState = Engine.preferred.state
+          const newState = utils.deepMerge.maps(currState ?? prefState, state) as State
+          StorageManager.utils.store.state(newState)
+        },
+        /** Accepts even partial instances of island state; merges partial with the current/default (preferred) instance. */
+        island(island: string, state: Island_State) {
+          this.all(new Map([[island, state]]))
+        },
+        /** Performs update only if needed. */
+        facet(island: string, facet: string, value: string) {
+          this.island(island, new Map([[facet, value]]))
+        },
+      },
+      modes: {
+        /** Accepts even partial instances of modes; merges partial with the current/default (preferred) instance. */
+        all(modes: State_Modes) {
+          const currModes = StorageManager.get.modes.all()
+          const prefModes = Engine.preferred.modes
+          const newModes = utils.deepMerge.maps(currModes ?? prefModes, modes) as State_Modes
+          StorageManager.utils.store.modes(newModes)
+        },
+        /** Performs update only if needed. */
+        island(island: string, mode: string) {
+          this.all(new Map([[island, mode]]))
+        },
+      },
+    }
+
+    private constructor() {
+      EventManager.on('State:base:update', 'StorageManager:state:update', (stateObj) => {
+        const state = utils.deepConvert.objToMap(stateObj) as State
+        StorageManager.set.state.all(state)
+
+        const modes = utils.construct.modes(state)
+        StorageManager.set.modes.all(modes)
+      })
+
+      StorageManager.abortController = new AbortController()
+      window.addEventListener(
+        'storage',
+        ({ key, newValue, oldValue }) => {
+          // prettier-ignore
+          switch (key) {
+          case Engine.storageKeys.state: {
+            const deserNewState = newValue ? utils.deserialize.state.all(newValue) : undefined
+            const deserOldState = oldValue ? utils.deserialize.state.all(oldValue) : undefined
+
+            const normNewState = utils.normalize.state.all(deserNewState ?? Engine.preferred.state, deserOldState)
+            StorageManager.set.state.all(normNewState)
+            StateManager.set.state.base.all(normNewState)
+          }; break;
+        }
+        },
+        { signal: StorageManager.abortController.signal }
+      )
     }
   }
 
@@ -914,16 +998,16 @@ export function script(args: Constructed_Script_Args) {
       },
       options: {
         all() {
-          const options = Processor.options
+          const options = Engine.values.options
           return utils.deepConvert.mapToObj(options) as Options_Obj
         },
         island(island: string) {
-          const options = Processor.options.get(island)
+          const options = Engine.values.options.get(island)
           if (!options) return undefined
           return utils.deepConvert.mapToObj(options) as Island_Options_Obj
         },
         facet(island: string, facet: string) {
-          const options = Processor.options.get(island)?.get(facet)
+          const options = Engine.values.options.get(island)?.get(facet)
           if (!options) return undefined
           return Array.from(options) as Island_Options_Obj_Facet
         },
@@ -988,4 +1072,6 @@ export function script(args: Constructed_Script_Args) {
 
   StateManager.init()
   window.T3M4 = new T3M4()
+
+  console.log(window.T3M4.get.state.base.all())
 }
