@@ -16,44 +16,21 @@ type Island_Facet_Options = Island_Options[keyof Island_Options]
 export interface T3M4 {
   get: {
     state: {
-      base: {
-        all: () => State | undefined
-        island: (island: string) => Island_State | undefined
-        facet: (island: string, facet: string) => Island_State_Facet | undefined
-      }
-      forced: {
-        all: () => State | undefined
-        island: (island: string) => Island_State | undefined
-        facet: (island: string, facet: string) => Island_State_Facet | undefined
-      }
-      computed: {
-        all: () => State | undefined
-        island: (island: string) => Island_State | undefined
-        facet: (island: string, facet: string) => Island_State_Facet | undefined
-      }
+      base: () => State | undefined
+      forced: () => State
+      computed: () => State | undefined
     }
     colorSchemes: {
-      all: () => Color_Schemes | undefined
-      island: (island: string) => Island_Color_Scheme | undefined
+      base: () => Color_Schemes | undefined
+      forced: () => Color_Schemes
+      computed: () => Color_Schemes | undefined
     }
-    options: {
-      all: () => Options | undefined
-      island: (island: string) => Island_Options | undefined
-      facet: (island: string, facet: string) => Island_Facet_Options | undefined
-    }
+    options: () => Options
   }
   set: {
     state: {
-      base: {
-        all: (state: State) => void
-        island: (island: string, state: Island_State) => void
-        facet: (island: string, facet: string, state: Island_State_Facet) => void
-      }
-      forced: {
-        all: (state: State) => void
-        island: (island: string, state: Island_State) => void
-        facet: (island: string, facet: string, state: Island_State_Facet) => void
-      }
+      base: (state: State) => void
+      forced: (state: State) => void
     }
   }
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
