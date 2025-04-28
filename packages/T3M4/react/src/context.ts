@@ -5,7 +5,7 @@ import { NullOr, UndefinedOr } from '@t3m4/utils/nullables'
 import { Context, createContext, useContext } from 'react'
 
 export type T3M4Context<Sc extends Schema, C extends Config<Sc>> = {
-  state: NullOr<State<Sc, C>>
+  state: UndefinedOr<State<Sc, C>>
   colorSchemes: UndefinedOr<ColorSchemes<Sc, C>>
   updateState: <I extends keyof Sc, S extends Pick_IslandState<Sc, C, State<Sc, C>, I>>(island: I, state: Partial<S> | ((state: S) => Partial<S>)) => void
   options: Options<Sc, C, State<Sc, C>>

@@ -8,22 +8,22 @@ import { constructScriptArgs } from '@t3m4/core'
 
 interface T3M4Props extends PropsWithChildren, ScriptArgs {}
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4Props) => {
-  const [state, setState] = useState<T3M4Context<Sc, C>['state']>(null)
+  const [state, setState] = useState<T3M4Context<Sc, C>['state']>(undefined)
   const [colorSchemes, setColorSchemes] = useState<T3M4Context<Sc, C>['colorSchemes']>(undefined)
   const options = useRef({} as T3M4Context<Sc, C>['options'])
 
   useEffect(() => {
-    setState(window.T3M4.state as T3M4Context<Sc, C>['state'])
-    setColorSchemes(window.T3M4.resolvedModes as T3M4Context<Sc, C>['colorSchemes'])
-    options.current = window.T3M4.options as T3M4Context<Sc, C>['options']
+    setState(window.T3M4.get.state.base.all() as T3M4Context<Sc, C>['state'])
+    setColorSchemes(window.T3M4.get.colorSchemes.all() as T3M4Context<Sc, C>['colorSchemes'])
+    options.current = window.T3M4.get.options.all() as T3M4Context<Sc, C>['options']
 
-    window.T3M4.subscribe('State:update', 'React:state:update', (values) => setState(values as State<Sc, C>))
-    window.T3M4.subscribe('ResolvedModes:update', 'React:resolvedMode:update', (RMs) => {
+    window.T3M4.subscribe('State:base:update', 'React:state:update', (values) => setState(values as State<Sc, C>))
+    window.T3M4.subscribe('ColorSchemes:update', 'React:resolvedMode:update', (RMs) => {
       console.log('RMs', RMs)
       setColorSchemes(RMs as T3M4Context<Sc, C>['colorSchemes'])
     })
-    window.T3M4.subscribe('State:reset', 'React:state:reset', () => {
-      setState(null)
+    window.T3M4.subscribe('Reset', 'React:reset', () => {
+      setState(undefined)
       setColorSchemes(undefined)
       options.current = {} as T3M4Context<Sc, C>['options']
     })
@@ -33,7 +33,7 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
 
   const updateState: T3M4Context<Sc, C>['updateState'] = (island, state) => {
     const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
-    window.T3M4.update.state(island as Parameters<T3M4['update']['state']>[0], newState as Parameters<T3M4['update']['state']>[1])
+    window.T3M4.set.state.base.island(island as Parameters<T3M4['set']['state']['base']['island']>[0], newState as Parameters<T3M4['set']['state']['base']['island']>[1])
   }
 
   return <T3M4Context.Provider value={{ state, updateState, colorSchemes, options: options.current }}>{children}</T3M4Context.Provider>

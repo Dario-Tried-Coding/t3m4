@@ -5,6 +5,7 @@ import { SELECTOR } from './types/constants/selectors'
 import { STORE_STRAT, STRAT } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Constructed_Script_Args } from './types/script'
+import { Mode_Strat_Obj } from './types/subscribers/config/mode'
 
 // #region TYPES
 type NestedMap<T> = Map<string, NestedMap<T> | T>
@@ -36,9 +37,9 @@ type Island_Options_Obj = Options_Obj[keyof Options_Obj]
 type Island_Options_Obj_Facet = Island_Options_Obj[keyof Island_Options_Obj]
 
 type Mode_Handling = {
-  facet: string
+  facetName: string
   strategy: STRAT
-  resolvedModes: Map<string, COLOR_SCHEME>
+  colorSchemes: Map<string, COLOR_SCHEME>
   systemMode: { name: string; fallback: string } | undefined
   store: boolean
   selectors: SELECTOR[]
@@ -58,10 +59,9 @@ type Engine = {
     islands: Islands
     options: Options
   }
-  preferred: {
+  fallback: {
     state: State
     modes: State_Modes
-    colorSchemes: State_Color_Schemes
   }
   nonce: string
   disableTransitionOnChange: boolean
@@ -73,6 +73,153 @@ export function script(args: Constructed_Script_Args) {
     constants: { STRATS, MODES, DEFAULT, FACETS },
     preset,
   } = args
+
+  // #region ENGINE
+  function constructEngine(args: Constructed_Script_Args): Engine {
+    const storageKeys = {
+      state: args.storageKey ?? preset.storageKey,
+      modes: args.mode?.storageKey ?? preset.mode.storageKey,
+    }
+
+    const nonce = args.nonce ?? preset.nonce
+    const disableTransitionOnChange = args.disableTransitionOnChange ?? preset.disableTransitionOnChange
+
+    const constructValues = (): Engine['values'] => {
+      const islands = new Set(Object.keys(args.config))
+
+      const options: Engine['values']['options'] = new Map()
+      for (const [island, facets] of Object.entries(args.schema)) {
+        const island_options: NonNullable<ReturnType<(typeof options)['get']>> = new Map()
+
+        for (const [facet, opt] of Object.entries(facets)) {
+          const facet_options: NonNullable<ReturnType<(typeof island_options)['get']>> = new Set()
+          const strat = args.config[island]![facet]!.strategy
+
+          if (opt === true) {
+            // prettier-ignore
+            switch (strat) {
+                case STRATS.MONO: facet_options.add(DEFAULT); break;
+                case STRATS.LIGHT_DARK: Object.values(MODES).filter((m) => m !== MODES.SYSTEM).forEach((m) => facet_options.add(m)); break;
+                case STRATS.SYSTEM: Object.values(MODES).forEach((m) => facet_options.add(m)); break;
+                default: break;
+              }
+          }
+          if (typeof opt === 'string') facet_options.add(opt)
+          if (Array.isArray(opt)) opt.forEach((o) => facet_options.add(o))
+          if (typeof opt === 'object' && !Array.isArray(opt)) {
+            facet_options.add(opt.light ?? MODES.LIGHT)
+            facet_options.add(opt.dark ?? MODES.DARK)
+            if (strat === STRATS.SYSTEM) facet_options.add((opt as { system: string }).system ?? MODES.SYSTEM)
+            if ('custom' in opt) opt.custom?.forEach((cm) => facet_options.add(cm))
+          }
+
+          island_options.set(facet, facet_options)
+        }
+
+        options.set(island, island_options)
+      }
+
+      return { islands, options }
+    }
+    const values = constructValues()
+
+    const constructModes = (): Engine['modesHandling'] => {
+      const modes = {
+        modes: new Map(),
+        strategy: args.mode?.strategy ?? preset.mode.strategy,
+        store: args.mode?.store ?? preset.mode.store,
+      } satisfies Modes_Handling
+
+      for (const [island, facets] of Object.entries(args.config)) {
+        for (const [facet, strat_obj] of Object.entries(facets)) {
+          if (strat_obj.type !== FACETS.MODE) continue
+
+          // colorSchemes
+          const colorSchemes: Mode_Handling['colorSchemes'] = new Map()
+          const strat = strat_obj.strategy
+          const opt = args.schema[island]![facet]!
+
+          // prettier-ignore
+          switch (strat) {
+              case (STRATS.MONO): colorSchemes.set(strat_obj.preferred, strat_obj.colorScheme); break;
+              case (STRATS.MULTI): Object.entries(strat_obj.colorSchemes).forEach(([mode, cs]) => colorSchemes.set(mode, cs)); break;
+              case (STRATS.LIGHT_DARK):
+              case (STRATS.SYSTEM): {
+
+                if (opt === true) {
+                  colorSchemes.set(MODES.LIGHT, MODES.LIGHT)
+                  colorSchemes.set(MODES.DARK, MODES.DARK)
+                }
+
+                if (typeof opt === 'object' && !Array.isArray(opt)) {
+                  colorSchemes.set(opt.light ?? MODES.LIGHT, MODES.LIGHT)
+                  colorSchemes.set(opt.dark ?? MODES.DARK, MODES.DARK)
+                  if ((strat_obj as {colorSchemes: Record<string, COLOR_SCHEME>}).colorSchemes) Object.entries(strat_obj.colorSchemes ?? []).forEach(([mode, cs]) => colorSchemes.set(mode, cs))
+                }
+              }
+            }
+
+          // systemMode
+          let systemMode: Mode_Handling['systemMode'] = undefined
+          if (strat === STRATS.SYSTEM) {
+            if (opt === true || (typeof opt === 'object' && !Array.isArray(opt))) {
+              systemMode = {
+                name: opt === true ? MODES.SYSTEM : ((opt as { system: string }).system ?? MODES.SYSTEM),
+                fallback: strat_obj.fallback,
+              }
+            }
+          }
+
+          modes.modes.set(island, {
+            facet,
+            strategy: strat,
+            colorSchemes,
+            systemMode,
+            store: strat_obj.store ?? true,
+            selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? preset.mode.selector,
+          })
+        }
+      }
+
+      return modes
+    }
+    const modesHandling = constructModes()
+
+    const contructFallback = (): Engine['fallback'] => {
+      const state: Engine['fallback']['state'] = new Map()
+      for (const [island, facets] of Object.entries(args.config)) {
+        const island_preferred: NonNullable<ReturnType<(typeof state)['get']>> = new Map()
+
+        for (const [facet, { preferred }] of Object.entries(facets)) {
+          island_preferred.set(facet, preferred)
+        }
+
+        state.set(island, island_preferred)
+      }
+
+      const modes: Engine['fallback']['modes'] = new Map()
+      for (const [island, facets] of state) {
+        const islandModeFacetName = modesHandling.modes.get(island)?.facetName
+        if (!islandModeFacetName) continue
+
+        const preferredMode = facets.get(islandModeFacetName)!
+        modes.set(island, preferredMode)
+      }
+
+      return { state, modes }
+    }
+    const fallback = contructFallback()
+
+    return {
+      storageKeys,
+      values,
+      modesHandling,
+      fallback,
+      nonce,
+      disableTransitionOnChange,
+    }
+  }
+  let Engine = constructEngine(args)
 
   // #region UTILS
   const utils = {
@@ -190,13 +337,13 @@ export function script(args: Constructed_Script_Args) {
         const modes: State_Modes = new Map()
 
         for (const [island, facets] of state) {
-          const islandMode = Engine.modesHandling.modes.get(island)?.facet
-          if (!islandMode) continue
+          const islandModeName = Engine.modesHandling.modes.get(island)?.facetName
+          if (!islandModeName) continue
 
-          const stateIslandHasMode = facets.has(islandMode)
+          const stateIslandHasMode = facets.has(islandModeName)
           if (!stateIslandHasMode) continue
 
-          modes.set(island, islandMode)
+          modes.set(island, islandModeName)
         }
 
         return modes
@@ -227,9 +374,9 @@ export function script(args: Constructed_Script_Args) {
         const isSystemMode = Engine.modesHandling.modes.get(island)!.systemMode?.name === mode
         const isSystem = isSystemStrat && isSystemMode
         const fallbackMode = Engine.modesHandling.modes.get(island)!.systemMode?.fallback
-        if (isSystem) return utils.miscellaneous.getSystemPref() ?? Engine.modesHandling.modes.get(island)?.resolvedModes.get(fallbackMode!)
+        if (isSystem) return utils.miscellaneous.getSystemPref() ?? Engine.modesHandling.modes.get(island)?.colorSchemes.get(fallbackMode!)
 
-        return Engine.modesHandling.modes.get(island)!.resolvedModes.get(mode)
+        return Engine.modesHandling.modes.get(island)!.colorSchemes.get(mode)
       },
     },
     isValid: {
@@ -244,7 +391,7 @@ export function script(args: Constructed_Script_Args) {
           return Engine.values.options.get(island)?.get(facet)?.has(value) ?? false
         },
         mode(island: string, value: string) {
-          const facetName = Engine.modesHandling.modes.get(island)?.facet
+          const facetName = Engine.modesHandling.modes.get(island)?.facetName
           if (!facetName) return false
 
           return Engine.values.options.get(island)!.get(facetName)!.has(value)
@@ -290,7 +437,7 @@ export function script(args: Constructed_Script_Args) {
 
           const isOption = utils.isValid.value.option(island, facet, value)
           const isFallbackOption = fallback ? utils.isValid.value.option(island, facet, fallback) : false
-          const preferred = Engine.preferred.state.get(island)!.get(facet)!
+          const preferred = Engine.fallback.state.get(island)!.get(facet)!
 
           return isOption ? value : isFallbackOption ? fallback! : preferred
         },
@@ -327,10 +474,10 @@ export function script(args: Constructed_Script_Args) {
           const isMode = utils.isValid.value.mode(island, mode)
           const isFallbackMode = fallback ? utils.isValid.value.mode(island, fallback) : false
 
-          const facetName = Engine.modesHandling.modes.get(island)?.facet
+          const facetName = Engine.modesHandling.modes.get(island)?.facetName
           if (!facetName) return
 
-          const preferred = Engine.preferred.state.get(island)!.get(facetName)!
+          const preferred = Engine.fallback.state.get(island)!.get(facetName)!
 
           return isMode ? mode : isFallbackMode ? fallback! : preferred
         },
@@ -356,7 +503,7 @@ export function script(args: Constructed_Script_Args) {
 
           const normFacets = sanFacets
 
-          for (const [facet, preferred] of Engine.preferred.state.get(island)!) {
+          for (const [facet, preferred] of Engine.fallback.state.get(island)!) {
             if (!normFacets.has(facet)) normFacets.set(facet, preferred)
           }
 
@@ -367,7 +514,7 @@ export function script(args: Constructed_Script_Args) {
 
           const normState = sanState
 
-          for (const [island, facets] of Engine.preferred.state) {
+          for (const [island, facets] of Engine.fallback.state) {
             for (const [facet, preferred] of facets) {
               if (!normState.has(island)) normState.set(island, new Map())
               if (!normState.get(island)!.has(facet)) normState.get(island)!.set(facet, preferred)
@@ -382,7 +529,7 @@ export function script(args: Constructed_Script_Args) {
           const sanModes = utils.sanitize.modes.all(modes, fallbacks)
           const normModes = sanModes
 
-          const prefModes = Engine.preferred.modes
+          const prefModes = Engine.fallback.modes
 
           for (const [island, prefMode] of prefModes) {
             if (!normModes.has(island)) normModes.set(island, prefMode)
@@ -419,155 +566,6 @@ export function script(args: Constructed_Script_Args) {
       },
     },
   }
-
-  // #region ENGINE
-  function constructEngine(args: Constructed_Script_Args): Engine {
-    const storageKeys = {
-      state: args.storageKey ?? preset.storageKey,
-      modes: args.mode?.storageKey ?? preset.mode.storageKey,
-    }
-
-    const nonce = args.nonce ?? preset.nonce
-    const disableTransitionOnChange = args.disableTransitionOnChange ?? preset.disableTransitionOnChange
-
-    const constructValues = (): Engine['values'] => {
-      const islands = new Set(Object.keys(args.config))
-
-      const options: Engine['values']['options'] = new Map()
-      for (const [island, facets] of Object.entries(args.schema)) {
-        const island_options: NonNullable<ReturnType<(typeof options)['get']>> = new Map()
-
-        for (const [facet, opt] of Object.entries(facets)) {
-          const facet_options: NonNullable<ReturnType<(typeof island_options)['get']>> = new Set()
-          const strat = args.config[island]![facet]!.strategy
-
-          if (opt === true) {
-            // prettier-ignore
-            switch (strat) {
-                case STRATS.MONO: facet_options.add(DEFAULT); break;
-                case STRATS.LIGHT_DARK: Object.values(MODES).filter((m) => m !== MODES.SYSTEM).forEach((m) => facet_options.add(m)); break;
-                case STRATS.SYSTEM: Object.values(MODES).forEach((m) => facet_options.add(m)); break;
-                default: break;
-              }
-          }
-          if (typeof opt === 'string') facet_options.add(opt)
-          if (Array.isArray(opt)) opt.forEach((o) => facet_options.add(o))
-          if (typeof opt === 'object' && !Array.isArray(opt)) {
-            facet_options.add(opt.light ?? MODES.LIGHT)
-            facet_options.add(opt.dark ?? MODES.DARK)
-            if (strat === STRATS.SYSTEM) facet_options.add((opt as { system: string }).system ?? MODES.SYSTEM)
-            if ('custom' in opt) opt.custom?.forEach((cm) => facet_options.add(cm))
-          }
-
-          island_options.set(facet, facet_options)
-        }
-
-        options.set(island, island_options)
-      }
-
-      return { islands, options }
-    }
-    const values = constructValues()
-
-    const constructModes = (): Engine['modesHandling'] => {
-      const modes = {
-        modes: new Map(),
-        strategy: args.mode?.strategy ?? preset.mode.strategy,
-        store: args.mode?.store ?? preset.mode.store,
-      } satisfies Modes_Handling
-
-      for (const [island, facets] of Object.entries(args.config)) {
-        for (const [facet, strat_obj] of Object.entries(facets)) {
-          if (strat_obj.type !== FACETS.MODE) continue
-
-          // resolvedModes
-          const resolvedModes: Mode_Handling['resolvedModes'] = new Map()
-          const strat = strat_obj.strategy
-          const opt = args.schema[island]![facet]!
-
-          // prettier-ignore
-          switch (strat) {
-              case (STRATS.MONO): resolvedModes.set(strat_obj.preferred, strat_obj.colorScheme); break;
-              case (STRATS.MULTI): Object.entries(strat_obj.colorSchemes).forEach(([mode, cs]) => resolvedModes.set(mode, cs)); break;
-              case (STRATS.LIGHT_DARK):
-              case (STRATS.SYSTEM): {
-
-                if (opt === true) {
-                  resolvedModes.set(MODES.LIGHT, MODES.LIGHT)
-                  resolvedModes.set(MODES.DARK, MODES.DARK)
-                }
-
-                if (typeof opt === 'object' && !Array.isArray(opt)) {
-                  resolvedModes.set(opt.light ?? MODES.LIGHT, MODES.LIGHT)
-                  resolvedModes.set(opt.dark ?? MODES.DARK, MODES.DARK)
-                  if ((strat_obj as {colorSchemes: Record<string, COLOR_SCHEME>}).colorSchemes) Object.entries(strat_obj.colorSchemes ?? []).forEach(([mode, cs]) => resolvedModes.set(mode, cs))
-                }
-              }
-            }
-
-          // systemMode
-          let systemMode: Mode_Handling['systemMode'] = undefined
-          if (strat === STRATS.SYSTEM) {
-            if (opt === true || (typeof opt === 'object' && !Array.isArray(opt))) {
-              systemMode = {
-                name: opt === true ? MODES.SYSTEM : ((opt as { system: string }).system ?? MODES.SYSTEM),
-                fallback: strat_obj.fallback,
-              }
-            }
-          }
-
-          modes.modes.set(island, {
-            facet,
-            strategy: strat,
-            resolvedModes,
-            systemMode,
-            store: strat_obj.store ?? true,
-            selectors: (typeof strat_obj.selector === 'string' ? [strat_obj.selector] : strat_obj.selector) ?? preset.mode.selector,
-          })
-        }
-      }
-
-      return modes
-    }
-    const modesHandling = constructModes()
-
-    const contructPreferred = (): Engine['preferred'] => {
-      const state: Engine['preferred']['state'] = new Map()
-      for (const [island, facets] of Object.entries(args.config)) {
-        const island_preferred: NonNullable<ReturnType<(typeof state)['get']>> = new Map()
-
-        for (const [facet, { preferred }] of Object.entries(facets)) {
-          island_preferred.set(facet, preferred)
-        }
-
-        state.set(island, island_preferred)
-      }
-
-      const modes: Engine['preferred']['modes'] = new Map()
-      for (const [island, facets] of state) {
-        const islandModeFacet = modesHandling.modes.get(island)?.facet
-        if (!islandModeFacet) continue
-
-        const preferredMode = facets.get(islandModeFacet)!
-        modes.set(island, preferredMode)
-      }
-
-      const colorSchemes = utils.resolve.colorSchemes(modes)
-
-      return { state, modes, colorSchemes }
-    }
-    const preferred = contructPreferred()
-
-    return {
-      storageKeys,
-      values,
-      modesHandling,
-      preferred,
-      nonce,
-      disableTransitionOnChange,
-    }
-  }
-  let Engine = constructEngine(args)
 
   // #region EVENT MANAGER
   class EventManager {
@@ -763,6 +761,14 @@ export function script(args: Constructed_Script_Args) {
 
     private constructor() {
       StorageManager.init()
+
+      const currStorageState = StorageManager.get.state.all()
+      const state = currStorageState ?? Engine.fallback.state
+
+      this.state = state
+
+      const colorSchemes = utils.construct.colorSchemes(state)
+      this.colorSchemes = colorSchemes
     }
   }
 
@@ -882,7 +888,7 @@ export function script(args: Constructed_Script_Args) {
         /** Accepts even deep-partials instances of state; merges partial with the current/default (preferred) instance. */
         all(state: State) {
           const currState = StorageManager.get.state.all()
-          const prefState = Engine.preferred.state
+          const prefState = Engine.fallback.state
           const newState = utils.deepMerge.maps(currState ?? prefState, state) as State
           StorageManager.utils.store.state(newState)
         },
@@ -899,7 +905,7 @@ export function script(args: Constructed_Script_Args) {
         /** Accepts even partial instances of modes; merges partial with the current/default (preferred) instance. */
         all(modes: State_Modes) {
           const currModes = StorageManager.get.modes.all()
-          const prefModes = Engine.preferred.modes
+          const prefModes = Engine.fallback.modes
           const newModes = utils.deepMerge.maps(currModes ?? prefModes, modes) as State_Modes
           StorageManager.utils.store.modes(newModes)
         },
@@ -929,7 +935,7 @@ export function script(args: Constructed_Script_Args) {
             const deserNewState = newValue ? utils.deserialize.state.all(newValue) : undefined
             const deserOldState = oldValue ? utils.deserialize.state.all(oldValue) : undefined
 
-            const normNewState = utils.normalize.state.all(deserNewState ?? Engine.preferred.state, deserOldState)
+            const normNewState = utils.normalize.state.all(deserNewState ?? Engine.fallback.state, deserOldState)
             StorageManager.set.state.all(normNewState)
             StateManager.set.state.base.all(normNewState)
           }; break;
@@ -1072,6 +1078,4 @@ export function script(args: Constructed_Script_Args) {
 
   StateManager.init()
   window.T3M4 = new T3M4()
-
-  console.log(window.T3M4.get.state.base.all())
 }
