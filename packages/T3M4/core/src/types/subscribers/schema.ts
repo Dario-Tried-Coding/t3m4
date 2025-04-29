@@ -1,30 +1,19 @@
-import { LinientAutoComplete } from '@t3m4/utils'
-import { DEFAULT } from '../constants/miscellaneous'
+import { Opts } from "./opts"
 
 export namespace Schema {
-  export type System_Values = Partial<{ light: string; dark: string; system: string; custom: string[] }>
-
-  export namespace Opts {
-    export type Implicit = true
-    export type Mono = LinientAutoComplete<DEFAULT>
-    export type Multi = string[]
-    export type Light_Dark = Omit<System_Values, 'system'>
-    export type System = System_Values
-  }
-
   export namespace Facet {
-    export type Generic = Opts.Implicit | Opts.Mono | Opts.Multi
-    export type Mode = Generic | Opts.Light_Dark | Opts.System
+    export type Generic<T extends 'primitive' | 'suggested' = 'suggested'> = Opts.Mono<T> | Opts.Multi
+    export type Mode<T extends 'primitive' | 'suggested' = 'suggested'> = Generic<T> | Opts.System<T>
   }
 
-  export type Island = {
+  export type Island<T extends 'primitive' | 'suggested' = 'suggested'> = {
     facets?: {
-      [facet: string]: Facet.Generic
+      [facet: string]: Facet.Generic<T>
     }
-    mode?: Facet.Mode
+    mode?: Facet.Mode<T>
   }
 
-  export type All = {
-    [island: string]: Island
+  export type All<T extends 'primitive' | 'suggested' = 'suggested'> = {
+    [island: string]: Island<T>
   }
 }

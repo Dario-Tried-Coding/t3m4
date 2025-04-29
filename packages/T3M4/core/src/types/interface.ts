@@ -1,7 +1,7 @@
 import { COLOR_SCHEME } from './constants/color-schemes'
 import { CallbackID, EventMap } from './events'
 import { Constructed_Script_Args } from './script'
-import { Options } from './subscribers/options'
+import { Options } from './subscribers/values'
 import { State } from './subscribers/state'
 
 type Island_State = State[keyof State]

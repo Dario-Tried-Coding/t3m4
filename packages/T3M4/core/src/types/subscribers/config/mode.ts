@@ -1,12 +1,12 @@
 import { LinientAutoComplete } from '@t3m4/utils'
 import { COLOR_SCHEME, COLOR_SCHEMES } from '../../constants/color-schemes'
+import { FACETS } from '../../constants/facets'
 import { DEFAULT } from '../../constants/miscellaneous'
 import { MODES } from '../../constants/modes'
 import { SELECTOR } from '../../constants/selectors'
-import { STRATS } from '../../constants/strats'
+import { STRAT, STRATS } from '../../constants/strats'
 import { Schema } from '../schema'
-import { FACETS } from '../../constants/facets'
-
+    
 export namespace Mode_Config {
   type ColorSchemes<V extends string[] | undefined> = V extends string[] ? { colorSchemes: Record<V[number], COLOR_SCHEME> } : {}
 
@@ -26,7 +26,7 @@ export namespace Mode_Config {
   export namespace Light_Dark {
     export type Dynamic<V extends Schema.Opts.Light_Dark> = Base & {
       strategy: STRATS['light_dark']
-      default: (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
+      default: System_Values<V, 'default'>
     } & ColorSchemes<V['custom']>
 
     export type Default = Dynamic<COLOR_SCHEMES>
@@ -41,8 +41,8 @@ export namespace Mode_Config {
   export namespace System {
     export type Dynamic<V extends Schema.Opts.System> = Base & {
       strategy: STRATS['system']
-      default: (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['system'] extends string ? V['system'] : 'system') | (V['custom'] extends string[] ? V['custom'][number] : never)
-      fallback: (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
+      default: System_Values<V, 'default'>
+      fallback: System_Values<V, 'fallback'>
     } & ColorSchemes<V['custom']>
 
     export type Default = Dynamic<MODES>
@@ -56,7 +56,7 @@ export namespace Mode_Config {
   }
 
   export namespace All {
-    export type Dynamic<O extends Schema.Opts.Facets.Mode> = O extends Schema.Opts.Implicit
+    export type Dynamic<O extends Schema.Facet.Mode> = O extends Schema.Opts.Implicit
       ? Mono.Default | Light_Dark.Default | System.Default
       : O extends Schema.Opts.Mono
         ? Mono.Dynamic<O>
