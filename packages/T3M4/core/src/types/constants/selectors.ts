@@ -1,6 +1,6 @@
 export type SELECTORS = {
-  CLASS: 'class'
-  COLOR_SCHEME: 'color-scheme'
-  DATA_ATTRIBUTE: 'data-attribute'
+  class: 'class'
+  color_scheme: 'color-scheme'
+  data_attribute: 'data-attribute'
 }
 export type SELECTOR = SELECTORS[keyof SELECTORS]

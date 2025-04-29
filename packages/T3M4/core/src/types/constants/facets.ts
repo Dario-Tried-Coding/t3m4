@@ -1,5 +1,5 @@
 export type FACETS = {
-  GENERIC: 'facet'
-  MODE: 'mode'
+  generic: 'facet'
+  mode: 'mode'
 }
 export type FACET = FACETS[keyof FACETS]

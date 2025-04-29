@@ -1,22 +1,30 @@
-import { LinientAutoComplete } from '@t3m4/utils';
-import { DEFAULT } from '../constants/miscellaneous';
+import { LinientAutoComplete } from '@t3m4/utils'
+import { DEFAULT } from '../constants/miscellaneous'
 
-export type System_Values = Partial<{ light: string; dark: string; system: string; custom: string[] }>
+export namespace Schema {
+  export type System_Values = Partial<{ light: string; dark: string; system: string; custom: string[] }>
 
-export type Implicit_Opt = true
-export type Mono_Opt = LinientAutoComplete<DEFAULT>
-export type Multi_Opt = string[]
-export type Light_Dark_Opt = Omit<System_Values, 'system'>
-export type System_Opt = System_Values
+  export namespace Opts {
+    export type Implicit = true
+    export type Mono = LinientAutoComplete<DEFAULT>
+    export type Multi = string[]
+    export type Light_Dark = Omit<System_Values, 'system'>
+    export type System = System_Values
+  }
 
-export type Explicit_Opt = Mono_Opt | Multi_Opt | Light_Dark_Opt | System_Opt
+  export namespace Facet {
+    export type Generic = Opts.Implicit | Opts.Mono | Opts.Multi
+    export type Mode = Generic | Opts.Light_Dark | Opts.System
+  }
 
-export type Opt = Implicit_Opt | Explicit_Opt
+  export type Island = {
+    facets?: {
+      [facet: string]: Facet.Generic
+    }
+    mode?: Facet.Mode
+  }
 
-export type Schema = {
-  [island: string]: {
-    [facet: string]: Opt
+  export type All = {
+    [island: string]: Island
   }
 }
-
-export type Pick_Island_Schema<S extends Schema, I extends keyof S> = S[I] extends Schema[keyof Schema] ? S[I] : never

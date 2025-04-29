@@ -1,36 +1,73 @@
-import { UndefinedOr } from '@t3m4/utils/nullables'
-import { System_Values } from '../schema'
+import { LinientAutoComplete } from '@t3m4/utils'
+import { COLOR_SCHEME, COLOR_SCHEMES } from '../../constants/color-schemes'
+import { DEFAULT } from '../../constants/miscellaneous'
+import { MODES } from '../../constants/modes'
 import { SELECTOR } from '../../constants/selectors'
 import { STRATS } from '../../constants/strats'
-import { COLOR_SCHEME } from '../../constants/color-schemes'
+import { Schema } from '../schema'
+import { FACETS } from '../../constants/facets'
 
-type Color_Schemes<Custom_Values extends UndefinedOr<string[]>> = [Custom_Values] extends [undefined]
-  ? { colorSchemes?: Record<string, COLOR_SCHEME> }
-  : Custom_Values extends string[]
-    ? { colorSchemes: Record<Custom_Values[number], COLOR_SCHEME> }
-    : {}
+export namespace Mode_Config {
+  type ColorSchemes<V extends string[] | undefined> = V extends string[] ? { colorSchemes: Record<V[number], COLOR_SCHEME> } : {}
 
-export type Mode_Strat = { type: 'mode'; selector?: SELECTOR | SELECTOR[]; store?: boolean }
+  type Base = Partial<{ name?: LinientAutoComplete<FACETS['mode']>; selector?: SELECTOR | SELECTOR[]; store?: boolean }>
 
-export type Mode_Mono_Strat_Obj<V extends string = string> = Mode_Strat & { strategy: STRATS['MONO']; preferred: V; colorScheme: COLOR_SCHEME }
+  export namespace Mono {
+    export type Dynamic<V extends Schema.Opts.Mono> = Base & { strategy: STRATS['mono']; default: V; colorScheme: COLOR_SCHEME }
+    export type Default = Dynamic<DEFAULT>
+    export type Static = Base & { strategy: STRATS['mono']; default: string; colorScheme: COLOR_SCHEME }
+  }
 
-export type Mode_Multi_Strat_Obj<V extends string[] = string[]> = Mode_Strat & { strategy: STRATS['MULTI']; preferred: V[number]; colorSchemes: { [K in V[number]]: COLOR_SCHEME } }
+  export namespace Multi {
+    export type Dynamic<V extends Schema.Opts.Multi> = Base & { strategy: STRATS['multi']; default: V[number] } & ColorSchemes<V>
+    export type Static = Base & { strategy: STRATS['multi']; default: string; colorSchemes?: Record<string, COLOR_SCHEME> }
+  }
 
-export type Mode_Light_Dark_Strat_Obj<V extends Omit<System_Values, 'system'> = { light: undefined; dark: undefined; custom: undefined }> = Mode_Strat & {
-  strategy: STRATS['LIGHT_DARK']
-  preferred: [V['light'], V['dark'], V['custom']] extends [undefined, undefined, undefined]
-    ? string
-    : (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
-} & Color_Schemes<V['custom']>
+  export namespace Light_Dark {
+    export type Dynamic<V extends Schema.Opts.Light_Dark> = Base & {
+      strategy: STRATS['light_dark']
+      default: (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
+    } & ColorSchemes<V['custom']>
 
-export type Mode_System_Strat_Obj<V extends System_Values = { light: undefined; dark: undefined; system: undefined; custom: undefined }> = Mode_Strat & {
-  strategy: STRATS['SYSTEM']
-  preferred: [V['light'], V['dark'], V['system'], V['custom']] extends [undefined, undefined, undefined, undefined]
-    ? string
-    : (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['system'] extends string ? V['system'] : 'system') | (V['custom'] extends string[] ? V['custom'][number] : never)
-  fallback: [V['light'], V['dark'], V['system'], V['custom']] extends [undefined, undefined, undefined, undefined]
-    ? string
-    : (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
-} & Color_Schemes<V['custom']>
+    export type Default = Dynamic<COLOR_SCHEMES>
 
-export type Mode_Strat_Obj = Mode_Mono_Strat_Obj | Mode_Multi_Strat_Obj | Mode_Light_Dark_Strat_Obj | Mode_System_Strat_Obj
+    export type Static = Base & {
+      strategy: STRATS['light_dark']
+      default: string
+      colorSchemes?: Record<string, COLOR_SCHEME>
+    }
+  }
+
+  export namespace System {
+    export type Dynamic<V extends Schema.Opts.System> = Base & {
+      strategy: STRATS['system']
+      default: (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['system'] extends string ? V['system'] : 'system') | (V['custom'] extends string[] ? V['custom'][number] : never)
+      fallback: (V['light'] extends string ? V['light'] : 'light') | (V['dark'] extends string ? V['dark'] : 'dark') | (V['custom'] extends string[] ? V['custom'][number] : never)
+    } & ColorSchemes<V['custom']>
+
+    export type Default = Dynamic<MODES>
+
+    export type Static = Base & {
+      strategy: STRATS['system']
+      default: string
+      fallback: string
+      colorSchemes?: Record<string, COLOR_SCHEME>
+    }
+  }
+
+  export namespace All {
+    export type Dynamic<O extends Schema.Opts.Facets.Mode> = O extends Schema.Opts.Implicit
+      ? Mono.Default | Light_Dark.Default | System.Default
+      : O extends Schema.Opts.Mono
+        ? Mono.Dynamic<O>
+        : O extends Schema.Opts.Multi
+          ? Multi.Dynamic<O>
+          : O extends Schema.Opts.Light_Dark
+            ? Light_Dark.Dynamic<O> | System.Dynamic<O>
+            : O extends Schema.Opts.System
+              ? System.Dynamic<O>
+              : never
+
+    export type Static = Mono.Static | Multi.Static | Light_Dark.Static | System.Static
+  }
+}
