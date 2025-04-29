@@ -1,30 +1,42 @@
-import { UndefinedOr } from '@t3m4/utils/nullables'
 import { Config } from './config'
 import { Schema } from './schema'
 import { State } from './state'
 
-export type Options<Sc extends UndefinedOr<Schema> = undefined, C extends UndefinedOr<Config<Sc>> = undefined, St extends UndefinedOr<State<Sc, C>> = undefined> = [Sc, C, St] extends [Schema, Config<Sc>, State<Sc, C>]
-  ? {
-      [I in keyof St]: I extends keyof Sc
-        ? I extends keyof C
-          ? {
-              [F in keyof St[I]]: St[I][F][]
-            }
-          : never
-        : never
-    }
-  : {
-      [island: string]: {
-        [facet: string]: string[]
+export namespace Options {
+  export namespace Facet {
+    export type Dynamic<Sc extends Schema, C extends Config.All.Dynamic<Sc>, St extends State.All.AsObj.Dynamic<Sc, C>, I extends keyof Sc, F extends keyof Sc[I]> = I extends keyof St
+      ? F extends keyof St[I]
+        ? St[I][F][]
+        : 'F does not extend keyof St[I]'
+      : 'I does not extend keyof St'
+    export type Static = string[]
+  }
+
+  export namespace Island {
+    export namespace AsObj {
+      export type Dynamic<Sc extends Schema, C extends Config.All.Dynamic<Sc>, St extends State.All.AsObj.Dynamic<Sc, C>, I extends keyof Sc> = { [F in keyof St[I]]: I extends keyof Sc ? F extends keyof Sc[I] ? Options.Facet.Dynamic<Sc, C, St, I, F> : 'F does not extend keyof Sc[I]' : 'I does not extend keyof Sc' }
+      export type Static = {
+        [facet: string]: Options.Facet.Static
       }
     }
 
-export type Pick_Island_Options<Sc extends Schema, C extends Config<Sc>, S extends State<Sc, C>, O extends Options<Sc, C, S>, I extends keyof Sc> = I extends keyof C
-  ? I extends keyof S
-    ? I extends keyof O
-      ? O[I] extends Options<Sc, C, S>[keyof Options<Sc, C, S>]
-        ? O[I]
-        : never
-      : never
-    : never
-  : never
+    export namespace AsMap {
+      export type Common = Map<string, Options.Facet.Static>
+    }
+  }
+
+  export namespace All {
+    export namespace AsObj {
+      export type Dynamic<Sc extends Schema, C extends Config.All.Dynamic<Sc>, St extends State.All.AsObj.Dynamic<Sc, C>> = {
+        [I in keyof St]: I extends keyof Sc ? Options.Island.AsObj.Dynamic<Sc, C, St, I> : 'I does not extend keyof Sc'
+      }
+      export type Static = {
+        [island: string]: Options.Island.AsObj.Static
+      }
+    }
+
+    export namespace AsMap {
+      export type Common = Map<string, Options.Island.AsMap.Common>
+    }
+  }
+}
