@@ -1,24 +1,30 @@
-import { Branded } from '@t3m4/utils'
-import { MODES } from '../constants/modes'
+import { FACET, FACETS } from '../constants/facets'
+import { MODE_TYPE, MODE_TYPES, MODES } from '../constants/modes'
+import { STRAT, STRATS } from '../constants/strats'
 import { Opts } from './opts'
 import { Schema } from './schema'
-import { STRAT, STRATS } from '../constants/strats'
-import { FACET, FACETS } from '../constants/facets'
 
 export namespace Values {
-  type Typed<T, M extends FACET> = T & { __type: M }
-  type Strategized<T, S extends STRAT> = T & { __strat: S }
-
-  type System<V extends Opts.System> = [
-    V['light'] extends string ? V['light'] : MODES['light'],
-    V['dark'] extends string ? V['dark'] : MODES['dark'],
-    V['system'] extends string ? V['system'] : MODES['system'],
-    ...(V['custom'] extends string[] ? V['custom'] : []),
+  type System<V extends Opts.Primitive.System> = [
+    Branded<V['light'] extends Opts.Primitive.Mono ? V['light'] : MODES['light'], { mode: MODE_TYPES['light'] }>,
+    Branded<V['dark'] extends Opts.Primitive.Mono ? V['dark'] : MODES['dark'], { mode: MODE_TYPES['dark'] }>,
+    V['system'] extends Opts.Primitive.Mono ? Branded<V['system'], { mode: MODE_TYPES['system'] }> : never,
+    V['custom'] extends Opts.Primitive.Multi ? { [C in V['custom'][number]]: Branded<C, { mode: MODE_TYPES['custom'] }> }[V['custom'][number]] : never,
   ]
 
   export namespace Facet {
-    export type Generic<Sc extends Schema.Facet.Generic, T extends FACET = FACETS['generic']> = Sc extends Opts.Mono ? Typed<Strategized<[Sc], STRATS['mono']>, T> : Sc extends Opts.Multi ? Typed<Strategized<Sc, STRATS['multi']>, T> : never
-    export type Mode<Sc extends Schema.Facet.Mode> = Sc extends Schema.Facet.Generic ? Generic<Sc, FACETS['mode']> : Sc extends Opts.System ? Typed<System<Sc>, FACETS['mode']> : never
+    export type Generic<Sc extends Schema.Facet.Generic, T extends FACET = FACETS['generic']> = Sc extends Opts.Primitive.Mono
+      ? Branded<Sc[], { type: T; strat: STRATS['mono'] }>
+      : Sc extends Opts.Primitive.Multi
+        ? Branded<Sc, { type: T; strat: STRATS['multi'] }>
+        : never
+    export type Mode<Sc extends Schema.Facet.Mode> = Sc extends Schema.Facet.Generic
+      ? Generic<Sc, FACETS['mode']>
+      : Sc extends Opts.Primitive.System
+        ? Sc['system'] extends Opts.Primitive.Mono
+          ? Branded<System<Sc>[number][], { type: FACETS['mode']; strat: STRATS['system'] }>
+          : Branded<System<Sc>[number][], { type: FACETS['mode']; strat: STRATS['system'] | STRATS['light_dark'] }>
+        : never
   }
 
   export namespace Island {

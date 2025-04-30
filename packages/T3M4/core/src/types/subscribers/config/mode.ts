@@ -1,73 +1,38 @@
 import { LinientAutoComplete } from '@t3m4/utils'
-import { COLOR_SCHEME, COLOR_SCHEMES } from '../../constants/color-schemes'
+import { COLOR_SCHEME } from '../../constants/color-schemes'
 import { FACETS } from '../../constants/facets'
-import { DEFAULT } from '../../constants/miscellaneous'
-import { MODES } from '../../constants/modes'
+import { MODE_TYPES, MODES } from '../../constants/modes'
 import { SELECTOR } from '../../constants/selectors'
-import { STRAT, STRATS } from '../../constants/strats'
+import { STRATS } from '../../constants/strats'
+import { Opts } from '../opts'
 import { Schema } from '../schema'
-    
-export namespace Mode_Config {
-  type ColorSchemes<V extends string[] | undefined> = V extends string[] ? { colorSchemes: Record<V[number], COLOR_SCHEME> } : {}
+import { Branded, Values } from '../values'
+import { Unbrand } from '../../moment'
 
-  type Base = Partial<{ name?: LinientAutoComplete<FACETS['mode']>; selector?: SELECTOR | SELECTOR[]; store?: boolean }>
+export namespace Mode_Config {
+  type Base = Partial<{ name: LinientAutoComplete<FACETS['mode']>; selector: SELECTOR | SELECTOR[]; store: boolean }>
+  type Color_Schemes<S extends Opts.Primitive.Mono | never> = S extends Opts.Primitive.Mono ? { colorSchemes: Record<S, COLOR_SCHEME> } : {}
 
   export namespace Mono {
-    export type Dynamic<V extends Schema.Opts.Mono> = Base & { strategy: STRATS['mono']; default: V; colorScheme: COLOR_SCHEME }
-    export type Default = Dynamic<DEFAULT>
-    export type Static = Base & { strategy: STRATS['mono']; default: string; colorScheme: COLOR_SCHEME }
+    export type Dynamic<O extends Opts.Primitive.Mono, V extends Values.Facet.Mode<O>> = Base & { strategy: STRATS['mono']; default: V[number]; colorScheme: COLOR_SCHEME }
+    export type Default = Dynamic<Opts.Default, Values.Facet.Mode<Opts.Default>>
+    export type Static = Dynamic<Opts.Primitive.Mono, Values.Facet.Mode<Opts.Primitive.Mono>>
   }
 
   export namespace Multi {
-    export type Dynamic<V extends Schema.Opts.Multi> = Base & { strategy: STRATS['multi']; default: V[number] } & ColorSchemes<V>
-    export type Static = Base & { strategy: STRATS['multi']; default: string; colorSchemes?: Record<string, COLOR_SCHEME> }
+    export type Dynamic<O extends Opts.Primitive.Multi, V extends Values.Facet.Mode<O>> = Base & { strategy: STRATS['multi']; default: V[number]; colorSchemes: Record<V[number], COLOR_SCHEME> }
+    export type Static = Dynamic<Opts.Primitive.Multi, Values.Facet.Mode<Opts.Primitive.Multi>>
   }
 
   export namespace Light_Dark {
-    export type Dynamic<V extends Schema.Opts.Light_Dark> = Base & {
-      strategy: STRATS['light_dark']
-      default: System_Values<V, 'default'>
-    } & ColorSchemes<V['custom']>
-
-    export type Default = Dynamic<COLOR_SCHEMES>
-
-    export type Static = Base & {
-      strategy: STRATS['light_dark']
-      default: string
-      colorSchemes?: Record<string, COLOR_SCHEME>
-    }
+    export type Dynamic<V extends Values.Facet.Mode<Omit<Required<Opts.Primitive.System>, MODES['system']>>> = Base & { strategy: STRATS['light_dark']; default: Unbrand<V[number]> } & Color_Schemes<Unbrand<Extract<V[number], Branded<string, { mode: MODE_TYPES['custom'] }>>>>
+    export type Default = Dynamic<Values.Facet.Mode<Omit<MODES, MODE_TYPES['system']>>>
+    export type Static = Base & { strategy: STRATS['light_dark']; default: string; colorSchemes?: Record<string, COLOR_SCHEME> }
   }
 
   export namespace System {
-    export type Dynamic<V extends Schema.Opts.System> = Base & {
-      strategy: STRATS['system']
-      default: System_Values<V, 'default'>
-      fallback: System_Values<V, 'fallback'>
-    } & ColorSchemes<V['custom']>
-
-    export type Default = Dynamic<MODES>
-
-    export type Static = Base & {
-      strategy: STRATS['system']
-      default: string
-      fallback: string
-      colorSchemes?: Record<string, COLOR_SCHEME>
-    }
-  }
-
-  export namespace All {
-    export type Dynamic<O extends Schema.Facet.Mode> = O extends Schema.Opts.Implicit
-      ? Mono.Default | Light_Dark.Default | System.Default
-      : O extends Schema.Opts.Mono
-        ? Mono.Dynamic<O>
-        : O extends Schema.Opts.Multi
-          ? Multi.Dynamic<O>
-          : O extends Schema.Opts.Light_Dark
-            ? Light_Dark.Dynamic<O> | System.Dynamic<O>
-            : O extends Schema.Opts.System
-              ? System.Dynamic<O>
-              : never
-
-    export type Static = Mono.Static | Multi.Static | Light_Dark.Static | System.Static
+    export type Dynamic<O extends Opts.Primitive.System, V extends Values.Facet.Mode<O>> = Base & { strategy: STRATS['system']; default: V[number]; fallback: Exclude<V[number], O['system']> } & ColorSchemes<V, O>
+    export type Default = Dynamic<MODES, Values.Facet.Mode<MODES>>
+    export type Static = Base & { strategy: STRATS['system']; default: string; colorSchemes?: Record<string, COLOR_SCHEME> }
   }
 }

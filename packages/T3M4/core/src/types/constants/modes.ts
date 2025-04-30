@@ -2,5 +2,6 @@ import { COLOR_SCHEMES } from "./color-schemes"
 
 export type MODES = COLOR_SCHEMES & {
   system: 'system'
+  custom: 'custom'
 }
-export type MODE = MODES[keyof MODES]
+export type Mode = MODES[keyof MODES]

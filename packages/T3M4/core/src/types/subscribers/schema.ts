@@ -1,19 +1,35 @@
-import { Opts } from "./opts"
+import { Opts } from './opts'
 
 export namespace Schema {
   export namespace Facet {
-    export type Generic<T extends 'primitive' | 'suggested' = 'suggested'> = Opts.Mono<T> | Opts.Multi
-    export type Mode<T extends 'primitive' | 'suggested' = 'suggested'> = Generic<T> | Opts.System<T>
+    export type Generic = Opts.Suggested.Mono | Opts.Primitive.Multi
+    export type Mode = Generic | Opts.Suggested.System
   }
 
-  export type Island<T extends 'primitive' | 'suggested' = 'suggested'> = {
+  export type Island = {
     facets?: {
-      [facet: string]: Facet.Generic<T>
+      [facet: string]: Facet.Generic
     }
-    mode?: Facet.Mode<T>
+    mode?: Facet.Mode
   }
 
-  export type All<T extends 'primitive' | 'suggested' = 'suggested'> = {
-    [island: string]: Island<T>
+  export type All = {
+    [island: string]: Island
   }
 }
+
+const schema = {
+  root: {
+    facets: {
+      color: ['blue', 'red', 'green'],
+      radius: 'custom-default',
+    },
+    mode: 'custom-mode',
+  },
+  island: {
+    mode: { light: 'light', dark: 'dark', custom: ['custom1', 'custom2'], system: 'system' },
+  },
+  island2: {
+    mode: ['mode1', 'mode2'],
+  },
+} as const satisfies Schema.All

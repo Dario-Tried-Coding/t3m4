@@ -3,4 +3,4 @@ export type SELECTORS = {
   color_scheme: 'color-scheme'
   data_attribute: 'data-attribute'
 }
-export type SELECTOR = SELECTORS[keyof SELECTORS]
+export type Selector = keyof SELECTORS
