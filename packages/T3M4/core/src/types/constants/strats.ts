@@ -4,7 +4,7 @@ export type STRATS = {
   light_dark: 'light-dark'
   system: 'system'
 }
-export type Strat = keyof STRATS
+export type Strat = STRATS[keyof STRATS]
 
 export type STORE_STRATS = {
   unique: 'unique',
