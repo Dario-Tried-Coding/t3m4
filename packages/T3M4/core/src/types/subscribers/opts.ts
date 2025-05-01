@@ -30,14 +30,14 @@ export namespace Opts {
   }
 
   export namespace Branded {
-    export type Mono<B extends Omit<Partial<Brand_Map>, 'mode'> & Pick<Brand_Map, 'type' | 'facet' | 'strat'>, T extends Primitive.Mono = Primitive.Mono> = Brand<T, B>
+    export type Mono<T extends Primitive.Mono, B extends Pick<Brand_Map, 'type' | 'strat'> & Partial<Pick<Brand_Map, 'facet'>>> = Brand<T, B>
 
-    export type Multi<B extends Omit<Partial<Brand_Map>, 'mode'> & Pick<Brand_Map, 'type' | 'facet' | 'strat'>, T extends readonly Primitive.Mono[]> = { [I in keyof T]: Brand<T[I], B> }
+    export type Multi<T extends readonly Primitive.Mono[], B extends Pick<Brand_Map, 'type' | 'strat'> & Partial<Pick<Brand_Map, 'facet'>>> = { [I in keyof T]: Brand<T[I], B> }
 
-    export type System<B extends Omit<Partial<Brand_Map>, 'type' | 'mode'> & Pick<Brand_Map, 'facet' | 'strat'>, T extends Primitive.System = Primitive.System> = {
-      light: Mono<B & { type: FACETS['mode']; mode: MODES['light'] }, T['light']>
-      dark: Mono<B & { type: FACETS['mode']; mode: MODES['dark'] }, T['dark']>
-    } & (T['system'] extends Primitive.Mono ? { system: Mono<B & { type: FACETS['mode']; mode: MODES['system'] }, NonNullable<T['system']>> } : {}) &
-      (T['custom'] extends Primitive.Multi ? { custom: Multi<B & { type: FACETS['mode']; mode: MODES['custom'] }, NonNullable<T['custom']>> } : {})
+    export type System<T extends Primitive.System, B extends Pick<Brand_Map, 'facet' | 'strat'>> = {
+      light: Mono<T['light'], B & { type: FACETS['mode']; mode: MODES['light'] }>
+      dark: Mono<T['dark'], B & { type: FACETS['mode']; mode: MODES['dark'] }>
+    } & (T['system'] extends Primitive.Mono ? { system: Mono<NonNullable<T['system']>, B & { type: FACETS['mode']; mode: MODES['system'] }> } : {}) &
+      (T['custom'] extends Primitive.Multi ? { custom: Multi<NonNullable<T['custom']>, B & { type: FACETS['mode']; mode: MODES['custom'] }> } : {})
   }
 }

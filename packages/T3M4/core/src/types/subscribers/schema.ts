@@ -25,17 +25,17 @@ export namespace Schema {
   export namespace Branded {
     export namespace Facet {
       export type Generic<V extends Primitive.Facet.Generic, B extends Pick<Brand_Map, 'facet'>, T extends Brand_Map['type'] = FACETS['generic']> = V extends Opts.Primitive.Mono
-        ? Opts.Branded.Mono<{ type: T; strat: STRATS['mono'] } & B, V>
+        ? Opts.Branded.Mono<V, { type: T; strat: STRATS['mono'] } & B>
         : V extends Opts.Primitive.Multi
-          ? Opts.Branded.Multi<{ type: T; strat: STRATS['multi'] } & B, V>
+          ? Opts.Branded.Multi<V, { type: T; strat: STRATS['multi'] } & B>
           : never
 
       export type Mode<V extends Primitive.Facet.Mode, B extends Pick<Brand_Map, 'facet'>> = V extends Primitive.Facet.Generic
         ? Generic<V, B, FACETS['mode']>
         : V extends Opts.Primitive.System
           ? V['system'] extends Opts.Primitive.Mono
-            ? Opts.Branded.System<{ strat: STRATS['system'] } & B, V>
-            : Opts.Branded.System<{ strat: STRATS['system'] | STRATS['light_dark'] } & B, V>
+            ? Opts.Branded.System<V, { strat: STRATS['system'] } & B>
+            : Opts.Branded.System<V, { strat: STRATS['system'] | STRATS['light_dark'] } & B>
           : never
     }
 
@@ -57,20 +57,3 @@ export namespace Schema {
     }
   }
 }
-
-const schema = {
-  root: {
-    facets: {
-      color: ['blue', 'red', 'green'],
-      radius: 'custom-default',
-    },
-    mode: 'custom-mode',
-  },
-  island: {
-    mode: { light: 'light', dark: 'dark', custom: ['custom'] },
-  },
-  island2: {
-    mode: ['mode1', 'mode2'],
-  },
-} as const satisfies Schema.Primitive.All
-type test = Schema.Branded.All<typeof schema>
