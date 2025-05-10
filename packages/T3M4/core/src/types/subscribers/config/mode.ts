@@ -1,38 +1,69 @@
 import { LinientAutoComplete } from '@t3m4/utils'
-import { COLOR_SCHEME } from '../../constants/color-schemes'
+import { Color_Scheme } from '../../constants/color-schemes'
 import { FACETS } from '../../constants/facets'
-import { MODE_TYPES, MODES } from '../../constants/modes'
-import { SELECTOR } from '../../constants/selectors'
+import { Mode, MODES } from '../../constants/modes'
+import { Selector } from '../../constants/selectors'
 import { STRATS } from '../../constants/strats'
+import { Unbrand } from '../brand'
 import { Opts } from '../opts'
 import { Schema } from '../schema'
-import { Branded, Values } from '../values'
-import { Unbrand } from '../../moment'
 
 export namespace Mode_Config {
-  type Base = Partial<{ name: LinientAutoComplete<FACETS['mode']>; selector: SELECTOR | SELECTOR[]; store: boolean }>
-  type Color_Schemes<S extends Opts.Primitive.Mono | never> = S extends Opts.Primitive.Mono ? { colorSchemes: Record<S, COLOR_SCHEME> } : {}
+  type Base = Partial<{ name: LinientAutoComplete<FACETS['mode']>; selector: Selector | Selector[]; store: boolean }>
 
   export namespace Mono {
-    export type Dynamic<O extends Opts.Primitive.Mono, V extends Values.Facet.Mode<O>> = Base & { strategy: STRATS['mono']; default: V[number]; colorScheme: COLOR_SCHEME }
-    export type Default = Dynamic<Opts.Default, Values.Facet.Mode<Opts.Default>>
-    export type Static = Dynamic<Opts.Primitive.Mono, Values.Facet.Mode<Opts.Primitive.Mono>>
+    export type Dynamic<S extends Schema.Branded.Facet.Mode<Opts.Primitive.Mono>> = Base & { strategy: STRATS['mono']; default: Unbrand<S>; colorScheme: Color_Scheme }
+    export type Default = Dynamic<Schema.Branded.Facet.Mode<Opts.Default>>
+    export type Static = Dynamic<Schema.Branded.Facet.Mode<Opts.Primitive.Mono>>
   }
 
   export namespace Multi {
-    export type Dynamic<O extends Opts.Primitive.Multi, V extends Values.Facet.Mode<O>> = Base & { strategy: STRATS['multi']; default: V[number]; colorSchemes: Record<V[number], COLOR_SCHEME> }
-    export type Static = Dynamic<Opts.Primitive.Multi, Values.Facet.Mode<Opts.Primitive.Multi>>
-  }
-
-  export namespace Light_Dark {
-    export type Dynamic<V extends Values.Facet.Mode<Omit<Required<Opts.Primitive.System>, MODES['system']>>> = Base & { strategy: STRATS['light_dark']; default: Unbrand<V[number]> } & Color_Schemes<Unbrand<Extract<V[number], Branded<string, { mode: MODE_TYPES['custom'] }>>>>
-    export type Default = Dynamic<Values.Facet.Mode<Omit<MODES, MODE_TYPES['system']>>>
-    export type Static = Base & { strategy: STRATS['light_dark']; default: string; colorSchemes?: Record<string, COLOR_SCHEME> }
+    export type Dynamic<S extends Schema.Branded.Facet.Mode<Opts.Primitive.Multi>> = Base & { strategy: STRATS['multi']; default: Unbrand<S>; colorSchemes: Record<Unbrand<S>, Color_Scheme> }
+    export type Static = Dynamic<Schema.Branded.Facet.Mode<Opts.Primitive.Multi>>
   }
 
   export namespace System {
-    export type Dynamic<O extends Opts.Primitive.System, V extends Values.Facet.Mode<O>> = Base & { strategy: STRATS['system']; default: V[number]; fallback: Exclude<V[number], O['system']> } & ColorSchemes<V, O>
-    export type Default = Dynamic<MODES, Values.Facet.Mode<MODES>>
-    export type Static = Base & { strategy: STRATS['system']; default: string; colorSchemes?: Record<string, COLOR_SCHEME> }
+    type Fallback<S extends string> = [Extract<S, { __mode: MODES['system'] }>] extends [never] ? {} : { fallback: Unbrand<Exclude<S, { __mode: MODES['system'] }>> }
+    type Color_Schemes<S extends string> = [Extract<S, { __mode: MODES['custom'] }>] extends [never] ? {} : { colorSchemes: Record<Unbrand<Extract<S, { __mode: MODES['custom'] }>>, Color_Scheme> }
+
+    export type Dynamic<S extends Schema.Branded.Facet.Mode<Required<Opts.Primitive.System>>> = Base & { strategy: STRATS['system']; default: Unbrand<S> } & Fallback<S> & Color_Schemes<S>
+    export type Default = Base & { strategy: STRATS['system']; default: Exclude<Mode, MODES['custom']> }
+    export type Static = Base & { strategy: STRATS['system']; default: string; colorSchemes?: Record<string, Color_Scheme> }
   }
+
+  export type Dynamic<S> =
+    S extends Schema.Branded.Facet.Mode<Opts.Primitive.Mono>
+      ? Mono.Dynamic<S>
+      : S extends Schema.Branded.Facet.Mode<Opts.Primitive.Multi>
+        ? Multi.Dynamic<S>
+        : S extends Schema.Branded.Facet.Mode<Required<Opts.Primitive.System>>
+          ? System.Dynamic<S>
+          : never
+  export type Static = Mono.Static | Multi.Static | System.Static
+}
+
+const schema = {
+  root: {
+    facets: {
+      color: ['blue', 'red', 'green'],
+      radius: 'custom-default',
+    },
+    mode: 'custom-mode',
+  },
+  island: {
+    mode: { light: 'light', dark: 'dark', system: 'system-custom', custom: ['custom1', 'custom2'] },
+  },
+  island2: {
+    mode: ['mode1', 'mode2'],
+  },
+} as const satisfies Schema.Primitive.All
+
+type test = Schema.Branded.All<typeof schema>['root']['mode']
+type test2 = Extract<test, { __mode: MODES['system'] }>
+type test3 = Extract<test, { __mode: MODES['custom'] }>
+type config = Mode_Config.Dynamic<test>
+const config: config = {
+  strategy: 'mono',
+  default: 'custom-mode',
+  colorScheme: 'dark'
 }

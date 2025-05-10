@@ -1,4 +1,5 @@
 import { FACETS } from '../constants/facets'
+import { MODES } from '../constants/modes'
 import { STRATS } from '../constants/strats'
 import { Brand_Map } from './brand'
 import { Opts } from './opts'
@@ -23,37 +24,39 @@ export namespace Schema {
   }
 
   export namespace Branded {
+    
     export namespace Facet {
-      export type Generic<V extends Primitive.Facet.Generic, B extends Pick<Brand_Map, 'facet'>, T extends Brand_Map['type'] = FACETS['generic']> = V extends Opts.Primitive.Mono
-        ? Opts.Branded.Mono<V, { type: T; strat: STRATS['mono'] } & B>
-        : V extends Opts.Primitive.Multi
-          ? Opts.Branded.Multi<V, { type: T; strat: STRATS['multi'] } & B>
-          : never
+      export type Generic<V extends Primitive.Facet.Generic, B extends Pick<Brand_Map, 'type'> = { type: FACETS['generic'] }> = V extends Opts.Primitive.Mono
+      ? Opts.Branded.Mono<V, B & { strat: STRATS['mono'] }>
+      : V extends Opts.Primitive.Multi
+      ? Opts.Branded.Multi<V, B & { strat: STRATS['multi'] }>[number]
+      : never
+      
+      type System<V extends Opts.Primitive.System> = [
+        Opts.Branded.Mono<V['light'] extends Opts.Primitive.Mono ? V['light'] : MODES['light'], { mode: MODES['light']; type: FACETS['mode']; strat: STRATS['system'] }>,
+        Opts.Branded.Mono<V['dark'] extends Opts.Primitive.Mono ? V['dark'] : MODES['dark'], { mode: MODES['dark']; type: FACETS['mode']; strat: STRATS['system'] }>,
+        ...(V['system'] extends Opts.Primitive.Mono ? [Opts.Branded.Mono<V['system'], { mode: MODES['system']; type: FACETS['mode']; strat: STRATS['system'] }>] : []),
+        ...(V['custom'] extends Opts.Primitive.Multi ? Opts.Branded.Multi<V['custom'], { mode: MODES['custom']; type: FACETS['mode']; strat: STRATS['system'] }> : []),
+      ][number]
 
-      export type Mode<V extends Primitive.Facet.Mode, B extends Pick<Brand_Map, 'facet'>> = V extends Primitive.Facet.Generic
-        ? Generic<V, B, FACETS['mode']>
-        : V extends Opts.Primitive.System
-          ? V['system'] extends Opts.Primitive.Mono
-            ? Opts.Branded.System<V, { strat: STRATS['system'] } & B>
-            : Opts.Branded.System<V, { strat: STRATS['system'] | STRATS['light_dark'] } & B>
-          : never
+      export type Mode<V extends Primitive.Facet.Mode> = V extends Primitive.Facet.Generic ? Generic<V, { type: FACETS['mode'] }> : V extends Opts.Primitive.System ? System<V> : never
     }
 
-    export type Island<S extends Primitive.Island> = (S['facets'] extends Primitive.Island['facets']
+    export type Island<V extends Primitive.Island> = (V['facets'] extends Primitive.Island['facets']
       ? {
           facets: {
-            [F in keyof S['facets'] as S['facets'][F] extends Primitive.Facet.Generic ? F : never]: S['facets'][F] extends Primitive.Facet.Generic ? Facet.Generic<S['facets'][F], { facet: Extract<F, string> }> : never
+            [F in keyof V['facets'] as V['facets'][F] extends Primitive.Facet.Generic ? F : never]: V['facets'][F] extends Primitive.Facet.Generic ? Facet.Generic<V['facets'][F], { facet: Extract<F, string>; type: FACETS['generic'] }> : never
           }
         }
       : {}) &
-      (S['mode'] extends Primitive.Island['mode']
+      (V['mode'] extends Primitive.Island['mode']
         ? {
-            mode: S['mode'] extends Primitive.Facet.Mode ? Facet.Mode<S['mode'], { facet: 'mode' }> : never
+            mode: V['mode'] extends Primitive.Facet.Mode ? Facet.Mode<V['mode']> : never
           }
         : {})
 
-    export type All<S extends Primitive.All> = {
-      [I in keyof S]: S[I] extends Primitive.Island ? Island<S[I]> : never
+    export type All<V extends Primitive.All> = {
+      [I in keyof V]: Island<V[I]>
     }
   }
 }

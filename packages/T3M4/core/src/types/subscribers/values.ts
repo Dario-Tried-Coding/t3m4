@@ -43,19 +43,3 @@ export namespace Values {
     [I in keyof V]: Island<V[I]>
   }
 }
-
-const schema = {
-  root: {
-    facets: {
-      color: ['blue', 'red', 'green'],
-      radius: 'custom-default',
-    },
-    mode: 'custom-mode',
-  },
-  island: {
-    mode: { light: 'light', dark: 'dark', custom: ['custom', 'custom1'] },
-  },
-  island2: {
-    mode: ['mode1', 'mode2'],
-  },
-} as const satisfies Schema.Primitive.All
