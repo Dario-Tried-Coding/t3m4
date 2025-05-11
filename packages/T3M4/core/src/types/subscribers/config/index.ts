@@ -1,26 +1,25 @@
 import { Schema } from '../schema'
-import { State } from '../state'
 import { Generic_Config } from './generic'
 import { Mode_Config } from './mode'
 
 export namespace Config {
   export namespace Facet {
     export namespace Generic {
-      export type Dynamic<S extends Schema.All, I extends keyof S, F extends keyof S[I]['facets']> = S[I]['facets'][F] extends Schema.Facet.Generic ? Generic_Config.All.Dynamic<S[I]['facets'][F]> : never
-      export type Static = Generic_Config.All.Static
+      export type Dynamic<S extends Schema.Primitive.Facet.Generic> = Generic_Config.Dynamic<Schema.Branded.Facet.Generic<S>>
+      export type Static = Generic_Config.Static
     }
 
     export namespace Mode {
-      export type Dynamic<S extends Schema.All, I extends keyof S> = S[I]['mode'] extends Schema.Facet.Mode ? Mode_Config.All.Dynamic<S[I]['mode']> : never
-      export type Static = Mode_Config.All.Static
+      export type Dynamic<S extends Schema.Primitive.Facet.Mode> = Mode_Config.Dynamic<Schema.Branded.Facet.Mode<S>>
+      export type Static = Mode_Config.Static
     }
   }
 
   export namespace Island {
     export namespace Facets {
-      export type Dynamic<S extends Schema.All, I extends keyof S> = {
+      export type Dynamic<S extends NonNullable<Schema.Primitive.Island['facets']>> = {
         facets: {
-          [F in keyof S[I]['facets']]: Facet.Generic.Dynamic<S, I, F>
+          [F in keyof S]: Facet.Generic.Dynamic<S[F]>
         }
       }
 
@@ -32,53 +31,22 @@ export namespace Config {
     }
 
     export namespace Mode {
-      export type Dynamic<S extends Schema.All, I extends keyof S> = { mode: Facet.Mode.Dynamic<S, I> }
+      export type Dynamic<S extends NonNullable<Schema.Primitive.Island['mode']>> = { mode: Facet.Mode.Dynamic<S> }
       export type Static = { mode?: Facet.Mode.Static }
     }
 
-    export type Dynamic<S extends Schema.All, I extends keyof S> = (S[I]['facets'] extends NonNullable<Schema.Island['facets']> ? Facets.Dynamic<S, I> : {}) & (S[I]['mode'] extends NonNullable<Schema.Island['mode']> ? Mode.Dynamic<S, I> : {})
+    type Clean<T> = T extends undefined ? undefined : T
+    export type Dynamic<S extends Schema.Primitive.Island> = keyof S extends never
+      ? never
+      : (S['facets'] extends NonNullable<Schema.Primitive.Island['facets']> ? Facets.Dynamic<S['facets']> : {}) & (S['mode'] extends NonNullable<Schema.Primitive.Island['mode']> ? Mode.Dynamic<S['mode']> : {})
     export type Static = Facets.Static & Mode.Static
   }
 
-  export namespace All {
-    export type Dynamic<S extends Schema.All> = {
-      [I in keyof S]: Island.Dynamic<S, I>
-    }
+  export type Dynamic<S extends Schema.Primitive.All> = {
+    [I in keyof S as [Island.Dynamic<S[I]>] extends [never] ? never : I]: Island.Dynamic<S[I]>
+  }
 
-    export type Static = {
-      [island: string]: Island.Static
-    }
+  export type Static = {
+    [island: string]: Island.Static
   }
 }
-
-const schema = {
-  root: {
-    facets: {
-      color: ['blue', 'red'],
-      radius: true,
-    },
-    mode: 'custom-default',
-  },
-} as const satisfies Schema.All
-
-const config = {
-  root: {
-    facets: {
-      color: {
-        strategy: 'multi',
-        default: 'blue',
-      },
-      radius: {
-        strategy: 'mono',
-        default: 'default',
-      },
-    },
-    mode: {
-      strategy: 'mono',
-      default: 'custom-default',
-      colorScheme: 'dark',
-    },
-  },
-} as const satisfies Config.All.Dynamic<typeof schema>
-
-type state = State.All.AsObj.Dynamic<typeof schema, typeof config>

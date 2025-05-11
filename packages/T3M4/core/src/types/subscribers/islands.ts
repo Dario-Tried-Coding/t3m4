@@ -1,19 +1,20 @@
+import { Config } from "./config";
 import { Schema } from "./schema";
-
-export type Islands<Sc extends Schema> = keyof Sc
 
 export namespace Islands {
   export namespace Island {
-    export type Dynamic<Sc extends Schema> = keyof Sc
+    export type Dynamic<C extends Config.Dynamic<Schema.Primitive.All>> = keyof C
     export type Static = string
   }
 
   export namespace AsArray {
-    export type Dynamic<Sc extends Schema> = Array<Island.Dynamic<Sc>>
+    export type Dynamic<C extends Config.Dynamic<Schema.Primitive.All>> = Array<Island.Dynamic<C>>
     export type Static = Array<Island.Static>
   }
 
   export namespace AsSet {
-    export type Common = Set<Island.Static>
+    export namespace Static {
+      export type Common = Set<Island.Static>
+    }
   }
 }

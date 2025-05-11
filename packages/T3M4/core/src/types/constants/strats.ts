@@ -1,7 +1,6 @@
 export type STRATS = {
   mono: 'mono'
   multi: 'multi'
-  light_dark: 'light-dark'
   system: 'system'
 }
 export type Strat = STRATS[keyof STRATS]

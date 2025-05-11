@@ -24,14 +24,13 @@ export namespace Schema {
   }
 
   export namespace Branded {
-    
     export namespace Facet {
       export type Generic<V extends Primitive.Facet.Generic, B extends Pick<Brand_Map, 'type'> = { type: FACETS['generic'] }> = V extends Opts.Primitive.Mono
-      ? Opts.Branded.Mono<V, B & { strat: STRATS['mono'] }>
-      : V extends Opts.Primitive.Multi
-      ? Opts.Branded.Multi<V, B & { strat: STRATS['multi'] }>[number]
-      : never
-      
+        ? Opts.Branded.Mono<V, B & { strat: STRATS['mono'] }>
+        : V extends Opts.Primitive.Multi
+          ? Opts.Branded.Multi<V, B & { strat: STRATS['multi'] }>[number]
+          : never
+
       type System<V extends Opts.Primitive.System> = [
         Opts.Branded.Mono<V['light'] extends Opts.Primitive.Mono ? V['light'] : MODES['light'], { mode: MODES['light']; type: FACETS['mode']; strat: STRATS['system'] }>,
         Opts.Branded.Mono<V['dark'] extends Opts.Primitive.Mono ? V['dark'] : MODES['dark'], { mode: MODES['dark']; type: FACETS['mode']; strat: STRATS['system'] }>,

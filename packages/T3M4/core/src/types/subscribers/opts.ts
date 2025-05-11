@@ -31,7 +31,7 @@ export namespace Opts {
   export namespace Branded {
     export type Mono<T extends Primitive.Mono, B extends Partial<Brand_Map> & Pick<Brand_Map, 'type' | 'strat'>> = Brand<T, B>
 
-    export type Multi<T extends readonly Primitive.Mono[], B extends Partial<Brand_Map> &  Pick<Brand_Map, 'type' | 'strat'>> = { [I in keyof T]: Brand<T[I], B> }
+    export type Multi<T extends readonly Primitive.Mono[], B extends Partial<Brand_Map> & Pick<Brand_Map, 'type' | 'strat'>> = { [I in keyof T]: Brand<T[I], B> }
 
     export type System<T extends Primitive.System, B extends Pick<Brand_Map, 'facet' | 'strat'>> = {
       light: Mono<T['light'], B & { type: FACETS['mode']; mode: MODES['light'] }>
