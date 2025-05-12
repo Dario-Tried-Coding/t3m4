@@ -8,23 +8,26 @@ export namespace Opts {
   export type Default = DEFAULT
 
   export namespace Primitive {
-    export type Mono = string
-    export type Multi = Mono[]
-    export type System = {
-      light: Mono
-      dark: Mono
-      system?: Mono
-      custom?: Multi
+    export namespace Mono {
+      export type Suggested = LinientAutoComplete<Default>
     }
+    export type Mono = string
 
-    export namespace Suggested {
-      export type Mono = LinientAutoComplete<Default>
-      export type System = {
+    export type Multi = Mono[]
+
+    export namespace System {
+      export type Suggested = {
         light: LinientAutoComplete<MODES['light']>
         dark: LinientAutoComplete<MODES['dark']>
         system?: LinientAutoComplete<MODES['system']>
         custom?: string[]
       }
+    }
+    export type System = {
+      light: Mono
+      dark: Mono
+      system?: Mono
+      custom?: Multi
     }
   }
 

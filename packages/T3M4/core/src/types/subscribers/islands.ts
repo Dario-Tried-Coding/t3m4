@@ -3,12 +3,12 @@ import { Schema } from "./schema";
 
 export namespace Islands {
   export namespace Island {
-    export type Dynamic<C extends Config.Dynamic<Schema.Primitive.All>> = keyof C
+    export type Dynamic<C extends Config.Dynamic<Schema>> = keyof C
     export type Static = string
   }
 
   export namespace AsArray {
-    export type Dynamic<C extends Config.Dynamic<Schema.Primitive.All>> = Array<Island.Dynamic<C>>
+    export type Dynamic<C extends Config.Dynamic<Schema>> = Array<Island.Dynamic<C>>
     export type Static = Array<Island.Static>
   }
 

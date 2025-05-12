@@ -7,13 +7,13 @@ import { Schema } from '../schema'
 export namespace Generic_Config {
   export namespace Mono {
     export type Dynamic<S extends Brand<Opts.Primitive.Mono, { type: FACETS['generic']; strat: STRATS['mono'] }>> = { strategy: STRATS['mono']; default: Unbrand<S> }
-    export type Default = Dynamic<Schema.Branded.Facet.Generic<Opts.Default>>
-    export type Static = Dynamic<Schema.Branded.Facet.Generic<Opts.Primitive.Mono>>
+    export type Default = Dynamic<Schema.Flattened.Branded.Facet<Opts.Default>>
+    export type Static = Dynamic<Schema.Flattened.Branded.Facet<Opts.Primitive.Mono>>
   }
 
   export namespace Multi {
     export type Dynamic<S extends Brand<Opts.Primitive.Mono, { type: FACETS['generic']; strat: STRATS['multi'] }>> = { strategy: STRATS['multi']; default: Unbrand<S> }
-    export type Static = Dynamic<Schema.Branded.Facet.Generic<Opts.Primitive.Multi>>
+    export type Static = Dynamic<Schema.Flattened.Branded.Facet<Opts.Primitive.Multi>>
   }
 
   export type Dynamic<S extends Brand<Opts.Primitive.Mono, { type: FACETS['generic'] }>> =
