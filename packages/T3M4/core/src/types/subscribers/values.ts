@@ -1,51 +1,50 @@
-import { FACETS } from '../constants/facets'
+import { Expand } from '@t3m4/utils'
 import { MODES } from '../constants/modes'
-import { STRATS } from '../constants/strats'
-import { Brand, Brand_Map } from './brand'
 import { Opts } from './opts'
 import { Schema } from './schema'
 
-// export namespace Values {
-//   type Strat<S extends Opts.Primitive.Mono | undefined> = S extends Opts.Primitive.Mono ? STRATS['system'] : STRATS['light_dark'] | STRATS['system']
-//   type System<V extends Opts.Primitive.System> = [
-//     Opts.Branded.Mono<V['light'] extends Opts.Primitive.Mono ? V['light'] : MODES['light'], { mode: MODES['light']; type: FACETS['mode']; strat: Strat<V['system']> }>,
-//     Opts.Branded.Mono<V['dark'] extends Opts.Primitive.Mono ? V['dark'] : MODES['dark'], { mode: MODES['dark']; type: FACETS['mode']; strat: Strat<V['system']> }>,
-//     ...(V['system'] extends Opts.Primitive.Mono ? [Opts.Branded.Mono<V['system'], { mode: MODES['system']; type: FACETS['mode']; strat: Strat<V['system']> }>] : []),
-//     ...(V['custom'] extends Opts.Primitive.Multi ? Opts.Branded.Multi<V['custom'], { mode: MODES['custom']; type: FACETS['mode']; strat: Strat<V['system']> }> : []),
-//   ]
-
-//   export namespace Facet {
-//     export type Generic<V extends Schema.Primitive.Facet.Generic, B extends Pick<Brand_Map, 'type'>> = V extends Opts.Primitive.Mono
-//       ? [Opts.Branded.Mono<V, B & { strat: STRATS['mono'] }>]
-//       : V extends Opts.Primitive.Multi
-//         ? Opts.Branded.Multi<V, B & { strat: STRATS['multi'] }>
-//         : never
-
-//     export type Mode<V extends Schema.Primitive.Facet.Mode> = V extends Schema.Primitive.Facet.Generic ? Generic<V, { type: FACETS['mode'] }> : V extends Opts.Primitive.System ? System<V> : never
-//   }
-
-//   export type Island<V extends Schema.Primitive.Island> = (V['facets'] extends Schema.Primitive.Island['facets']
-//     ? {
-//         facets: {
-//           [F in keyof V['facets'] as V['facets'][F] extends Schema.Primitive.Facet.Generic ? F : never]: V['facets'][F] extends Schema.Primitive.Facet.Generic
-//             ? Facet.Generic<V['facets'][F], { facet: Extract<F, string>; type: FACETS['generic'] }>
-//             : never
-//         }
-//       }
-//     : {}) &
-//     (V['mode'] extends Schema.Primitive.Island['mode']
-//       ? {
-//           mode: V['mode'] extends Schema.Primitive.Facet.Mode ? Facet.Mode<V['mode']> : never
-//         }
-//       : {})
-
-//   export type All<V extends Schema.Primitive.All> = {
-//     [I in keyof V]: Island<V[I]>
-//   }
-// }
-
 export namespace Values {
-  export namespace AsArr {
-    export type Dynamic
+  type HasMode<T extends { mode?: any }> = 'mode' extends keyof T ? true : false
+  export type AsObj<Sc extends Schema> = {
+    [I in keyof Sc as keyof Sc[I] extends never ? never : [keyof Sc[I]['facets'], HasMode<Sc[I]>] extends [never, false] ? never : I]: Expand<AsObj.Island<Sc[I]>>
   }
+  namespace AsObj {
+    type Facet<Sc extends Schema.Facet> = Sc extends Opts.Primitive.Mono ? [Sc] : Sc extends Opts.Primitive.Multi ? Sc : never
+    namespace Facet {
+      export type Mode<Sc extends Schema.Facet.Mode> = Sc extends Schema.Facet
+        ? Facet<Sc>
+        : Sc extends Opts.Primitive.System
+          ? [
+              Sc['light'] extends Opts.Primitive.Mono ? Sc['light'] : MODES['light'],
+              Sc['dark'] extends Opts.Primitive.Mono ? Sc['dark'] : MODES['dark'],
+              ...(Sc['system'] extends Opts.Primitive.Mono ? [Sc['system']] : []),
+              ...(Sc['custom'] extends Opts.Primitive.Multi ? Sc['custom'] : []),
+            ]
+          : never
+    }
+
+    export type Island<Sc extends Schema.Island> = (Sc extends Schema.Island.Facets ? (keyof Sc['facets'] extends never ? {} : Island.Facets<Sc['facets']>) : {}) & (Sc extends Schema.Island.Mode ? Island.Mode<Sc['mode']> : {})
+    namespace Island {
+      export type Facets<Sc extends Schema.Island.Facets['facets']> = {
+        readonly facets: {
+          [F in keyof Sc as keyof Sc[F] extends never ? never : F]: Facet<Sc[F]>
+        }
+      }
+
+      export type Mode<Sc extends Schema.Island.Mode['mode']> = {
+        readonly mode: Facet.Mode<Sc>
+      }
+    }
+
+    export type Static = {
+      [island: string]: {
+        facets?: {
+          [facet: string]: string[]
+        }
+        mode?: string[]
+      }
+    }
+  }
+
+  export type AsMap = Map<string, {facets?: Map<string, Set<string>>, Mode: Set<string>}>
 }
