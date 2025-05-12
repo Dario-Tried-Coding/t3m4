@@ -14,15 +14,17 @@ export namespace Schema {
   }
   export type Facet = Opts.Primitive.Mono.Suggested | Opts.Primitive.Multi
 
-  type Island_Facets = {
-    facets: {
-      [facet: string]: Facet
+  export namespace Island {
+    export type Facets = {
+      facets: {
+        [facet: string]: Facet
+      }
+    }
+    export type Mode = {
+      mode: Facet.Mode
     }
   }
-  type Island_Mode = {
-    mode: Facet.Mode
-  }
-  export type Island = Partial<Island_Facets & Island_Mode>
+  export type Island = Partial<Island.Facets & Island.Mode>
 
   // #region Flattened
   export type Flattened<Sc extends Schema> = {
@@ -42,19 +44,17 @@ export namespace Schema {
           : never
     }
 
-    type Island_Facets<Sc extends NonNullable<Schema.Island['facets']>> = keyof Sc extends never
-      ? {}
-      : {
-          facets: {
-            [F in keyof Sc]: Facet<Sc[F]>
-          }
+    export namespace Island {
+      export type Facets<Sc extends Schema.Island.Facets> = {
+        facets: {
+          [F in keyof Sc['facets']]: Facet<Sc['facets'][F]>
         }
-    type Island_Mode<Sc extends NonNullable<Schema.Island['mode']>> = {
-      mode: Facet.Mode<Sc>
+      }
+      export type Mode<Sc extends NonNullable<Schema.Island.Mode>> = {
+        mode: Facet.Mode<Sc['mode']>
+      }
     }
-    export type Island<Sc extends Schema.Island> = keyof Sc extends never
-      ? never
-      : (Sc['facets'] extends NonNullable<Schema.Island['facets']> ? Island_Facets<Sc['facets']> : {}) & (Sc['mode'] extends NonNullable<Schema.Island['mode']> ? Island_Mode<Sc['mode']> : {})
+    export type Island<Sc extends Schema.Island> = keyof Sc extends never ? never : (Sc extends Schema.Island.Facets ? (keyof Sc['facets'] extends never ? {} : Island.Facets<Sc>) : {}) & (Sc extends Schema.Island.Mode ? Island.Mode<Sc> : {})
 
     // #region Branded
     export type Branded<V extends Schema> = {
@@ -78,7 +78,7 @@ export namespace Schema {
           : never
 
       namespace Island {
-        export type Facets<V extends NonNullable<Schema.Island['facets']>> = keyof V extends never ? {} : {
+        export type Facets<V extends Schema.Island.Facets> = {
           facets: {
             [F in keyof V as keyof V extends never ? never : F]: V[F] extends Schema.Facet ? Facet<V[F], { facet: Extract<F, string>; type: FACETS['generic'] }> : never
           }
@@ -88,7 +88,7 @@ export namespace Schema {
       }
       export type Island<V extends Schema.Island> = keyof V extends never
         ? never
-        : (V['facets'] extends NonNullable<Schema.Island['facets']> ? Island.Facets<V['facets']> : {}) & (V['mode'] extends NonNullable<Schema.Island['mode']> ? Island.Mode<V['mode']> : {})
+        : (V extends Schema.Island.Facets ? (keyof V['facets'] extends never ? {} : Island.Facets<V>) : {}) & (V['mode'] extends NonNullable<Schema.Island['mode']> ? Island.Mode<V['mode']> : {})
     }
   }
 }
