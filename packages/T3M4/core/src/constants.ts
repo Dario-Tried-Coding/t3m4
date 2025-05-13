@@ -1,25 +1,33 @@
-import { CONSTANTS as T_CONSTANTS } from './types/script'
+import { type CONSTANTS as T_CONSTANTS } from "./types/constants";
 
 export const CONSTANTS = {
-  DEFAULT: 'default',
-  STRATS: {
-    MONO: 'mono',
-    MULTI: 'multi',
-    LIGHT_DARK: 'light-dark',
-    SYSTEM: 'system',
+  libraryName: 'T3M4',
+  default: 'default',
+  facets: {
+    generic: 'facet',
+    mode: 'mode'
   },
-  MODES: {
-    LIGHT: 'light',
-    DARK: 'dark',
-    SYSTEM: 'system',
+  modes: {
+    light: 'light',
+    dark: 'dark',
+    system: 'system',
+    custom: 'custom'
   },
-  FACETS: {
-    GENERIC: 'facet',
-    MODE: 'mode',
+  strats: {
+    mono: 'mono',
+    multi: 'multi',
+    system: 'system'
   },
-  SELECTORS: {
-    CLASS: 'class',
-    COLOR_SCHEME: 'color-scheme',
-    DATA_ATTRIBUTE: 'data-attribute',
+  colorSchemes: {
+    light: 'light',
+    dark: 'dark',
   },
+  selectors: {
+    class: 'class',
+    data_attribute: 'data-attribute'
+  },
+  storeStrats: {
+    split: 'split',
+    unique: 'unique',
+  }
 } as const satisfies T_CONSTANTS

@@ -1,3 +1,4 @@
+import { Expand } from '@t3m4/utils'
 import { Schema } from '../schema'
 import { State } from '../state'
 import { Generic_Config } from './generic'
@@ -5,7 +6,7 @@ import { Mode_Config } from './mode'
 
 type HasMode<T extends { mode?: any }> = 'mode' extends keyof T ? true : false
 export type Config<S extends Schema> = {
-  [I in keyof S as keyof S[I] extends never ? never : [keyof S[I]['facets'], HasMode<S[I]>] extends [never, false] ? never : I]: Config.Island.Dynamic<S[I]>
+  [I in keyof S as keyof S[I] extends never ? never : [keyof S[I]['facets'], HasMode<S[I]>] extends [never, false] ? never : I]: Expand<Config.Island.Dynamic<S[I]>>
 }
 export namespace Config {
   namespace Facet {
@@ -22,7 +23,7 @@ export namespace Config {
 
   export namespace Island {
     export namespace Facets {
-      export type Dynamic<S extends NonNullable<Schema.Island['facets']>> = keyof S extends never ? {} : {
+      export type Dynamic<S extends NonNullable<Schema.Island['facets']>> = {
         facets: {
           [F in keyof S]: Facet.Generic.Dynamic<S[F]>
         }
@@ -40,12 +41,13 @@ export namespace Config {
       export type Static = { mode?: Facet.Mode.Static }
     }
 
-    export type Dynamic<S extends Schema.Island> = (S['facets'] extends NonNullable<Schema.Island['facets']> ? Facets.Dynamic<S['facets']> : {}) & (S['mode'] extends NonNullable<Schema.Island['mode']> ? Mode.Dynamic<S['mode']> : {})
+    export type Dynamic<S extends Schema.Island> = (S['facets'] extends NonNullable<Schema.Island['facets']> ? (keyof S['facets'] extends never ? {} : Facets.Dynamic<S['facets']>) : {}) &
+      (S['mode'] extends NonNullable<Schema.Island['mode']> ? Mode.Dynamic<S['mode']> : {})
 
     export type Static = Facets.Static & Mode.Static
   }
 
   export type Static = {
-    [island: string]: Island.Static
+    [island: string]: Expand<Island.Static>
   }
 }

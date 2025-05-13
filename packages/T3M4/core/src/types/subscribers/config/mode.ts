@@ -7,19 +7,20 @@ import { STRATS } from '../../constants/strats'
 import { Brand, Unbrand } from '../brand'
 import { Opts } from '../opts'
 import { Schema } from '../schema'
+import { State } from '../state'
 
 export namespace Mode_Config {
   type Base = Partial<{ name: LinientAutoComplete<FACETS['mode']>; selector: Selector | Selector[]; store: boolean }>
 
   export namespace Mono {
     export type Dynamic<S extends Brand<Opts.Primitive.Mono, { type: FACETS['mode']; strat: STRATS['mono'] }>> = Base & { strategy: STRATS['mono']; default: Unbrand<S>; colorScheme: Color_Scheme }
-    export type Default = Dynamic<Schema.Flattened.Branded.Facet.Mode<Opts.Default>>
-    export type Static = Dynamic<Schema.Flattened.Branded.Facet.Mode<Opts.Primitive.Mono>>
+    export type Default = Dynamic<State.AsObj.Branded.Facet.Mode<Opts.Default>>
+    export type Static = Dynamic<State.AsObj.Branded.Facet.Mode<Opts.Primitive.Mono>>
   }
 
   export namespace Multi {
     export type Dynamic<S extends Brand<Opts.Primitive.Mono, { type: FACETS['mode']; strat: STRATS['multi'] }>> = Base & { strategy: STRATS['multi']; default: Unbrand<S>; colorSchemes: Record<Unbrand<S>, Color_Scheme> }
-    export type Static = Dynamic<Schema.Flattened.Branded.Facet.Mode<Opts.Primitive.Multi>>
+    export type Static = Dynamic<State.AsObj.Branded.Facet.Mode<Opts.Primitive.Multi>>
   }
 
   export namespace System {

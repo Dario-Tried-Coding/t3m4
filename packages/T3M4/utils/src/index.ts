@@ -4,8 +4,6 @@ export type Prettify<T> = {
 
 export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : T
 
+export type Branded<T, P extends string, V> = T & { [K in `__${P}`]: V }
 
-declare const __brand: unique symbol
-export type Branded<T, Brand> = T & { [__brand]: Brand }
-
-export type LinientAutoComplete<T extends string> = T | string & {}
+export type LinientAutoComplete<T extends string> = T | (string & {})
