@@ -854,7 +854,7 @@ export function script(args: ScriptArgs) {
 
             DomManager.set.state(newState, node)
           })
-          if (node.hasChildNodes()) node.childNodes.forEach(node => processNode(node))
+          if (node.hasChildNodes()) node.childNodes.forEach((node) => processNode(node))
         }
 
         const handler = (mutations: MutationRecord[]) => {
@@ -862,10 +862,10 @@ export function script(args: ScriptArgs) {
             const node = mutation.target
             const islandName = node instanceof HTMLElement && node.getAttribute('data-island')
             const isIsland = islandName && (Normalizer.utils.isIsland(islandName) || Normalizer.utils.isIsland(mutation.oldValue ?? ''))
-            console.log({islandName, isIsland})
+            console.log({ islandName, isIsland })
             if (!isIsland) return
 
-            if (mutation.type === 'childList') mutation.addedNodes.forEach(node => processNode(node))
+            if (mutation.type === 'childList') mutation.addedNodes.forEach((node) => processNode(node))
 
             if (mutation.type === 'attributes' && mutation.target instanceof HTMLElement) {
               const attrName = mutation.attributeName
@@ -882,7 +882,7 @@ export function script(args: ScriptArgs) {
                 return
               }
 
-              const {normalized} = Normalizer.normalize({ island: islandName, facet: attrName.replace('data-', ''), value: mutation.target.getAttribute(attrName), fallback: oldValue })
+              const { normalized } = Normalizer.normalize({ island: islandName, facet: attrName.replace('data-', ''), value: mutation.target.getAttribute(attrName), fallback: oldValue })
               if (normalized) {
                 const partialState = new Map([[islandName, new Map([[attrName.replace('data-', ''), normalized]])]])
                 if (isObservedAttr) processNode(mutation.target, partialState)
@@ -918,7 +918,7 @@ export function script(args: ScriptArgs) {
         const enableTransitions = Processor.disableTransitionOnChange ? DomManager.utils.disableTransitions() : undefined
         DomManager.apply.resolvedModes(modes)
         enableTransitions?.()
-      }
+      },
     }
 
     private static set state(state: State) {

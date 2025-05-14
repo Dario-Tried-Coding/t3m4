@@ -1,5 +1,5 @@
-import { Config } from "./config";
-import { Schema } from "./schema";
+import { Config } from './config'
+import { Schema } from './schema'
 
 export namespace Islands {
   export type Island<C extends Config<Schema>> = keyof C

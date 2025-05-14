@@ -1,6 +1,6 @@
 import { Expand } from '@t3m4/utils'
 import { MODES } from '../constants/modes'
-import { Opts } from './opts'
+import { Opts } from './options'
 import { Schema } from './schema'
 
 export namespace Values {
@@ -46,5 +46,5 @@ export namespace Values {
     }
   }
 
-  export type AsMap = Map<string, {facets?: Map<string, Set<string>>, mode: Set<string>}>
+  export type AsMap = Map<string, { facets?: Map<string, Set<string>>; mode: Set<string> }>
 }

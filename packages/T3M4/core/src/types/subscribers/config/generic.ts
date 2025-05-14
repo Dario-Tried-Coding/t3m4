@@ -1,7 +1,7 @@
 import { FACETS } from '../../constants/facets'
 import { STRATS } from '../../constants/strats'
 import { Brand, Unbrand } from '../brand'
-import { Opts } from '../opts'
+import { Opts } from '../options'
 import { State } from '../state'
 
 export namespace Generic_Config {

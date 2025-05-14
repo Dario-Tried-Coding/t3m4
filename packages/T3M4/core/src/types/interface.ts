@@ -1,9 +1,9 @@
-import { State } from "./subscribers/state"
-import { Color_Schemes } from "./subscribers/color-schemes"
-import { Values } from "./subscribers/values"
-import { Schema } from "./subscribers/schema"
-import { CallbackID, EventMap } from "./events"
-import { Script_Args } from "./script"
+import { State } from './subscribers/state'
+import { Color_Schemes } from './subscribers/color-schemes'
+import { Values } from './subscribers/values'
+import { Schema } from './subscribers/schema'
+import { CallbackID, EventMap } from './events'
+import { Script_Args } from './script'
 
 export interface T3M4 {
   get: {

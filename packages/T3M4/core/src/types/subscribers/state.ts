@@ -1,6 +1,6 @@
 import { Expand } from '@t3m4/utils'
 import { Schema } from './schema'
-import { Opts } from './opts'
+import { Opts } from './options'
 import { MODES } from '../constants/modes'
 import { STRATS } from '../constants/strats'
 import { Brand_Map } from './brand'
