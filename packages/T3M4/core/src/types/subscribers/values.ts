@@ -8,7 +8,7 @@ export namespace Values {
   export type AsObj<Sc extends Schema> = {
     [I in keyof Sc as keyof Sc[I] extends never ? never : [keyof Sc[I]['facets'], HasMode<Sc[I]>] extends [never, false] ? never : I]: Expand<AsObj.Island<Sc[I]>>
   }
-  namespace AsObj {
+  export namespace AsObj {
     type Facet<Sc extends Schema.Facet> = Sc extends Opts.Primitive.Mono ? [Sc] : Sc extends Opts.Primitive.Multi ? Sc : never
     namespace Facet {
       export type Mode<Sc extends Schema.Facet.Mode> = Sc extends Schema.Facet
@@ -46,5 +46,5 @@ export namespace Values {
     }
   }
 
-  export type AsMap = Map<string, {facets?: Map<string, Set<string>>, Mode: Set<string>}>
+  export type AsMap = Map<string, {facets?: Map<string, Set<string>>, mode: Set<string>}>
 }

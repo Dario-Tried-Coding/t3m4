@@ -1,40 +1,62 @@
 'use client'
 
-import { ScriptArgs, T3M4 } from '@t3m4/core/types'
+import { constructScriptArgs } from '@t3m4/core'
+import { ScriptProps } from '@t3m4/core/types'
 import { Config, Schema, State } from '@t3m4/core/types/subscribers'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { T3M4Context } from './context'
-import { constructScriptArgs } from '@t3m4/core'
+import merge from 'lodash.merge'
 
-interface T3M4Props extends PropsWithChildren, ScriptArgs {}
+interface T3M4Props extends PropsWithChildren, ScriptProps {}
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4Props) => {
-  const [state, setState] = useState<T3M4Context<Sc, C>['state']>(undefined)
-  const [colorSchemes, setColorSchemes] = useState<T3M4Context<Sc, C>['colorSchemes']>(undefined)
-  const options = useRef({} as T3M4Context<Sc, C>['options'])
+  const [state, setState] = useState<T3M4Context<Sc, C>['state']>({ base: undefined, forced: {}, computed: undefined })
+  const [colorSchemes, setColorSchemes] = useState<T3M4Context<Sc, C>['colorSchemes']>({ base: undefined, forced: {}, computed: undefined })
+  const values = useRef({} as T3M4Context<Sc, C>['values'])
 
   useEffect(() => {
-    setState(window.T3M4.get.state.base.all() as T3M4Context<Sc, C>['state'])
-    setColorSchemes(window.T3M4.get.colorSchemes.all() as T3M4Context<Sc, C>['colorSchemes'])
-    options.current = window.T3M4.get.options.all() as T3M4Context<Sc, C>['options']
-
-    window.T3M4.subscribe('State:base:update', 'React:state:update', (values) => setState(values as State<Sc, C>))
-    window.T3M4.subscribe('ColorSchemes:update', 'React:resolvedMode:update', (RMs) => {
-      console.log('RMs', RMs)
-      setColorSchemes(RMs as T3M4Context<Sc, C>['colorSchemes'])
+    setState({
+      base: window.T3M4.get.state.base() as T3M4Context<Sc, C>['state']['base'],
+      forced: window.T3M4.get.state.forced() as T3M4Context<Sc, C>['state']['forced'],
+      computed: window.T3M4.get.state.computed() as T3M4Context<Sc, C>['state']['computed'],
     })
-    window.T3M4.subscribe('Reset', 'React:reset', () => {
-      setState(undefined)
-      setColorSchemes(undefined)
-      options.current = {} as T3M4Context<Sc, C>['options']
+    setColorSchemes({
+      base: window.T3M4.get.colorSchemes.base() as T3M4Context<Sc, C>['colorSchemes']['base'],
+      forced: window.T3M4.get.colorSchemes.forced() as T3M4Context<Sc, C>['colorSchemes']['forced'],
+      computed: window.T3M4.get.colorSchemes.computed() as T3M4Context<Sc, C>['colorSchemes']['computed'],
+    })
+    values.current = window.T3M4.get.values() as T3M4Context<Sc, C>['values']
+
+    window.T3M4.subscribe('State:Base:Update', 'React:State:Update', (base) => setState({ ...state, base: base as T3M4Context<Sc, C>['state']['base'] }))
+    window.T3M4.subscribe('State:Forced:Update', 'React:State:Update', (forced) => setState({ ...state, forced: forced as T3M4Context<Sc, C>['state']['forced'] }))
+    window.T3M4.subscribe('State:Computed:Update', 'React:State:Update', (computed) => setState({ ...state, computed: computed as T3M4Context<Sc, C>['state']['computed'] }))
+
+    window.T3M4.subscribe('ColorSchemes:Base:Update', 'React:ColorSchemes:Update', (base) => setColorSchemes({ ...colorSchemes, base: base as T3M4Context<Sc, C>['colorSchemes']['base'] }))
+    window.T3M4.subscribe('ColorSchemes:Forced:Update', 'React:ColorSchemes:Update', (forced) => setColorSchemes({ ...colorSchemes, forced: forced as T3M4Context<Sc, C>['colorSchemes']['forced'] }))
+    window.T3M4.subscribe('ColorSchemes:Computed:Update', 'React:ColorSchemes:Update', (computed) => setColorSchemes({ ...colorSchemes, computed: computed as T3M4Context<Sc, C>['colorSchemes']['computed'] }))
+
+    window.T3M4.subscribe('Reset', 'React:Reset', () => {
+      setState({ base: undefined, forced: {}, computed: undefined })
+      setColorSchemes({ base: undefined, forced: {}, computed: undefined })
+      values.current = {} as T3M4Context<Sc, C>['values']
     })
   }, [])
 
   useEffect(() => window.T3M4.reboot(constructScriptArgs(scriptArgs)), [JSON.stringify(scriptArgs)])
 
-  const updateState: T3M4Context<Sc, C>['updateState'] = (island, state) => {
-    const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
-    window.T3M4.set.state.base.island(island as Parameters<T3M4['set']['state']['base']['island']>[0], newState as Parameters<T3M4['set']['state']['base']['island']>[1])
+  const updateState: T3M4Context<Sc, C>['updateState'] = {
+    base: (island, stateUpdate) => {
+      const prevState = state.base?.[island as unknown as keyof typeof state.base]
+      const partialUpdate = typeof stateUpdate === 'function' ? stateUpdate(prevState) : stateUpdate
+    },
+    // base: (island, state) => {
+    //   const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
+    //   window.T3M4.set.state.base({ [island]: newState })
+    // },
+    forced: (island, state) => {
+      const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
+      window.T3M4.set.state.forced({ [island]: newState })
+    }
   }
 
-  return <T3M4Context.Provider value={{ state, updateState, colorSchemes, options: options.current }}>{children}</T3M4Context.Provider>
+  return <T3M4Context.Provider value={{ state, updateState, colorSchemes, values: values.current }}>{children}</T3M4Context.Provider>
 }

@@ -1,38 +1,30 @@
-import { COLOR_SCHEME } from './constants/color-schemes'
-import { CallbackID, EventMap } from './events'
-import { Constructed_Script_Args } from './script'
-import { Options } from './subscribers/values'
-import { State } from './subscribers/state'
-
-type Island_State = State[keyof State]
-type Island_State_Facet = Island_State[keyof Island_State]
-
-type Color_Schemes = Record<string, COLOR_SCHEME>
-type Island_Color_Scheme = Color_Schemes[keyof Color_Schemes]
-
-type Island_Options = Options[keyof Options]
-type Island_Facet_Options = Island_Options[keyof Island_Options]
+import { State } from "./subscribers/state"
+import { Color_Schemes } from "./subscribers/color-schemes"
+import { Values } from "./subscribers/values"
+import { Schema } from "./subscribers/schema"
+import { CallbackID, EventMap } from "./events"
+import { Script_Args } from "./script"
 
 export interface T3M4 {
   get: {
     state: {
-      base: () => State | undefined
-      forced: () => State
-      computed: () => State | undefined
+      base: () => State.AsObj.Static | undefined
+      forced: () => State.AsObj.Static
+      computed: () => State.AsObj.Static | undefined
     }
     colorSchemes: {
-      base: () => Color_Schemes | undefined
-      forced: () => Color_Schemes
-      computed: () => Color_Schemes | undefined
+      base: () => Color_Schemes.AsObj.Static | undefined
+      forced: () => Color_Schemes.AsObj.Static
+      computed: () => Color_Schemes.AsObj.Static | undefined
     }
-    options: () => Options
+    values: () => Values.AsObj.Static
   }
   set: {
     state: {
-      base: (state: State) => void
-      forced: (state: State) => void
+      base: (state: State.AsObj.Static) => void
+      forced: (state: State.AsObj.Static) => void
     }
   }
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
-  reboot: (args: Constructed_Script_Args) => void
+  reboot: (args: Script_Args) => void
 }

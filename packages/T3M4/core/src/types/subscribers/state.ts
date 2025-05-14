@@ -45,6 +45,20 @@ export namespace State {
         mode?: string
       }
     }
+    export namespace Static {
+      export type Island = Partial<Island.Facets & Island.Mode>
+      export namespace Island {
+        export type Facets = {
+          facets: {
+            [facet: string]: string
+          }
+        }
+
+        export type Mode = {
+          mode: string
+        }
+      }
+    }
 
     export type Branded<V extends Schema> = {
       [I in keyof V as keyof V[I] extends never ? never : [keyof V[I]['facets'], HasMode<V[I]>] extends [never, false] ? never : I]: Expand<Branded.Island<V[I]>>

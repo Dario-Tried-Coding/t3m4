@@ -6,7 +6,6 @@ import { Selector } from '../../constants/selectors'
 import { STRATS } from '../../constants/strats'
 import { Brand, Unbrand } from '../brand'
 import { Opts } from '../opts'
-import { Schema } from '../schema'
 import { State } from '../state'
 
 export namespace Mode_Config {

@@ -2,7 +2,7 @@ import { Config } from "./config";
 import { Schema } from "./schema";
 
 export namespace Islands {
-  type Island<C extends Config<Schema>> = keyof C
+  export type Island<C extends Config<Schema>> = keyof C
   namespace Island {
     export type Static = string
   }

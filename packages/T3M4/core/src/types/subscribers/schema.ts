@@ -1,3 +1,4 @@
+import { Expand } from '@t3m4/utils'
 import { Opts } from './opts'
 
 // #region Schema
@@ -20,5 +21,5 @@ export namespace Schema {
       mode: Facet.Mode
     }
   }
-  export type Island = Partial<Island.Facets & Island.Mode>
+  export type Island = Partial<Expand<Island.Facets> & Expand<Island.Mode>>
 }

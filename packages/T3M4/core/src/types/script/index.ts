@@ -6,7 +6,7 @@ import { Schema } from '../subscribers/schema'
 export type Script_Props = {
   schema: Schema
   config: Config.Static
-} & Partial<Preset> & { modes?: Partial<Preset['modes']> }
+} & Partial<Omit<Preset, 'modes'>> & { modes?: Partial<Preset['modes']> }
 
 export type Script_Args = Script_Props & {
   preset: PRESET

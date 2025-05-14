@@ -41,8 +41,10 @@ export const ThemeSwitch: FC = ({}) => {
 }
 
 const Switch: FC = () => {
-  const { updateState, options, resolvedMode, state } = useT3M4()
+  const { updateState, values, colorScheme, state } = useT3M4('root')
   const t = useTranslations('ThemeSwitch')
+
+  updateState.base(({mode}) => ({ mode: mode === 'dark' ? 'light' : 'dark'}))
 
   return (
     <div className='pt-4 md:pt-0'>
@@ -51,7 +53,7 @@ const Switch: FC = () => {
           <h4 className='font-semibold leading-none tracking-tight'>{t('Demo.title')}</h4>
           <p className='text-muted-foreground text-xs'>{t('Demo.description')}</p>
         </div>
-        <Button variant='ghost' size='icon' onClick={() => updateState({ color: 'zinc', radius: '0.5', mode: 'dark' })}>
+        <Button variant='ghost' size='icon' onClick={() => updateState.base({ facets: {color: 'zinc', radius: '0.5'}, mode: 'dark' })}>
           <Repeat />
           <span className='sr-only'>{t('Demo.reset')}</span>
         </Button>
