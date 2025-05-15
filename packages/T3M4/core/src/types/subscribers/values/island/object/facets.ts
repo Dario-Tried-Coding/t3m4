@@ -1,6 +1,6 @@
-import * as Schema from '../../schema'
+import * as Schema from '../../../schema'
 
-import * as Facet from '../facet'
+import * as Facet from '../../facet/object'
 
 export type Static = {
   facets: {
@@ -14,4 +14,4 @@ export type Dynamic<Sc extends Schema.Island.Facets.Primitive['facets']> = {
   }
 }
 
-export * as Facet from '../facet'
+export * as Facet from '../../facet/object'

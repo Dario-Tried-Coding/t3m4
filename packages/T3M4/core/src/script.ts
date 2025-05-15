@@ -21,8 +21,8 @@ type Engine = {
     state: string
     modes: StorageKeys.Modes.Singular
   }
-  islands: Islands.AsSet
-  values: Values.AsMap
+  islands: Islands.Set.Common
+  values: Values.Map.Common
 }
 
 export const script = (args: Script_Args) => {
@@ -47,7 +47,6 @@ export const script = (args: Script_Args) => {
 
         const mode = 'mode' in v ? new Set(typeof v.mode === 'string' ? [v.mode] : Array.isArray(v.mode) ? v.mode : [v.mode!.light, v.mode!.dark, ...(v.mode!.system ? [v.mode!.system] : []), ...(v.mode!.custom ? v.mode!.custom : [])]) : undefined
 
-        console.log({i, facets, mode})
         return [i, { ...(facets ?? {}), ...(mode ?? {}) } as NonNullable<ReturnType<Engine['values']['get']>>]
       })
     )

@@ -4,7 +4,7 @@ import { constructScriptArgs } from '@t3m4/core'
 import { ScriptProps } from '@t3m4/core/types'
 import { Config, Schema, State } from '@t3m4/core/types/subscribers'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
-import { T3M4Context } from './context'
+import { DeepPartial, T3M4Context } from './context'
 import merge from 'lodash.merge'
 
 interface T3M4Props extends PropsWithChildren, ScriptProps {}
@@ -45,15 +45,15 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
 
   const updateState: T3M4Context<Sc, C>['updateState'] = {
     base: (island, stateUpdate) => {
-      const prevState = state.base?.[island as unknown as keyof typeof state.base]
-      const partialUpdate = typeof stateUpdate === 'function' ? stateUpdate(prevState) : stateUpdate
+      const newStatePartial = typeof stateUpdate === 'function' ? stateUpdate(state.base?.[island as unknown as keyof typeof state.base] ?? {} as any) : stateUpdate
+      const currState = state.base?.[island as unknown as keyof typeof state.base] ?? {}
+      const newState = merge(currState, newStatePartial)
+      window.T3M4.set.state.base({ [island]: newState })
     },
-    // base: (island, state) => {
-    //   const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
-    //   window.T3M4.set.state.base({ [island]: newState })
-    // },
-    forced: (island, state) => {
-      const newState = { ...state, ...(typeof state === 'function' ? state(state as any) : state) }
+    forced: (island, stateUpdate) => {
+      const newStatePartial = typeof stateUpdate === 'function' ? stateUpdate(state.forced?.[island as unknown as keyof typeof state.forced] ?? ({} as any)) : stateUpdate
+      const currState = state.forced?.[island as unknown as keyof typeof state.forced] ?? {}
+      const newState = merge(currState, newStatePartial)
       window.T3M4.set.state.forced({ [island]: newState })
     }
   }

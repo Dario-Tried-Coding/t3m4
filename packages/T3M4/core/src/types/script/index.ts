@@ -1,10 +1,10 @@
 import { PRESET, Preset } from '../../preset'
 import { CONSTANTS } from '../constants'
-import { Config } from '../subscribers/config'
-import { Schema } from '../subscribers/schema'
+import { Config } from '../subscribers'
+import { Schema } from '../subscribers'
 
 export type Script_Props = {
-  schema: Schema
+  schema: Schema.Primitive
   config: Config.Static
 } & Partial<Omit<Preset, 'modes'>> & { modes?: Partial<Preset['modes']> }
 

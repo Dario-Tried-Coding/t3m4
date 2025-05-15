@@ -1,28 +1,25 @@
-import { State } from './subscribers/state'
-import { Color_Schemes } from './subscribers/color-schemes'
-import { Values } from './subscribers/values'
-import { Schema } from './subscribers/schema'
+import { Color_Schemes, State, Values } from './subscribers'
 import { CallbackID, EventMap } from './events'
 import { Script_Args } from './script'
 
 export interface T3M4 {
   get: {
     state: {
-      base: () => State.AsObj.Static | undefined
-      forced: () => State.AsObj.Static
-      computed: () => State.AsObj.Static | undefined
+      base: () => State.Primitive.Static | undefined
+      forced: () => State.Primitive.Static
+      computed: () => State.Primitive.Static | undefined
     }
     colorSchemes: {
-      base: () => Color_Schemes.AsObj.Static | undefined
-      forced: () => Color_Schemes.AsObj.Static
-      computed: () => Color_Schemes.AsObj.Static | undefined
+      base: () => Color_Schemes.Object.Static | undefined
+      forced: () => Color_Schemes.Object.Static
+      computed: () => Color_Schemes.Object.Static | undefined
     }
-    values: () => Values.AsObj.Static
+    values: () => Values.Object.Static
   }
   set: {
     state: {
-      base: (state: State.AsObj.Static) => void
-      forced: (state: State.AsObj.Static) => void
+      base: (state: State.Primitive.Static) => void
+      forced: (state: State.Primitive.Static) => void
     }
   }
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void

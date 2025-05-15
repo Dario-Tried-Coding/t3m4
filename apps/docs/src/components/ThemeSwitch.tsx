@@ -41,10 +41,8 @@ export const ThemeSwitch: FC = ({}) => {
 }
 
 const Switch: FC = () => {
-  const { updateState, values, colorScheme, state } = useT3M4('root')
+  const { updateState, values, colorScheme, state: {forced} } = useT3M4('root')
   const t = useTranslations('ThemeSwitch')
-
-  updateState.base(({mode}) => ({ mode: mode === 'dark' ? 'light' : 'dark'}))
 
   return (
     <div className='pt-4 md:pt-0'>

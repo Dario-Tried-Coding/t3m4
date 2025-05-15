@@ -7,7 +7,7 @@ export type Static = {
 }
 
 export type Dynamic<C extends Config.Static> = {
-  [I in keyof C as 'mode' extends keyof C[I] ? I : never]: C[I] extends Config.Island.Mode.Static ? Island.Dynamic<C[I]['mode']> : never
+  [I in keyof Config.Polished<C> as C[I] extends Config.Island.Mode.Static ? I : never]: Island.Dynamic<C[I]>
 }
 
 export * as Island from './island/object'
