@@ -1,11 +1,11 @@
-import * as Mode from "../facet/mode"
+import * as Facet from "../facet/mode"
 
 export type Primitive = {
-  mode: Mode.Primitive
+  mode: Facet.Primitive
 }
 
 export type Suggested = {
-  mode: Mode.Suggested
+  mode: Facet.Suggested
 }
 
-export * as Mode from "../facet/mode"
+export * as Facet from "../facet/mode"
