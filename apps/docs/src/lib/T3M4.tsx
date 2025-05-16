@@ -9,7 +9,7 @@ const schema = {
       color: ['zinc', 'blue', 'red', 'rose', 'orange', 'green', 'yellow', 'violet'],
       radius: ['0', '0.3', '0.5', '0.75', '1'],
     }
-  }
+  },
 } as const satisfies Schema
 type TSchema = typeof schema
 

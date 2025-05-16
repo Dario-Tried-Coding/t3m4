@@ -1,15 +1,15 @@
 import { T3M4 as T_T3M4 } from './types'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
-import { Islands, Schema, Values } from './types/subscribers'
+import { Islands, State, Values } from './types/subscribers'
 
-export type Brand_Map = {
+type Brand_Map = {
   number: 'singular' | 'plural'
 }
 
-export type Brand<T, K extends keyof Brand_Map, V extends Brand_Map[K]> = T & { [P in `__${K}`]: V }
+type Brand<T, K extends keyof Brand_Map, V extends Brand_Map[K]> = T & { [P in `__${K}`]: V }
 
-export namespace StorageKeys {
+namespace StorageKeys {
   export namespace Modes {
     export type Singular<S extends string = string> = Brand<S, 'number', 'singular'>
     export type Plural = Brand<string, 'number', 'plural'>
@@ -28,6 +28,7 @@ type Engine = {
 export const script = (args: Script_Args) => {
   const { schema, config, constants, preset } = args
 
+  // #region Engine
   function constructEngine({ storageKey, modes, preset }: Pick<Script_Args, 'preset' | 'storageKey' | 'modes'>): Engine {
     const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([k, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
 
@@ -47,7 +48,7 @@ export const script = (args: Script_Args) => {
 
         const mode = 'mode' in v ? new Set(typeof v.mode === 'string' ? [v.mode] : Array.isArray(v.mode) ? v.mode : [v.mode!.light, v.mode!.dark, ...(v.mode!.system ? [v.mode!.system] : []), ...(v.mode!.custom ? v.mode!.custom : [])]) : undefined
 
-        return [i, { ...(facets ?? {}), ...(mode ?? {}) } as NonNullable<ReturnType<Engine['values']['get']>>]
+        return [i, { ...(facets ? { facets } : {}), ...(mode ? { mode } : {}) } as NonNullable<ReturnType<Engine['values']['get']>>]
       })
     )
 
@@ -125,5 +126,4 @@ export const script = (args: Script_Args) => {
   }
 
   window.T3M4 = new T3M4()
-  console.dir(engine.values)
 }

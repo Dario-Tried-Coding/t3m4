@@ -2,10 +2,10 @@
 
 import { constructScriptArgs } from '@t3m4/core'
 import { ScriptProps } from '@t3m4/core/types'
-import { Config, Schema, State } from '@t3m4/core/types/subscribers'
-import { PropsWithChildren, useEffect, useRef, useState } from 'react'
-import { DeepPartial, T3M4Context } from './context'
+import { Config, Schema } from '@t3m4/core/types/subscribers'
 import merge from 'lodash.merge'
+import { PropsWithChildren, useEffect, useRef, useState } from 'react'
+import { T3M4Context } from './context'
 
 interface T3M4Props extends PropsWithChildren, ScriptProps {}
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4Props) => {

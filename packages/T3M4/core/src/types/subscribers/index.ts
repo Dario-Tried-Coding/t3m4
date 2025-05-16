@@ -1,4 +1,4 @@
-export type * as Schema from './schema'
+export type { Schema } from './schema'
 export type * as State from './state'
 export type * as Config from './config'
 export type * as Islands from './islands'

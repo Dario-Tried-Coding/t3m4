@@ -1,18 +1,14 @@
-import * as Schema from '../schema'
+import { Schema, Schema_Polished } from "../schema"
 
-import * as Island from './island'
+export type Config<Sc extends Schema> = {
+  [I in keyof Schema_Polished<Sc>]: Island.Dynamic<Schema.Polished<Sc>[I]>
+}
 
-export type Static = {
+export type Config_Static = {
   [island: string]: Island.Static
 }
 
-export type Dynamic<Sc extends Schema.Primitive> = {
-  [I in keyof Schema.Polished<Sc>]: Island.Dynamic<Schema.Polished<Sc>[I]>
-}
-
 type IsMeaningfulIsland<C extends Static[keyof Static]> = C extends Island.Mode.Static ? true : C extends Island.Facets.Static ? (keyof C['facets'] extends never ? false : true) : false
-export type Polished<C extends Static> = {
+export type Config_Polished<C extends Static> = {
   [I in keyof C as IsMeaningfulIsland<C[I]> extends true ? I : never]: C[I]
 }
-
-export * as Island from './island'
