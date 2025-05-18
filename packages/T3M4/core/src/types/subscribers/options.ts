@@ -30,7 +30,7 @@ export namespace System {
     system?: LinientAutoComplete<MODES['system']>
     custom?: Multi
   }
-  export type Branded<T extends System, B extends Pick<Brand_Map, 'facet' | 'strat'>> = {
+  export type Branded<T extends System, B extends Pick<Brand_Map, 'strat'>> = {
     light: Mono.Branded<T['light'], B & { type: FACETS['mode']; mode: MODES['light'] }>
     dark: Mono.Branded<T['dark'], B & { type: FACETS['mode']; mode: MODES['dark'] }>
   } & (T['system'] extends Mono ? { system: Mono.Branded<NonNullable<T['system']>, B & { type: FACETS['mode']; mode: MODES['system'] }> } : {}) &

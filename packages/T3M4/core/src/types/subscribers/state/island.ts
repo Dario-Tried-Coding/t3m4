@@ -1,33 +1,70 @@
-import { FACETS } from "../../constants/facets"
-import { Island_Facets as Schema_Island_Facets, Island_Mode as Schema_Island_Mode, Island as Schema_Island } from "../schema/island"
-import { Facet, Facet_Static, Facet_Branded, Mode, Mode_Static, Mode_Branded } from "./facet"
+import { Schema } from "../schema";
+import { Facet as T_Facet, Mode as T_Mode } from "./facet";
 
-export type Island_Facets<Sc extends Schema_Island_Facets['facets']> = {
-  readonly facets: {
-    [F in keyof Sc]: Facet<Sc[F]>
+export type Island<Sc extends Schema.Island> = (Sc extends Schema.Island.Facets ? Island.Facets<Sc['facets']> : {}) & (Sc extends Schema.Island.Mode ? Island.Mode<Sc['mode']> : {});
+export namespace Island {
+  export type Facets<Sc extends Schema.Island.Facets['facets']> = {
+    facets: {
+      [F in keyof Sc]: T_Facet<Sc[F]>;
+    }
+  }
+  export namespace Facets {
+    export type Facet<Sc extends Schema.Island.Facets.Facet> = T_Facet<Sc>
+    export namespace Facet {
+      export type Mono<Sc extends Schema.Island.Facets.Facet.Mono> = T_Facet.Mono<Sc>
+      export type Multi<Sc extends Schema.Island.Facets.Facet.Multi> = T_Facet.Multi<Sc>
+
+      export type Static = T_Facet.Static
+    }
+  }
+
+  export type Mode<Sc extends Schema.Island.Mode['mode']> = {
+    mode: T_Mode<Sc>
+  }
+  export namespace Mode {
+    export type Facet<Sc extends Schema.Island.Mode.Facet> = T_Mode<Sc>
+    export namespace Facet {
+      export type Mono<Sc extends Schema.Island.Mode.Facet.Mono> = T_Mode.Mono<Sc>
+      export type Multi<Sc extends Schema.Island.Mode.Facet.Multi> = T_Mode.Multi<Sc>
+      export type System<Sc extends Schema.Island.Mode.Facet.System> = T_Mode.System<Sc>
+
+      export type Static = T_Mode.Static
+    }
+  }
+
+  export type Static = Partial<Static.Facets & Static.Mode>
+  export namespace Static {
+    export type Facets = {
+      facets: {
+        [facet: string]: Facets.Facet
+      }
+    }
+    export namespace Facets {
+      export type Facet = T_Facet.Static
+    }
+
+    export type Mode = {
+      mode: Mode.Facet
+    }
+    export namespace Mode {
+      export type Facet = T_Facet.Static
+    }
+  }
+
+  export type AsMap = Partial<AsMap.Facets & AsMap.Mode>
+  export namespace AsMap {
+    export type Facets = {
+      facets: Map<string, Facets.Facet>
+    }
+    export namespace Facets {
+      export type Facet = T_Facet.Static
+    }
+
+    export type Mode = {
+      mode: Mode.Facet
+    }
+    export namespace Mode {
+      export type Facet = T_Facet.Static
+    }
   }
 }
-export type Island_Facets_Static = {
-  facets: {
-    [facet: string]: Facet_Static
-  }
-}
-export type Island_Facets_Branded<Sc extends Schema_Island_Facets['facets']> = {
-  readonly facets: {
-    [F in keyof Sc]: Facet_Branded<Sc[F], { facet: Extract<F, string>; type: FACETS['generic'] }>
-  }
-}
-
-export type Island_Mode<Sc extends Schema_Island_Mode['mode']> = {
-  readonly mode: Mode<Sc>
-}
-export type Island_Mode_Static = {
-  mode: Mode_Static
-}
-export type Island_Mode_Branded<Sc extends Schema_Island_Mode['mode']> = {
-  readonly mode: Mode_Branded<Sc>
-}
-
-export type Island<Sc extends Schema_Island> = (Sc extends Schema_Island_Facets ? Island_Facets<Sc['facets']> : {}) & (Sc extends Schema_Island_Mode ? Island_Mode<Sc['mode']> : {})
-export type Island_Static = Partial<Island_Facets_Static & Island_Mode_Static>
-export type Island_Branded<Sc extends Schema_Island> = (Sc extends Schema_Island_Facets ? Island_Facets_Branded<Sc['facets']> : {}) & (Sc extends Schema_Island_Mode ? Island_Mode_Branded<Sc['mode']> : {})

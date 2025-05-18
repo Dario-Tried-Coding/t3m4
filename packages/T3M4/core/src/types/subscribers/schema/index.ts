@@ -1,5 +1,4 @@
-import {Facet as T_Facet, Mode as T_Mode} from './facet'
-import {Island as T_Island, Suggested as T_Suggested, Branded as T_Branded} from './island'
+import { Island as T_Island, Suggested as T_Suggested } from './island'
 
 export type Schema = {
   [island: string]: T_Island
@@ -9,12 +8,21 @@ export namespace Schema {
   export namespace Island {
     export type Facets = T_Island.Facets
     export namespace Facets {
-      export type Facet = T_Facet
+      export type Facet = T_Island.Facets.Facet
+      export namespace Facet {
+        export type Mono = T_Island.Facets.Facet.Mono
+        export type Multi = T_Island.Facets.Facet.Multi
+      }
     }
 
     export type Mode = T_Island.Mode
     export namespace Mode {
-      export type Facet = T_Mode
+      export type Facet = T_Island.Mode.Facet
+      export namespace Facet {
+        export type Mono = T_Island.Mode.Facet.Mono
+        export type Multi = T_Island.Mode.Facet.Multi
+        export type System = T_Island.Mode.Facet.System
+      }
     }
   }
 
@@ -25,9 +33,5 @@ export namespace Schema {
   type IsMeaningfulIsland<I extends Island> = I extends Schema.Island.Mode ? true : I extends Schema.Island.Facets ? (keyof I['facets'] extends never ? false : true) : false
   export type Polished<Sc extends Schema> = {
     [I in keyof Sc as IsMeaningfulIsland<Sc[I]> extends true ? I : never]: Sc[I]
-  }
-
-  export type Branded<Sc extends Schema> = {
-    [I in keyof Sc]: T_Branded<Sc[I]>
   }
 }

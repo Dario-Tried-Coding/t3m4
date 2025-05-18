@@ -1,27 +1,27 @@
-import { FACETS } from '../../constants/facets'
-import { MODES } from '../../constants/modes'
-import { STRATS } from '../../constants/strats'
-import { Brand_Map } from '../brand'
-import { Mono, Multi, System } from '../options'
+import { Mono as Mono_Opt, Multi as Multi_Opt, System as System_Opt } from '../options'
 
-export type Facet = Mono | Multi
+export type Facet = Facet.Mono | Facet.Multi
 export namespace Facet {
-  export type Suggested = Mono.Suggested | Multi
-  export type Branded<Sc extends Facet, B extends Pick<Brand_Map, 'type'> = { type: FACETS['generic'] }> = Sc extends Mono
-    ? Mono.Branded<Sc, B & { strat: STRATS['mono'] }>
-    : Sc extends Multi
-      ? Multi.Branded<Sc, B & { strat: STRATS['multi'] }>
-    : never
+  export type Mono = Mono_Opt
+  export type Multi = Multi_Opt
+
+  export type Suggested = Suggested.Mono | Suggested.Multi
+  export namespace Suggested {
+    export type Mono = Mono_Opt.Suggested
+    export type Multi = Multi_Opt
+  }
 }
 
-export type Mode = Facet | System
+export type Mode = Mode.Mono | Mode.Multi | Mode.System
 export namespace Mode {
-  export type Suggested = Facet.Suggested | System.Suggested
+  export type Mono = Facet.Mono
+  export type Multi = Facet.Multi
+  export type System = System_Opt
 
-  type System_Branded<Sc extends System> = {
-    light: Mono.Branded<Sc['light'] extends Mono ? Sc['light'] : MODES['light'], { mode: MODES['light']; type: FACETS['mode']; strat: STRATS['system'] }>
-    dark: Mono.Branded<Sc['dark'] extends Mono ? Sc['dark'] : MODES['dark'], { mode: MODES['dark']; type: FACETS['mode']; strat: STRATS['system'] }>
-  } & (Sc['system'] extends Mono ? { system: Mono.Branded<Sc['system'], { mode: MODES['system']; type: FACETS['mode']; strat: STRATS['system'] }> } : {}) &
-    (Sc['custom'] extends Multi ? { custom: Multi.Branded<Sc['custom'], { mode: MODES['custom']; type: FACETS['mode']; strat: STRATS['system'] }> } : {})
-  export type Branded<Sc extends Mode> = Sc extends Facet ? Facet.Branded<Sc, { type: FACETS['mode'] }> : Sc extends System ? System_Branded<Sc> : never
+  export type Suggested = Suggested.Mono | Suggested.Multi | Suggested.System
+  export namespace Suggested {
+    export type Mono = Facet.Suggested.Mono
+    export type Multi = Facet.Suggested.Multi
+    export type System = System_Opt.Suggested
+  }
 }
