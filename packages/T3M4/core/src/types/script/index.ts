@@ -4,7 +4,7 @@ import { Config } from '../subscribers'
 import { Schema } from '../subscribers'
 
 export type Script_Props = {
-  schema: Schema.Primitive
+  schema: Schema
   config: Config.Static
 } & Partial<Omit<Preset, 'modes'>> & { modes?: Partial<Preset['modes']> }
 

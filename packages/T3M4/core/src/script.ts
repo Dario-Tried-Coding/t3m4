@@ -1,7 +1,7 @@
 import { T3M4 as T_T3M4 } from './types'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
-import { Islands, State, Values } from './types/subscribers'
+import { Islands, Values } from './types/subscribers'
 
 type Brand_Map = {
   number: 'singular' | 'plural'
@@ -21,8 +21,8 @@ type Engine = {
     state: string
     modes: StorageKeys.Modes.Singular
   }
-  islands: Islands.Set.Common
-  values: Values.Map.Common
+  islands: Islands.Static.AsSet
+  values: Values.Static.AsMap
 }
 
 export const script = (args: Script_Args) => {

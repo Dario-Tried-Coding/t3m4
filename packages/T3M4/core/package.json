@@ -38,9 +38,9 @@
       "default": "./dist/types/index.js"
     },
     "./types/subscribers": {
-      "import": "./dist/types/subscribers/export.mjs",
-      "types": "./dist/types/subscribers/export.d.ts",
-      "default": "./dist/types/subscribers/export.js"
+      "import": "./dist/types/subscribers/index.mjs",
+      "types": "./dist/types/subscribers/index.d.ts",
+      "default": "./dist/types/subscribers/index.js"
     },
     "./types/constants": {
       "import": "./dist/types/constants/index.mjs",
