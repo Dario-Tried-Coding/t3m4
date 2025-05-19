@@ -11,7 +11,7 @@ export namespace Values {
   export namespace Island {
     // #region Values.Island.Facets
     export type Facets<Sc extends Schema.Island.Facets['facets']> = {
-      facets: {
+      readonly facets: {
         [F in keyof Sc]: Facets.Facet<Sc[F]>
       }
     }
@@ -26,7 +26,7 @@ export namespace Values {
 
     // #region Values.Island.Mode
     export type Mode<Sc extends Schema.Island.Mode['mode']> = {
-      mode: Mode.Facet<Sc>
+      readonly mode: Mode.Facet<Sc>
     }
     export namespace Mode {
       // #region Values.Island.Mode.Facet
@@ -56,7 +56,7 @@ export namespace Values {
   }
   export namespace Static {
     // #region Values.Static.Island
-    export type Island = Required<Island.Facets & Island.Mode>
+    export type Island = Partial<Island.Facets & Island.Mode>
     export namespace Island {
       // #region Values.Static.Island.Facets
       export type Facets = {

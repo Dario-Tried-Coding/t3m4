@@ -10,6 +10,14 @@ const schema = {
       radius: ['0', '0.3', '0.5', '0.75', '1'],
     }
   },
+  switch: {
+    mode: ['custom1', 'custom2'],
+  },
+  footer: {
+    facets: {
+      font: ['sans', 'serif', 'mono'],
+    }
+  }
 } as const satisfies Schema
 type TSchema = typeof schema
 
@@ -32,6 +40,24 @@ const config = {
       radius: {
         strategy: 'multi',
         default: '0.5'
+      }
+    }
+  },
+  switch: {
+    mode: {
+      strategy: 'multi',
+      default: 'custom1',
+      colorSchemes: {
+        custom1: 'dark',
+        custom2: 'light'
+      }
+    }
+  },
+  footer: {
+    facets: {
+      font: {
+        strategy: 'multi',
+        default: 'sans'
       }
     }
   }

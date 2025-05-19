@@ -1,3 +1,4 @@
+import { Expand } from '@t3m4/utils'
 import { Schema } from './schema'
 
 // #region State
@@ -10,7 +11,7 @@ export namespace State {
   export namespace Island {
     // #region State.Island.Facets
     export type Facets<Sc extends Schema.Island.Facets['facets']> = {
-      facets: {
+      readonly facets: {
         [F in keyof Sc]: Facets.Facet<Sc[F]>
       }
     }
@@ -25,7 +26,7 @@ export namespace State {
 
     // #region State.Island.Mode
     export type Mode<Sc extends Schema.Island.Mode['mode']> = {
-      mode: Mode.Facet<Sc>
+      readonly mode: Mode.Facet<Sc>
     }
     export namespace Mode {
       // #region State.Island.Mode.Facet
@@ -34,7 +35,7 @@ export namespace State {
         : Sc extends Schema.Island.Mode.Facet.Multi
           ? Facet.Multi<Sc>
           : Sc extends Schema.Island.Mode.Facet.System
-            ? Facet.System<Sc>
+            ? Expand.Union<Facet.System<Sc>>
             : never
       export namespace Facet {
         export type Mono<Sc extends Schema.Island.Mode.Facet.Mono> = Sc
@@ -58,7 +59,7 @@ export namespace State {
     export namespace Island {
       // #region State.Optional.Island.Facets
       export type Facets<Sc extends Schema.Island.Facets['facets']> = {
-        facets?: {
+        readonly facets?: {
           [F in keyof Sc]?: Facets.Facet<Sc[F]>
         }
       }
@@ -73,7 +74,7 @@ export namespace State {
 
       // #region State.Optional.Island.Mode
       export type Mode<Sc extends Schema.Island.Mode['mode']> = {
-        mode?: Mode.Facet<Sc>
+        readonly mode?: Mode.Facet<Sc>
       }
       export namespace Mode {
         // #region State.Optional.Island.Mode.Facet
@@ -82,7 +83,7 @@ export namespace State {
           : Sc extends Schema.Island.Mode.Facet.Multi
             ? Facet.Multi<Sc>
             : Sc extends Schema.Island.Mode.Facet.System
-              ? Facet.System<Sc>
+              ? Expand.Union<Facet.System<Sc>>
               : never
         export namespace Facet {
           export type Mono<Sc extends Schema.Island.Mode.Facet.Mono> = Sc

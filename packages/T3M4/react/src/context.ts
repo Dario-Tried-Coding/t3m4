@@ -8,12 +8,12 @@ import { Context, createContext, useContext } from 'react'
 export type T3M4Context<Sc extends Schema, C extends Config<Sc>> = {
   state: {
     base: State<Sc> | undefined
-    forced: State.Optional<Sc>
+    forced: State.Optional<Sc> | undefined
     computed: State<Sc> | undefined
   }
   colorSchemes: {
     base: ColorSchemes<C> | undefined
-    forced: Partial<ColorSchemes<C>>
+    forced: ColorSchemes<C> | undefined
     computed: ColorSchemes<C> | undefined
   }
   updateState: {
@@ -25,23 +25,23 @@ export type T3M4Context<Sc extends Schema, C extends Config<Sc>> = {
 export const T3M4Context = createContext<T3M4Context<Schema, Config<Schema>> | null>(null)
 
 // #region useT3M4
-type useT3M4<Sc extends Schema, C extends Config<Sc>, I extends keyof Schema.Polished<Sc>> = {
+export type useT3M4<Sc extends Schema, C extends Config<Sc>, I extends keyof Schema.Polished<Sc>> = {
   state: {
     base: Expand<State.Island<Sc[I]>> | undefined
-    forced: Expand<State.Optional.Island<Sc[I]>>
+    forced: Expand<State.Optional.Island<Sc[I]>> | undefined
     computed: Expand<State.Island<Sc[I]>> | undefined
   }
   colorScheme: I extends keyof C
     ? Sc[I] extends Schema.Island.Mode
       ? {
-          base: ColorSchemes.Island<C[I]> | undefined
+          base: ColorSchemes.Island<C[I]>
           forced: ColorSchemes.Island<C[I]> | undefined
-        }
+        } | undefined
       : undefined
     : undefined
   updateState: {
-    base: (state: State.Optional.Island<Sc[I]> | ((state: State.Island<Sc[I]>) => State.Optional.Island<Sc[I]>)) => void
-    forced: (state: State.Optional.Island<Sc[I]> | ((state: State.Optional.Island<Sc[I]>) => State.Optional.Island<Sc[I]>)) => void
+    base: (state: Expand<State.Optional.Island<Sc[I]>> | ((state: Expand<State.Island<Sc[I]>>) => Expand<State.Optional.Island<Sc[I]>>)) => void
+    forced: (state: Expand<State.Optional.Island<Sc[I]>> | ((state: Expand<State.Optional.Island<Sc[I]>>) => Expand<State.Optional.Island<Sc[I]>>)) => void
   }
   values: Expand<Values.Island<Sc[I]>> | undefined
 }
@@ -57,14 +57,13 @@ export const useT3M4 = <Sc extends Schema, C extends Config<Sc>, I extends keyof
     },
     colorScheme: (context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>]
       ? {
-          base: context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>],
-          forced: context.colorSchemes.forced?.[island as keyof Config.Polished.Mode<C>],
+          base: context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>] as NonNullable<useT3M4<Sc, C, I>['colorScheme']>['base'],
+          forced: context.colorSchemes.forced?.[island as keyof Config.Polished.Mode<C>] as NonNullable<useT3M4<Sc, C, I>['colorScheme']>['forced'],
         }
       : undefined) as useT3M4<Sc, C, I>['colorScheme'],
     updateState: {
-      // @ts-ignore
-      base: (state) => context.updateState.base(island, state),
-      forced: (state) => context.updateState.forced(island, state),
+      base: (state) => context.updateState.base(island, state as State.Island<Sc[typeof island]>),
+      forced: (state) => context.updateState.forced(island, state as State.Optional.Island<Sc[typeof island]>),
     },
     values: context.values?.[island] as useT3M4<Sc, C, I>['values'],
   }
