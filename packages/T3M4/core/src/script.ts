@@ -1,25 +1,44 @@
-import { Nullable } from '@t3m4/utils/nullables'
 import { T3M4 as T_T3M4 } from './types'
 import { Color_Scheme } from './types/constants/color-schemes'
 import { Selector } from './types/constants/selectors'
 import { Store_Strat, Strat } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
-import { Islands, Schema, State, Values } from './types/subscribers'
+import { Islands, Schema, State as T_State, Values } from './types/subscribers'
 
+// #region TYPES
 type Brand_Map = {
   number: 'singular' | 'plural'
+  completeness: 'complete' | 'partial'
 }
 type Brand<T, K extends keyof Brand_Map, V extends Brand_Map[K]> = T & { [P in `__${K}`]: V }
-
-type NestedMap<T> = Map<string, NestedMap<T> | T>
-type NestedObj<T> = { [key: string]: NestedObj<T> | T }
 
 namespace StorageKeys {
   export namespace Modes {
     export type Singular<S extends string = string> = Brand<S, 'number', 'singular'>
     export type Plural = Brand<string, 'number', 'plural'>
   }
+}
+namespace State {
+  export type AsMap = T_State.Static.AsMap
+  export namespace AsMap {
+    export type Partial = Brand<AsMap, 'completeness', 'partial'>
+    export type Complete = Brand<AsMap, 'completeness', 'complete'>
+
+    export type Modes = Map<string, string>
+    export namespace Modes {
+      export type Partial = Brand<Modes, 'completeness', 'partial'>
+      export type Complete = Brand<Modes, 'completeness', 'complete'>
+    }
+
+    export type Color_Schemes = Map<string, Color_Scheme>
+    export namespace Color_Schemes {
+      export type Partial = Brand<Color_Schemes, 'completeness', 'partial'>
+      export type Complete = Brand<Color_Schemes, 'completeness', 'complete'>
+    }
+  }
+
+  export type AsObj = T_State.Static
 }
 
 type Engine = {
@@ -29,7 +48,7 @@ type Engine = {
   }
   islands: Islands.Static.AsSet
   values: Values.Static.AsMap
-  fallbacks: State.Static.AsMap
+  fallbacks: State.AsMap
   nonce: string
   disableTransitionOnChange: boolean
   modes: {
@@ -129,40 +148,131 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
   const engine = constructEngine({ preset, modes, storageKey })
 
   const utils = {
-    deepMerge: {
-      maps<T extends Nullable<NestedMap<string>>[]>(...maps: T): T[number] extends null | undefined ? undefined : NestedMap<string> {
-        const result: NestedMap<string> = new Map()
-
-        for (const map of maps) {
-          if (!map) continue
-
-          for (const [key, value] of map.entries()) {
-            if (result.has(key) && value instanceof Map && result.get(key) instanceof Map) {
-              result.set(key, this.maps(result.get(key) as NestedMap<string>, value))
-            } else {
-              result.set(key, value)
-            }
-          }
-        }
-
-        return (result.size === 0 ? undefined : result) as T[number] extends null | undefined ? undefined : NestedMap<string>
+    miscellaneous: {
+      getSystemPref() {
+        const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
+        const systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? constants.modes.dark : constants.modes.light) : undefined
+        return systemPref
       },
-      objs<T extends Nullable<NestedObj<string>>[]>(...objs: T): T[number] extends null | undefined ? undefined : NestedObj<string> {
-        const result: NestedObj<string> = {}
+      safeParse(json: string | null) {
+        if (!json?.trim()) return null
 
-        for (const obj of objs) {
-          if (!obj) continue
+        try {
+          return JSON.parse(json) as unknown
+        } catch (e) {
+          return null
+        }
+      },
+    },
+    deepMerge: {
+      state: {
+        maps(...sources: (State.AsMap | undefined)[]): State.AsMap {
+          const result: State.AsMap = new Map()
 
-          for (const [key, value] of Object.entries(obj)) {
-            if (result[key] && typeof result[key] === 'object' && typeof value === 'object') {
-              result[key] = this.objs(result[key], value)
-            } else {
-              result[key] = value
+          for (const source of sources) {
+            if (!source) continue
+
+            for (const [key, sourceValue] of source) {
+              const targetValue = result.get(key)
+
+              if (!targetValue) {
+                result.set(key, {
+                  mode: sourceValue.mode,
+                  facets: sourceValue.facets ? new Map(sourceValue.facets) : undefined,
+                })
+              } else {
+                const mergedFacets = new Map(targetValue.facets || [])
+                if (sourceValue.facets) {
+                  for (const [facetKey, facetValue] of sourceValue.facets) {
+                    mergedFacets.set(facetKey, facetValue)
+                  }
+                }
+
+                result.set(key, {
+                  mode: sourceValue.mode ?? targetValue.mode,
+                  facets: mergedFacets.size > 0 ? mergedFacets : undefined,
+                })
+              }
             }
           }
+
+          return result
+        },
+        objects(...sources: (State.AsObj | undefined)[]) {
+          const result: State.AsObj = {}
+
+          for (const source of sources) {
+            if (!source) continue
+
+            for (const [island, sourceValue] of Object.entries(source)) {
+              const targetValue = result[island]
+
+              if (!targetValue) {
+                result[island] = {
+                  mode: sourceValue.mode,
+                  facets: sourceValue.facets ? { ...sourceValue.facets } : undefined,
+                }
+              } else {
+                result[island] = {
+                  mode: sourceValue.mode ?? targetValue.mode,
+                  facets: {
+                    ...(targetValue.facets || {}),
+                    ...(sourceValue.facets || {}),
+                  },
+                }
+
+                // Rimuove facets se risultano vuote
+                if (Object.keys(result[island].facets!).length === 0) {
+                  delete result[island].facets
+                }
+              }
+            }
+          }
+
+          return result
+        },
+      },
+    },
+    construct: {
+      modes<T extends State.AsMap.Complete | State.AsMap.Partial>(state: T): T extends State.AsMap.Complete ? State.AsMap.Modes.Complete : State.AsMap.Modes.Partial {
+        const modes: State.AsMap.Modes = new Map()
+
+        for (const [island, { mode }] of state) {
+          if (!mode) continue
+          modes.set(island, mode)
         }
 
-        return (Object.keys(result).length === 0 ? undefined : result) as T[number] extends null | undefined ? undefined : NestedObj<string>
+        return modes as T extends State.AsMap.Complete ? State.AsMap.Modes.Complete : State.AsMap.Modes.Partial
+      },
+      /** ATTENTION!!! To get back the entitirety of color schemes, provide a complete State instance. Not a partial. */
+      colorSchemes<T extends State.AsMap.Complete | State.AsMap.Partial>(state: T): T extends State.AsMap.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial {
+        const modes = this.modes(state)
+        const colorSchemes = utils.resolve.colorSchemes(modes)
+        return colorSchemes
+      },
+    },
+    resolve: {
+      colorSchemes(modes: State_Modes) {
+        const colorSchemes: State_Color_Schemes = new Map()
+
+        for (const [island, mode] of modes) {
+          const colorScheme = this.colorScheme(island, mode)
+          if (!colorScheme) continue
+          colorSchemes.set(island, colorScheme)
+        }
+
+        return colorSchemes
+      },
+      colorScheme(island: string, mode: string) {
+        if (!engine.modes.map.has(island)) return
+
+        const isSystemStrat = engine.modes.map.get(island)!.strategy === constants.strats.system
+        const isSystemMode = engine.modes.map.get(island)!.system?.mode === mode
+        const isSystem = isSystemStrat && isSystemMode
+        const fallbackMode = engine.modes.map.get(island)!.system?.fallback
+        if (isSystem) return utils.miscellaneous.getSystemPref() ?? engine.modes.map.get(island)?.colorSchemes.get(fallbackMode!)
+
+        return engine.modes.map.get(island)!.colorSchemes.get(mode)
       },
     },
   }
@@ -206,7 +316,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     public static init() {
       if (!Main.instance) Main.instance = new Main()
     }
-    
+
     public static get = {
       state: {
         base: () => Main.instance.state.base,
@@ -216,20 +326,42 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (!base) return undefined
 
           const forced = Main.get.state.forced()
-          const computed = utils.deepMerge.maps(base, forced) as State
+          const computed = utils.deepMerge.state.maps(base, forced)
 
           return computed
-        }
-      }
+        },
+      },
+      colorSchemes: {
+        base() {
+          const state = Main.get.state.base()
+          if (!state) return undefined
 
+          const colorSchemes = utils.construct.colorSchemes(state)
+          return colorSchemes
+        },
+        forced() {
+          const state = Main.get.state.forced()
+          const colorSchemes = utils.construct.colorSchemes(state)
+          return colorSchemes
+        },
+        computed() {
+          const base = Main.get.colorSchemes.base()
+          if (!base) return undefined
+
+          const forced = Main.get.colorSchemes.forced()
+          const computed = utils.deepMerge.maps(base, forced)
+
+          return computed
+        },
+      },
     }
 
     private state: {
-      base: State.Static.AsMap | undefined
-      forced: State.Static.AsMap | undefined
+      base: State.AsMap | undefined
+      forced: State.AsMap | undefined
     } = {
       base: undefined,
-      forced: undefined
+      forced: undefined,
     }
 
     private constructor() {}
