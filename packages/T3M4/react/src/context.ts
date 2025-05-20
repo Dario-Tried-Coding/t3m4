@@ -52,7 +52,7 @@ export const useT3M4 = <Sc extends Schema, C extends Config<Sc>, I extends keyof
   return {
     state: {
       base: context.state.base?.[island] as useT3M4<Sc, C, I>['state']['base'],
-      forced: context.state.forced?.[island] as useT3M4<Sc, C, I>['state']['forced'],
+      forced: (context.state.forced?.[island]) as useT3M4<Sc, C, I>['state']['forced'],
       computed: context.state.computed?.[island] as useT3M4<Sc, C, I>['state']['computed'],
     },
     colorScheme: (context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>]

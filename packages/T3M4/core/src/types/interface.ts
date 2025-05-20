@@ -6,12 +6,12 @@ export interface T3M4 {
   get: {
     state: {
       base: () => State.Static | undefined
-      forced: () => State.Static
+      forced: () => State.Static | undefined
       computed: () => State.Static | undefined
     }
     colorSchemes: {
       base: () => Color_Schemes.Static | undefined
-      forced: () => Color_Schemes.Static
+      forced: () => Color_Schemes.Static | undefined
       computed: () => Color_Schemes.Static | undefined
     }
     values: () => Values.Static

@@ -4,7 +4,7 @@ import { Selector } from './types/constants/selectors'
 import { Store_Strat, Strat } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
-import { Islands, Schema, State as T_State, Values } from './types/subscribers'
+import { Islands, Schema, State as T_State, Values, ColorSchemes } from './types/subscribers'
 
 // #region TYPES
 type Brand_Map = {
@@ -147,6 +147,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
   }
   const engine = constructEngine({ preset, modes, storageKey })
 
+  // #region utils
   const utils = {
     miscellaneous: {
       getSystemPref() {
@@ -164,72 +165,189 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         }
       },
     },
-    deepMerge: {
-      state: {
-        maps(...sources: (State.AsMap | undefined)[]): State.AsMap {
-          const result: State.AsMap = new Map()
+    merge: {
+      shallow: {
+        maps(...sources: (Map<string, string> | undefined)[]): Map<string, string> {
+          const result = new Map<string, string>()
 
           for (const source of sources) {
             if (!source) continue
 
-            for (const [key, sourceValue] of source) {
-              const targetValue = result.get(key)
-
-              if (!targetValue) {
-                result.set(key, {
-                  mode: sourceValue.mode,
-                  facets: sourceValue.facets ? new Map(sourceValue.facets) : undefined,
-                })
-              } else {
-                const mergedFacets = new Map(targetValue.facets || [])
-                if (sourceValue.facets) {
-                  for (const [facetKey, facetValue] of sourceValue.facets) {
-                    mergedFacets.set(facetKey, facetValue)
-                  }
-                }
-
-                result.set(key, {
-                  mode: sourceValue.mode ?? targetValue.mode,
-                  facets: mergedFacets.size > 0 ? mergedFacets : undefined,
-                })
-              }
+            for (const [key, value] of source) {
+              result.set(key, value)
             }
           }
 
           return result
         },
-        objects(...sources: (State.AsObj | undefined)[]) {
-          const result: State.AsObj = {}
+      },
+      deep: {
+        state: {
+          maps(...sources: (State.AsMap | undefined)[]): State.AsMap {
+            const result: State.AsMap = new Map()
 
-          for (const source of sources) {
-            if (!source) continue
+            for (const source of sources) {
+              if (!source) continue
 
-            for (const [island, sourceValue] of Object.entries(source)) {
-              const targetValue = result[island]
+              for (const [key, sourceValue] of source) {
+                const targetValue = result.get(key)
 
-              if (!targetValue) {
-                result[island] = {
-                  mode: sourceValue.mode,
-                  facets: sourceValue.facets ? { ...sourceValue.facets } : undefined,
+                if (!targetValue) {
+                  result.set(key, {
+                    mode: sourceValue.mode,
+                    facets: sourceValue.facets ? new Map(sourceValue.facets) : undefined,
+                  })
+                } else {
+                  const mergedFacets = new Map(targetValue.facets || [])
+                  if (sourceValue.facets) {
+                    for (const [facetKey, facetValue] of sourceValue.facets) {
+                      mergedFacets.set(facetKey, facetValue)
+                    }
+                  }
+
+                  result.set(key, {
+                    mode: sourceValue.mode ?? targetValue.mode,
+                    facets: mergedFacets.size > 0 ? mergedFacets : undefined,
+                  })
                 }
-              } else {
-                result[island] = {
-                  mode: sourceValue.mode ?? targetValue.mode,
-                  facets: {
-                    ...(targetValue.facets || {}),
-                    ...(sourceValue.facets || {}),
-                  },
-                }
+              }
+            }
 
-                // Rimuove facets se risultano vuote
-                if (Object.keys(result[island].facets!).length === 0) {
-                  delete result[island].facets
+            return result
+          },
+          objects(...sources: (State.AsObj | undefined)[]) {
+            const result: State.AsObj = {}
+
+            for (const source of sources) {
+              if (!source) continue
+
+              for (const [island, sourceValue] of Object.entries(source)) {
+                const targetValue = result[island]
+
+                if (!targetValue) {
+                  result[island] = {
+                    mode: sourceValue.mode,
+                    facets: sourceValue.facets ? { ...sourceValue.facets } : undefined,
+                  }
+                } else {
+                  result[island] = {
+                    mode: sourceValue.mode ?? targetValue.mode,
+                    facets: {
+                      ...(targetValue.facets || {}),
+                      ...(sourceValue.facets || {}),
+                    },
+                  }
+
+                  // Rimuove facets se risultano vuote
+                  if (Object.keys(result[island].facets!).length === 0) {
+                    delete result[island].facets
+                  }
                 }
+              }
+            }
+
+            return result
+          },
+        },
+      },
+    },
+    equal: {
+      deep: {
+        state(state1: State.AsMap | undefined, state2: State.AsMap | undefined) {
+          if (!state1 || !state2) return false
+          if (state1.size !== state2.size) return false
+
+          for (const [key, value1] of state1) {
+            const value2 = state2.get(key)
+            if (!value2) return false
+
+            if (value1.mode !== value2.mode) return false
+
+            const facets1 = value1.facets
+            const facets2 = value2.facets
+
+            if ((facets1 && !facets2) || (!facets1 && facets2)) return false
+            if (facets1 && facets2) {
+              if (facets1.size !== facets2.size) return false
+              for (const [facetKey, facetVal1] of facets1) {
+                if (facets2.get(facetKey) !== facetVal1) return false
               }
             }
           }
 
-          return result
+          return true
+        },
+      },
+    },
+    convert: {
+      shallow: {
+        mapToObj: {
+          string(map: Map<string, string>): Record<string, string> {
+            return Object.fromEntries(map)
+          },
+          set(map: Map<string, Set<string>>): Record<string, string[]> {
+            const result: Record<string, string[]> = {}
+            for (const [key, value] of map) {
+              result[key] = Array.from(value)
+            }
+            return result
+          },
+        },
+      },
+      deep: {
+        state: {
+          mapToObj(state: State.AsMap): State.AsObj {
+            const result: State.AsObj = {}
+
+            for (const [key, { facets, mode }] of state) {
+              const obj = {} as State.AsObj[typeof key]
+              if (mode) obj.mode = mode
+              if (facets) obj.facets = Object.fromEntries(facets)
+              result[key] = obj
+            }
+
+            return result
+          },
+          objToMap(state: State.AsObj): State.AsMap {
+            const result: State.AsMap = new Map()
+
+            for (const [key, { facets, mode }] of Object.entries(state)) {
+              const obj = {} as NonNullable<ReturnType<State.AsMap['get']>>
+
+              if (mode) obj.mode = mode
+              if (facets) {
+                const map = new Map() as NonNullable<NonNullable<ReturnType<State.AsMap['get']>>['facets']>
+                for (const [facet, value] of Object.entries(facets)) {
+                  map.set(facet, value)
+                }
+                obj.facets = map
+              }
+
+              result.set(key, obj)
+            }
+
+            return result
+          },
+        },
+        values: {
+          mapToObj(map: Values.Static.AsMap): Values.Static {
+            const result: Values.Static = {}
+
+            for (const [key, { facets, mode }] of map) {
+              const obj = {} as Values.Static[typeof key]
+              if (mode) obj.mode = Array.from(mode)
+              if (facets) {
+                const facetsObj = {} as NonNullable<Values.Static[typeof key]['facets']>
+                for (const [facet, value] of facets) {
+                  facetsObj[facet] = Array.from(value)
+                }
+                obj.facets = facetsObj
+              }
+              result[key] = obj
+            }
+
+            return result
+          },
         },
       },
     },
@@ -244,16 +362,15 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
         return modes as T extends State.AsMap.Complete ? State.AsMap.Modes.Complete : State.AsMap.Modes.Partial
       },
-      /** ATTENTION!!! To get back the entitirety of color schemes, provide a complete State instance. Not a partial. */
       colorSchemes<T extends State.AsMap.Complete | State.AsMap.Partial>(state: T): T extends State.AsMap.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial {
         const modes = this.modes(state)
         const colorSchemes = utils.resolve.colorSchemes(modes)
-        return colorSchemes
+        return colorSchemes as T extends State.AsMap.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial
       },
     },
     resolve: {
-      colorSchemes(modes: State_Modes) {
-        const colorSchemes: State_Color_Schemes = new Map()
+      colorSchemes<T extends State.AsMap.Modes.Complete | State.AsMap.Modes.Partial>(modes: T): T extends State.AsMap.Modes.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial {
+        const colorSchemes: State.AsMap.Color_Schemes = new Map()
 
         for (const [island, mode] of modes) {
           const colorScheme = this.colorScheme(island, mode)
@@ -261,7 +378,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           colorSchemes.set(island, colorScheme)
         }
 
-        return colorSchemes
+        return colorSchemes as T extends State.AsMap.Modes.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial
       },
       colorScheme(island: string, mode: string) {
         if (!engine.modes.map.has(island)) return
@@ -326,7 +443,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (!base) return undefined
 
           const forced = Main.get.state.forced()
-          const computed = utils.deepMerge.state.maps(base, forced)
+          const computed = utils.merge.deep.state.maps(base, forced) as State.AsMap.Complete
 
           return computed
         },
@@ -336,12 +453,12 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           const state = Main.get.state.base()
           if (!state) return undefined
 
-          const colorSchemes = utils.construct.colorSchemes(state)
+          const colorSchemes = utils.construct.colorSchemes(state as State.AsMap.Complete)
           return colorSchemes
         },
         forced() {
           const state = Main.get.state.forced()
-          const colorSchemes = utils.construct.colorSchemes(state)
+          const colorSchemes = utils.construct.colorSchemes(state as State.AsMap.Partial)
           return colorSchemes
         },
         computed() {
@@ -349,44 +466,157 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (!base) return undefined
 
           const forced = Main.get.colorSchemes.forced()
-          const computed = utils.deepMerge.maps(base, forced)
+          const computed = utils.merge.shallow.maps(base, forced) as State.AsMap.Color_Schemes.Complete
 
           return computed
         },
       },
     }
 
+    public static set = {
+      state: {
+        base: (state: State.AsMap.Partial) => {
+          const currState = Main.get.state.base()
+          if (!currState) return console.error('[T3M4]: Library not initialized')
+
+          const mergedState = utils.merge.deep.state.maps(currState, state) as State.AsMap.Complete
+          Main.smartUpdateNotify.state.base(mergedState)
+        },
+        forced: (state: State.AsMap.Partial) => {
+          const currState = Main.get.state.forced()
+          if (!currState) return console.error('[T3M4]: Library not initialized')
+
+          const mergedState = utils.merge.deep.state.maps(currState, state) as State.AsMap.Partial
+          Main.smartUpdateNotify.state.forced(mergedState)
+        },
+      },
+    }
+
+    private static notifyUpdate = {
+      state: {
+        base: (state: State.AsMap.Complete) => {
+          const colorSchemes = utils.construct.colorSchemes(state)
+          EventManager.emit('State:Base:Update', utils.convert.deep.state.mapToObj(state) as State.AsObj)
+          EventManager.emit('ColorSchemes:Base:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
+        },
+        forced: (state: State.AsMap.Partial) => {
+          const colorSchemes = utils.construct.colorSchemes(state)
+          EventManager.emit('State:Forced:Update', utils.convert.deep.state.mapToObj(state) as State.AsObj)
+          EventManager.emit('ColorSchemes:Forced:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
+        },
+        computed: (state: State.AsMap.Complete) => {
+          const colorSchemes = utils.construct.colorSchemes(state)
+          EventManager.emit('State:Computed:Update', utils.convert.deep.state.mapToObj(state) as State.AsObj)
+          EventManager.emit('ColorSchemes:Computed:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
+        }
+      }
+    }
+
+    private static smartUpdateNotify = {
+      state: {
+        base(newState: State.AsMap.Complete) {
+          const currState = Main.get.state.base()
+          if (!currState) return console.error('[T3M4] Library not initialized.')
+
+          const isEqual = utils.equal.deep.state(currState, newState)
+          if (isEqual) return
+
+          Main.instance.state.base = newState
+          Main.notifyUpdate.state.base(newState)
+
+          const computedState = Main.get.state.computed()!
+          Main.notifyUpdate.state.computed(computedState)
+        },
+        forced(newState: State.AsMap.Partial) {
+          const currState = Main.get.state.forced()
+          if (!currState) return console.error('[T3M4] Library not initialized.')
+
+          const isEqual = utils.equal.deep.state(currState, newState)
+          if (isEqual) return
+
+          Main.instance.state.forced = newState
+          Main.notifyUpdate.state.forced(newState)
+
+          const computedState = Main.get.state.computed()!
+          Main.notifyUpdate.state.computed(computedState)
+        },
+      },
+    }
+
     private state: {
-      base: State.AsMap | undefined
-      forced: State.AsMap | undefined
+      base: State.AsMap.Complete | undefined
+      forced: State.AsMap.Partial | undefined
     } = {
       base: undefined,
       forced: undefined,
     }
 
-    private constructor() {}
+    private constructor() {
+      const mockStorageState = new Map([['root', { mode: 'custom-light', facets: new Map([['color', 'blue']]) }]]) as State.AsMap.Complete
+
+      const baseState = mockStorageState
+      this.state.base = baseState
+      Main.notifyUpdate.state.base(baseState)
+      
+      const forcedState = new Map() as State.AsMap.Partial
+      this.state.forced = forcedState
+      Main.notifyUpdate.state.forced(forcedState)
+
+      const computedState = utils.merge.deep.state.maps(baseState, forcedState) as State.AsMap.Complete
+      Main.notifyUpdate.state.computed(computedState)
+    }
   }
 
   // #region T3M4
   class T3M4 implements T_T3M4 {
     public get = {
       state: {
-        base: () => undefined,
-        forced: () => ({}),
-        computed: () => undefined,
+        base: () => {
+          const state = Main.get.state.base()
+          if (!state) return undefined
+          return utils.convert.deep.state.mapToObj(state)
+        },
+        forced: () => {
+          const state = Main.get.state.forced()
+          if (!state) return undefined
+          return utils.convert.deep.state.mapToObj(state)
+        },
+        computed: () => {
+          const state = Main.get.state.computed()
+          if (!state) return undefined
+          return utils.convert.deep.state.mapToObj(state)
+        },
       },
       colorSchemes: {
-        base: () => undefined,
-        forced: () => ({}),
-        computed: () => undefined,
+        base: () => {
+          const colorSchemes = Main.get.colorSchemes.base()
+          if (!colorSchemes) return undefined
+          return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
+        },
+        forced: () => {
+          const colorSchemes = Main.get.colorSchemes.forced()
+          if (!colorSchemes) return undefined
+          return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
+        },
+        computed: () => {
+          const colorSchemes = Main.get.colorSchemes.computed()
+          if (!colorSchemes) return undefined
+          return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
+        },
       },
-      values: () => ({}),
+      values: () => utils.convert.deep.values.mapToObj(engine.values),
     }
 
     public set = {
       state: {
-        base: (state: {}) => {},
-        forced: (state: {}) => {},
+        base: (state: State.AsObj) => {
+          const stateMap = utils.convert.deep.state.objToMap(state) as State.AsMap.Partial
+          Main.set.state.base(stateMap)
+        },
+        forced: (state: State.AsObj) => {
+          const stateMap = utils.convert.deep.state.objToMap(state) as State.AsMap.Partial
+          Main.set.state.forced(stateMap)
+        },
       },
     }
 
@@ -397,6 +627,6 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     public reboot(args: Script_Args) {}
   }
 
+  Main.init()
   window.T3M4 = new T3M4()
-  console.log(engine.modes)
 }
