@@ -19,7 +19,7 @@ export const PRESET = {
   storageKey: 'T3M4',
   modes: {
     store: false,
-    storageKey: 'mode',
+    storageKey: 'theme',
     strategy: 'unique',
     selectors: [],
   },

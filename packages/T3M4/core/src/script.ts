@@ -1,13 +1,19 @@
+import { Nullable } from '@t3m4/utils/nullables'
 import { T3M4 as T_T3M4 } from './types'
+import { Color_Scheme } from './types/constants/color-schemes'
+import { Selector } from './types/constants/selectors'
+import { Store_Strat, Strat } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
-import { Islands, Values } from './types/subscribers'
+import { Islands, Schema, State, Values } from './types/subscribers'
 
 type Brand_Map = {
   number: 'singular' | 'plural'
 }
-
 type Brand<T, K extends keyof Brand_Map, V extends Brand_Map[K]> = T & { [P in `__${K}`]: V }
+
+type NestedMap<T> = Map<string, NestedMap<T> | T>
+type NestedObj<T> = { [key: string]: NestedObj<T> | T }
 
 namespace StorageKeys {
   export namespace Modes {
@@ -23,13 +29,29 @@ type Engine = {
   }
   islands: Islands.Static.AsSet
   values: Values.Static.AsMap
+  fallbacks: State.Static.AsMap
+  nonce: string
+  disableTransitionOnChange: boolean
+  modes: {
+    store: boolean
+    strategy: Store_Strat
+    storageKey: string
+    map: Map<
+      string,
+      {
+        strategy: Strat
+        store: boolean
+        selectors: Selector[]
+        colorSchemes: Map<string, Color_Scheme>
+        system: { mode: string; fallback: string } | undefined
+      }
+    >
+  }
 }
 
-export const script = (args: Script_Args) => {
-  const { schema, config, constants, preset } = args
-
+export const script = ({ schema, config, constants, preset, nonce, disableTransitionOnChange, storageKey, modes }: Script_Args) => {
   // #region Engine
-  function constructEngine({ storageKey, modes, preset }: Pick<Script_Args, 'preset' | 'storageKey' | 'modes'>): Engine {
+  function constructEngine({ storageKey, modes, preset }: { storageKey: Script_Args['storageKey']; modes: Script_Args['modes']; preset: Script_Args['preset'] }): Engine {
     const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([k, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
 
     const islands = new Set(Object.entries(polishedSchema).map(([k]) => k))
@@ -52,6 +74,45 @@ export const script = (args: Script_Args) => {
       })
     )
 
+    const fallbacks = new Map(
+      Object.entries(config).map(([i, v]) => {
+        const facets = 'facets' in v ? new Map(Object.entries(v.facets!).map(([f, strat_obj]) => [f, strat_obj.default])) : undefined
+        const mode = 'mode' in v ? v.mode!.default : undefined
+
+        return [i, { ...(facets ? { facets } : {}), ...(mode ? { mode } : {}) }]
+      })
+    )
+
+    const modesHandling = {
+      store: modes?.store ?? preset.modes.store,
+      strategy: modes?.strategy ?? preset.modes.strategy,
+      storageKey: modes?.storageKey ?? preset.modes.storageKey,
+      map: new Map(
+        Object.entries(config)
+          .filter(([i, { mode }]) => !!mode)
+          .map(([i, { mode }]) => {
+            const obj = {
+              strategy: mode!.strategy,
+              store: mode!.store ?? true,
+              selectors: (typeof mode?.selector === 'string' ? [mode.selector] : mode!.selector) ?? preset.modes.selectors,
+              colorSchemes:
+                mode!.strategy === constants.strats.mono
+                  ? new Map([[mode!.default, mode!.colorScheme]])
+                  : mode!.strategy === constants.strats.multi
+                    ? new Map(Object.entries(mode!.colorSchemes))
+                    : new Map([
+                        [(polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).light, constants.colorSchemes.light],
+                        [(polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).dark, constants.colorSchemes.dark],
+                        ...Object.entries(mode!.colorSchemes ?? {}),
+                      ]),
+              system:
+                mode?.strategy === constants.strats.system && (polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System)!.system ? { mode: (polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).system!, fallback: mode.fallback! } : undefined,
+            }
+            return [i, obj]
+          })
+      ),
+    }
+
     return {
       storageKeys: {
         state: storageKey ?? preset.storageKey,
@@ -59,9 +120,52 @@ export const script = (args: Script_Args) => {
       },
       islands,
       values,
+      fallbacks,
+      nonce: nonce ?? preset.nonce,
+      disableTransitionOnChange: disableTransitionOnChange ?? preset.disableTransitionOnChange,
+      modes: modesHandling,
     }
   }
-  const engine = constructEngine(args)
+  const engine = constructEngine({ preset, modes, storageKey })
+
+  const utils = {
+    deepMerge: {
+      maps<T extends Nullable<NestedMap<string>>[]>(...maps: T): T[number] extends null | undefined ? undefined : NestedMap<string> {
+        const result: NestedMap<string> = new Map()
+
+        for (const map of maps) {
+          if (!map) continue
+
+          for (const [key, value] of map.entries()) {
+            if (result.has(key) && value instanceof Map && result.get(key) instanceof Map) {
+              result.set(key, this.maps(result.get(key) as NestedMap<string>, value))
+            } else {
+              result.set(key, value)
+            }
+          }
+        }
+
+        return (result.size === 0 ? undefined : result) as T[number] extends null | undefined ? undefined : NestedMap<string>
+      },
+      objs<T extends Nullable<NestedObj<string>>[]>(...objs: T): T[number] extends null | undefined ? undefined : NestedObj<string> {
+        const result: NestedObj<string> = {}
+
+        for (const obj of objs) {
+          if (!obj) continue
+
+          for (const [key, value] of Object.entries(obj)) {
+            if (result[key] && typeof result[key] === 'object' && typeof value === 'object') {
+              result[key] = this.objs(result[key], value)
+            } else {
+              result[key] = value
+            }
+          }
+        }
+
+        return (Object.keys(result).length === 0 ? undefined : result) as T[number] extends null | undefined ? undefined : NestedObj<string>
+      },
+    },
+  }
 
   // #region EVENT MANAGER
   class EventManager {
@@ -95,6 +199,42 @@ export const script = (args: Script_Args) => {
     }
   }
 
+  // #region MAIN
+  class Main {
+    private static instance: Main
+
+    public static init() {
+      if (!Main.instance) Main.instance = new Main()
+    }
+    
+    public static get = {
+      state: {
+        base: () => Main.instance.state.base,
+        forced: () => Main.instance.state.forced,
+        computed: () => {
+          const base = Main.get.state.base()
+          if (!base) return undefined
+
+          const forced = Main.get.state.forced()
+          const computed = utils.deepMerge.maps(base, forced) as State
+
+          return computed
+        }
+      }
+
+    }
+
+    private state: {
+      base: State.Static.AsMap | undefined
+      forced: State.Static.AsMap | undefined
+    } = {
+      base: undefined,
+      forced: undefined
+    }
+
+    private constructor() {}
+  }
+
   // #region T3M4
   class T3M4 implements T_T3M4 {
     public get = {
@@ -126,4 +266,5 @@ export const script = (args: Script_Args) => {
   }
 
   window.T3M4 = new T3M4()
+  console.log(engine.modes)
 }
