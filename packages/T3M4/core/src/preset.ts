@@ -7,7 +7,7 @@ export type Preset = {
   storageKey: LinientAutoComplete<LIBRARY_NAME>
   modes: {
     strategy: Store_Strat
-    storageKey: LinientAutoComplete<'mode' | 'theme'>
+    storageKey: LinientAutoComplete<'modes' | 'themes'>
     store: boolean
     selectors: Selector[]
   }
@@ -19,7 +19,7 @@ export const PRESET = {
   storageKey: 'T3M4',
   modes: {
     store: false,
-    storageKey: 'theme',
+    storageKey: 'modes',
     strategy: 'unique',
     selectors: [],
   },

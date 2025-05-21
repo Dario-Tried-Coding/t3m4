@@ -4,7 +4,7 @@ import { FC, PropsWithChildren } from 'react'
 
 const schema = {
   root: {
-    mode: { light: 'custom-light', dark: 'dark', custom: ['custom1', 'custom2'] },
+    mode: { light: 'custom-light', dark: 'dark', system: 'system', custom: ['custom1', 'custom2'] },
     facets: {
       color: ['zinc', 'blue', 'red', 'rose', 'orange', 'green', 'yellow', 'violet'],
       radius: ['0', '0.3', '0.5', '0.75', '1'],
@@ -18,14 +18,15 @@ const schema = {
       font: ['sans', 'serif', 'mono'],
     }
   }
-} as const satisfies Schema
+} as const satisfies Schema.Suggested
 type TSchema = typeof schema
 
 const config = {
   root: {
     mode: {
       strategy: 'system',
-      default: 'dark',
+      default: 'system',
+      fallback: 'custom1',
       colorSchemes: {
         custom1: 'dark',
         custom2: 'light'
