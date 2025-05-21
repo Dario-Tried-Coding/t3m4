@@ -493,7 +493,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
             return isOption ? value : isBackupOption ? backup! : fallback
           },
         },
-        island(island: string, values: State.AsMap.Island, fallbacks?: State.AsMap.Island) {
+        island(island: string, values: State.AsMap.Island, backup?: State.AsMap.Island) {
           const isIsland = utils.isValid.value.island(island)
           if (!isIsland) return
 
@@ -502,35 +502,84 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (values.facets) {
             const facets = new Map() as NonNullable<State.AsMap.Island['facets']>
             for (const [facet, value] of values.facets) {
-              const sanFacet = utils.sanitize.state.option.facet(island, facet, value, fallbacks?.facets?.get(facet))
+              const sanFacet = utils.sanitize.state.option.facet(island, facet, value, backup?.facets?.get(facet))
               if (sanFacet) facets.set(facet, sanFacet)
             }
-            obj.facets = facets
+            if (facets.size !== 0) obj.facets = facets
           }
 
           if (values.mode) {
-            const mode = utils.sanitize.state.option.mode(island, values.mode, fallbacks?.mode)
+            const mode = utils.sanitize.state.option.mode(island, values.mode, backup?.mode)
             if (mode) obj.mode = mode
           }
 
-          if (Object.keys(obj).length === 0) return undefined
           return obj
         },
-        all(state: State.AsMap, fallbacks?: State.AsMap.Branded.Dirty) {
-          const sanState = new Map() as State.AsMap
+        all(state: State.AsMap, backup?: State.AsMap.Branded.Dirty) {
+          const sanState = new Map() as State.AsMap.Branded.Sanitized
 
           for (const [island, values] of state) {
-            const sanIsland = utils.sanitize.state.island(island, values, fallbacks?.get(island))
+            const sanIsland = utils.sanitize.state.island(island, values, backup?.get(island))
             if (!sanIsland) continue
 
             sanState.set(island, sanIsland)
           }
 
-          if (sanState.size === 0) return undefined
           return sanState
         },
       },
     },
+    normalize: {
+      state: {
+        island(island: string, values: State.AsMap.Island, backup?: State.AsMap.Island) {
+          const isIsland = utils.isValid.value.island(island)
+          if (!isIsland) return
+
+          const normalized = {} as State.AsMap.Island
+
+          // fallbacks
+          for (const [facet, fallback] of engine.fallbacks.get(island)!.facets ?? []) {
+            normalized.facets = new Map()
+            normalized.facets.set(facet, fallback)
+          }
+          if (engine.fallbacks.get(island)!.mode) normalized.mode = engine.fallbacks.get(island)!.mode!
+
+          // backup
+          if (backup) {
+            const sanBackup = utils.sanitize.state.island(island, backup)!
+            if (sanBackup.facets) {
+              for (const [facet, value] of sanBackup.facets) {
+                normalized.facets?.set(facet, value)
+              }
+            }
+            if (sanBackup.mode) normalized.mode = sanBackup.mode
+          }
+
+          // values
+          const sanValues = utils.sanitize.state.island(island, values, backup)!
+          if (sanValues.facets) {
+            for (const [facet, value] of sanValues.facets) {
+              normalized.facets?.set(facet, value)
+            }
+          }
+          if (sanValues.mode) normalized.mode = sanValues.mode
+
+          return normalized
+        },
+        state(state: State.AsMap, backup?: State.AsMap) {
+          const normalized = new Map() as State.AsMap.Branded.Normalized
+
+          for (const [island, values] of state) {
+            const normIsland = utils.normalize.state.island(island, values, backup?.get(island))
+            if (!normIsland) continue
+
+            normalized.set(island, normIsland)
+          }
+
+          return normalized
+        }
+      }
+    }
   }
 
   // #region EVENT MANAGER
@@ -593,7 +642,15 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (!deserialized) return undefined
 
           const sanitized = utils.sanitize.state.all(deserialized)
+          return sanitized
         },
+        normalized: () => {
+          const sanitized = StorageManager.get.state.sanitized()
+          if (!sanitized) return undefined
+
+          const normalized = utils.normalize.state.state(sanitized)
+          return normalized
+        }
       },
     }
   }
@@ -801,4 +858,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
   Main.init()
   window.T3M4 = new T3M4()
+
+  // console.log(engine.fallbacks)
+  console.log(utils.normalize.state.island('root', { mode: 'prova', facets: new Map([['color', 'prova']])}, { mode: 'custom1', facets: new Map([['color', 'green']])}))
 }
