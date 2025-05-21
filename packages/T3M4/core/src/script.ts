@@ -1,53 +1,20 @@
 import { T3M4 as T_T3M4 } from './types'
-import { Color_Scheme } from './types/constants/color-schemes'
 import { Selector } from './types/constants/selectors'
 import { Store_Strat, Strat } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
-import { Islands, Schema, State as T_State, Values, ColorSchemes } from './types/subscribers'
+import { ColorSchemes, Islands, Schema, State, Values } from './types/subscribers'
 
 // #region TYPES
 type Brand_Map = {
   completeness: 'complete' | 'partial'
   stage: 'dirty' | 'sanitized' | 'normalized'
 }
-type Brand<T, K extends keyof Brand_Map, V extends Brand_Map[K]> = T & { [P in `__${K}`]: V }
+type Brand<T, B extends Partial<Brand_Map>> = T & { [K in keyof B as `__${Extract<K, string>}`]: B[K] }
 
-namespace State {
-  export type AsMap = T_State.Static.AsMap
-  export namespace AsMap {
-    export namespace Branded {
-      export type Partial = Brand<AsMap, 'completeness', 'partial'>
-      export type Complete = Brand<AsMap, 'completeness', 'complete'>
-
-      export type Dirty = Brand<AsMap, 'stage', 'dirty'>
-      export type Sanitized = Brand<AsMap, 'stage', 'sanitized'>
-      export type Normalized = Brand<AsMap, 'stage', 'normalized'>
-    }
-
-    export type Island = T_State.Static.AsMap.Island
-
-    export type Modes = Map<string, string>
-    export namespace Modes {
-      export type Partial = Brand<Modes, 'completeness', 'partial'>
-      export type Complete = Brand<Modes, 'completeness', 'complete'>
-
-      export type Dirty = Brand<Modes, 'stage', 'dirty'>
-      export type Sanitized = Brand<Modes, 'stage', 'sanitized'>
-      export type Normalized = Brand<Modes, 'stage', 'normalized'>
-    }
-
-    export type Color_Schemes = Map<string, Color_Scheme>
-    export namespace Color_Schemes {
-      export type Partial = Brand<Color_Schemes, 'completeness', 'partial'>
-      export type Complete = Brand<Color_Schemes, 'completeness', 'complete'>
-    }
-  }
-
-  export type AsObj = T_State.Static
-  export namespace AsObj {
-    export type Modes = Record<string, string>
-  }
+namespace Modes {
+  export type AsMap = Map<string, string>
+  export type AsObj = Record<string, string>
 }
 
 type Engine = {
@@ -57,7 +24,7 @@ type Engine = {
   }
   islands: Islands.Static.AsSet
   values: Values.Static.AsMap
-  fallbacks: State.AsMap
+  fallbacks: Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>
   nonce: string
   disableTransitionOnChange: boolean
   modes: {
@@ -70,7 +37,7 @@ type Engine = {
         strategy: Strat
         store: boolean
         selectors: Selector[]
-        colorSchemes: Map<string, Color_Scheme>
+        colorSchemes: ColorSchemes.Static.AsMap
         system: { mode: string; fallback: string } | undefined
       }
     >
@@ -152,7 +119,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       nonce: nonce ?? preset.nonce,
       disableTransitionOnChange: disableTransitionOnChange ?? preset.disableTransitionOnChange,
       modes: modesHandling,
-    }
+    } as Engine
   }
   const engine = constructEngine({ preset, modes, storageKey })
 
@@ -192,8 +159,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       },
       deep: {
         state: {
-          maps(...sources: (State.AsMap | undefined)[]): State.AsMap {
-            const result: State.AsMap = new Map()
+          maps(...sources: (State.Static.AsMap | undefined)[]): State.Static.AsMap {
+            const result: State.Static.AsMap = new Map()
 
             for (const source of sources) {
               if (!source) continue
@@ -224,8 +191,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
             return result
           },
-          objects(...sources: (State.AsObj | undefined)[]) {
-            const result: State.AsObj = {}
+          objects(...sources: (State.Static | undefined)[]) {
+            const result: State.Static = {}
 
             for (const source of sources) {
               if (!source) continue
@@ -262,7 +229,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     },
     equal: {
       deep: {
-        state(state1: State.AsMap | undefined, state2: State.AsMap | undefined) {
+        state(state1: State.Static.AsMap | undefined, state2: State.Static.AsMap | undefined) {
           if (!state1 || !state2) return false
           if (state1.size !== state2.size) return false
 
@@ -310,11 +277,11 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       },
       deep: {
         state: {
-          mapToObj(state: State.AsMap): State.AsObj {
-            const result: State.AsObj = {}
+          mapToObj(state: State.Static.AsMap) {
+            const result = {} as State.Static
 
             for (const [key, { facets, mode }] of state) {
-              const obj = {} as State.AsObj[typeof key]
+              const obj = {} as State.Static.Island
               if (mode) obj.mode = mode
               if (facets) obj.facets = Object.fromEntries(facets)
               result[key] = obj
@@ -322,15 +289,15 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
             return result
           },
-          objToMap(state: State.AsObj): State.AsMap {
-            const result: State.AsMap = new Map()
+          objToMap(state: State.Static) {
+            const result = new Map() as State.Static.AsMap
 
             for (const [key, { facets, mode }] of Object.entries(state)) {
-              const obj = {} as NonNullable<ReturnType<State.AsMap['get']>>
+              const obj = {} as State.Static.AsMap.Island
 
               if (mode) obj.mode = mode
               if (facets) {
-                const map = new Map() as NonNullable<NonNullable<ReturnType<State.AsMap['get']>>['facets']>
+                const map = new Map() as State.Static.AsMap.Island.Facets['facets']
                 for (const [facet, value] of Object.entries(facets)) {
                   map.set(facet, value)
                 }
@@ -366,8 +333,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       },
     },
     construct: {
-      modes<T extends State.AsMap.Branded.Complete | State.AsMap.Branded.Partial>(state: T): T extends State.AsMap.Branded.Complete ? State.AsMap.Modes.Complete : State.AsMap.Modes.Partial {
-        const modes: State.AsMap.Modes = new Map()
+      modes<T extends Brand<State.Static.AsMap, { completeness: 'complete' | 'partial' }>>(state: T) {
+        const modes = new Map() as T extends Brand<any, { completeness: 'complete' }> ? Brand<Modes.AsMap, Brand_Map & { completeness: 'complete' }> : Brand<Modes.AsMap, Brand_Map & { completeness: 'partial' }>
 
         for (const [island, { mode }] of state) {
           if (!mode) continue
@@ -375,21 +342,22 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           modes.set(island, mode)
         }
 
-        return modes as T extends State.AsMap.Branded.Complete ? State.AsMap.Modes.Complete : State.AsMap.Modes.Partial
+        return modes
       },
-      colorSchemes<T extends State.AsMap.Branded.Complete | State.AsMap.Branded.Partial>(state: T): T extends State.AsMap.Branded.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial {
+      colorSchemes<T extends Brand<State.Static.AsMap, { completeness: 'complete' | 'partial' }>>(state: T) {
         const modes = new Map(
           Array.from(state.entries())
             .filter(([, { mode }]) => !!mode)
             .map(([island, { mode }]) => [island, mode!])
-        ) as T extends State.AsMap.Branded.Complete ? State.AsMap.Modes.Complete : State.AsMap.Modes.Partial
+        ) as T extends Brand<State.Static.AsMap, { completeness: 'complete' }> ? Brand<Modes.AsMap, { completeness: 'complete' }> : Brand<Modes.AsMap, { completeness: 'partial' }>
+
         const colorSchemes = utils.resolve.colorSchemes(modes)
-        return colorSchemes as T extends State.AsMap.Branded.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial
+        return colorSchemes
       },
     },
     resolve: {
-      colorSchemes<T extends State.AsMap.Modes.Complete | State.AsMap.Modes.Partial>(modes: T): T extends State.AsMap.Modes.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial {
-        const colorSchemes: State.AsMap.Color_Schemes = new Map()
+      colorSchemes<T extends Brand<Modes.AsMap, { completeness: 'complete' | 'partial' }>>(modes: T) {
+        const colorSchemes = new Map() as T extends Brand<Modes.AsMap, { completeness: 'complete' }> ? Brand<ColorSchemes.Static.AsMap, { completeness: 'complete' }> : Brand<ColorSchemes.Static.AsMap, { completeness: 'partial' }>
 
         for (const [island, mode] of modes) {
           const colorScheme = this.colorScheme(island, mode)
@@ -397,7 +365,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           colorSchemes.set(island, colorScheme)
         }
 
-        return colorSchemes as T extends State.AsMap.Modes.Complete ? State.AsMap.Color_Schemes.Complete : State.AsMap.Color_Schemes.Partial
+        return colorSchemes
       },
       colorScheme(island: string, mode: string) {
         if (!engine.modes.map.has(island)) return
@@ -430,7 +398,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       },
       structure: {
         state: {
-          obj(obj: Record<string, unknown>): obj is State.AsObj {
+          obj(obj: Record<string, unknown>): obj is Brand<State.Static, { stage: 'dirty' }> {
             for (const [key, value] of Object.entries(obj)) {
               if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
 
@@ -449,7 +417,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           },
         },
         modes: {
-          obj(obj: Record<string, unknown>): obj is State.AsObj.Modes {
+          obj(obj: Record<string, unknown>): obj is Brand<Modes.AsObj, { stage: 'dirty' }> {
             return Object.values(obj).every((v) => typeof v === 'string')
           },
         },
@@ -474,8 +442,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         const isStateObj = utils.isValid.structure.state.obj(parsed)
         if (!isStateObj) return undefined
 
-        const dirtyState = utils.convert.deep.state.objToMap(parsed) as State.AsMap.Branded.Dirty
-        return dirtyState
+        const dirtyState = utils.convert.deep.state.objToMap(parsed)
+        return dirtyState as Brand<State.Static.AsMap, { stage: 'dirty' }>
       },
       modes(string: string) {
         const parsed = utils.miscellaneous.safeParse(string)
@@ -487,8 +455,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         const isModesObj = utils.isValid.structure.modes.obj(parsed)
         if (!isModesObj) return undefined
 
-        const dirtyModes = utils.convert.shallow.objToMap.string(parsed) as State.AsMap.Modes.Dirty
-        return dirtyModes
+        const dirtyModes = utils.convert.shallow.objToMap.string(parsed)
+        return dirtyModes as Brand<Modes.AsMap, { stage: 'dirty' }>
       },
     },
     sanitize: {
@@ -521,14 +489,14 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
             return isOption ? value : isBackupOption ? backup! : fallback
           },
         },
-        island(island: string, values: State.AsMap.Island, backup?: State.AsMap.Island) {
+        island(island: string, values: Brand<State.Static.AsMap.Island, { stage: 'dirty' }>, backup?: Brand<State.Static.AsMap.Island, { stage: 'dirty' }>) {
           const isIsland = utils.isValid.value.island(island)
           if (!isIsland) return
 
-          const obj = {} as State.AsMap.Island
+          const obj = {} as Brand<State.Static.AsMap.Island, { stage: 'sanitized' }>
 
           if (values.facets) {
-            const facets = new Map() as NonNullable<State.AsMap.Island['facets']>
+            const facets = new Map() as NonNullable<State.Static.AsMap.Island.Facets['facets']>
             for (const [facet, value] of values.facets) {
               const sanFacet = utils.sanitize.state.option.facet(island, facet, value, backup?.facets?.get(facet))
               if (sanFacet) facets.set(facet, sanFacet)
@@ -543,11 +511,11 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
           return obj
         },
-        all(state: State.AsMap, backup?: State.AsMap.Branded.Dirty) {
-          const sanState = new Map() as State.AsMap.Branded.Sanitized
+        all(state: Brand<State.Static.AsMap, { stage: 'dirty' }>, backup?: Brand<State.Static.AsMap, { stage: 'dirty' }>) {
+          const sanState = new Map() as Brand<State.Static.AsMap, { stage: 'sanitized' }>
 
           for (const [island, values] of state) {
-            const sanIsland = utils.sanitize.state.island(island, values, backup?.get(island))
+            const sanIsland = utils.sanitize.state.island(island, values as Brand<State.Static.AsMap.Island, { stage: 'dirty' }>, backup?.get(island) as Brand<State.Static.AsMap.Island, { stage: 'dirty' }>)
             if (!sanIsland) continue
 
             sanState.set(island, sanIsland)
@@ -570,8 +538,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
           return isMode ? value : isBackupMode ? backup! : fallback
         },
-        all(modes: State.AsMap.Modes.Dirty, backup?: State.AsMap.Modes) {
-          const sanModes = new Map() as State.AsMap.Modes.Sanitized
+        all(modes: Brand<Modes.AsMap, { stage: 'dirty' }>, backup?: Brand<Modes.AsMap, { stage: 'dirty' }>) {
+          const sanModes = new Map() as Brand<Modes.AsMap, { stage: 'sanitized' }>
 
           for (const [island, value] of modes) {
             const sanMode = utils.sanitize.modes.mode(island, value, backup?.get(island))
@@ -586,11 +554,11 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     },
     normalize: {
       state: {
-        island(island: string, values: State.AsMap.Island, backup?: State.AsMap.Island) {
+        island(island: string, values: Brand<State.Static.AsMap.Island, { stage: 'dirty' }>, backup?: Brand<State.Static.AsMap.Island, { stage: 'dirty' }>) {
           const isIsland = utils.isValid.value.island(island)
           if (!isIsland) return
 
-          const normalized = {} as State.AsMap.Island
+          const normalized = {} as Brand<State.Static.AsMap.Island, { stage: 'normalized'; completeness: 'complete' }>
 
           // fallbacks
           for (const [facet, fallback] of engine.fallbacks.get(island)!.facets ?? []) {
@@ -621,15 +589,15 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
           return normalized
         },
-        state(state: State.AsMap, backup?: State.AsMap) {
-          const normalized = new Map() as State.AsMap.Branded.Normalized
+        state(state: Brand<State.Static.AsMap, { stage: 'dirty' | 'sanitized' | 'normalized' }>, backup?: Brand<State.Static.AsMap, { stage: 'dirty' | 'sanitized' | 'normalized' }>) {
+          const normalized = new Map() as Brand<State.Static.AsMap, { stage: 'normalized'; completeness: 'complete' }>
 
           for (const [island, values] of engine.fallbacks) {
             normalized.set(island, values)
           }
 
           for (const [island, values] of state) {
-            const normIsland = utils.normalize.state.island(island, values, backup?.get(island))
+            const normIsland = utils.normalize.state.island(island, values as Brand<State.Static.AsMap.Island, { stage: 'dirty' }>, backup?.get(island) as Brand<State.Static.AsMap.Island, { stage: 'dirty' }>)
             if (!normIsland) continue
 
             normalized.set(island, normIsland)
@@ -639,10 +607,10 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         },
       },
       modes: {
-        all: (values: State.AsMap.Modes, backup?: State.AsMap.Modes) => {
-          const normalized = new Map() as State.AsMap.Modes.Normalized
+        all: (values: Brand<Modes.AsMap, Pick<Brand_Map, 'stage'>>, backup?: Brand<Modes.AsMap, Pick<Brand_Map, 'stage'>>) => {
+          const normalized = new Map() as Brand<Modes.AsMap, { stage: 'normalized'; completeness: 'complete' }>
 
-          for (const [island, value] of utils.construct.modes(engine.fallbacks as State.AsMap.Branded.Complete)) {
+          for (const [island, value] of utils.construct.modes(engine.fallbacks)) {
             normalized.set(island, value)
           }
 
@@ -759,18 +727,18 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         normalized: () => {
           const sanitized = StorageManager.get.modes.sanitized()
 
-          const normalized = utils.normalize.modes.all(sanitized ?? utils.construct.modes(engine.fallbacks as State.AsMap.Branded.Complete))
+          const normalized = utils.normalize.modes.all(sanitized ?? utils.construct.modes(engine.fallbacks))
           return normalized
         },
       },
     }
 
     public static set = {
-      state(state: State.AsMap.Branded.Partial) {
+      state(state: Brand<State.Static.AsMap, Pick<Brand_Map, 'completeness'>>) {
         const currState = StorageManager.get.state.normalized()
-        const newState = utils.merge.deep.state.maps(currState, state) as State.AsMap.Branded.Complete
+        const newState = utils.merge.deep.state.maps(currState, state) as typeof currState
 
-        const obj = utils.convert.deep.state.mapToObj(newState)
+        const obj = utils.convert.deep.state.mapToObj(newState) as Brand<State.Static, { stage: 'normalized'; completeness: 'complete' }>
         const serialized = JSON.stringify(obj)
 
         const needsUpdate = StorageManager.get.state.serialized() !== serialized
@@ -780,13 +748,14 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           StorageManager.isInternalChange = false
         }
 
-        StorageManager.set.modes(newState as unknown as State.AsMap.Branded.Partial)
+        StorageManager.set.modes(newState)
       },
-      modes(state: State.AsMap.Branded.Partial) {
+      modes(state: Brand<State.Static.AsMap, Pick<Brand_Map, 'completeness'>>) {
+        if (!engine.modes.store) return
         if (engine.modes.strategy === 'split') return
 
         const currState = StorageManager.get.state.normalized()
-        const newState = utils.merge.deep.state.maps(currState, state) as State.AsMap.Branded.Complete
+        const newState = utils.merge.deep.state.maps(currState, state) as typeof currState
 
         const modes = utils.construct.modes(newState)
         const modesObj = utils.convert.shallow.mapToObj.string(modes)
@@ -802,39 +771,42 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         const stateObj = utils.convert.deep.state.mapToObj(newState)
         const serState = JSON.stringify(stateObj)
         const stateNeedsUpdate = StorageManager.get.state.serialized() !== serState
-        if (stateNeedsUpdate) StorageManager.set.state(newState as unknown as State.AsMap.Branded.Partial)
-      }
+        if (stateNeedsUpdate) StorageManager.set.state(newState)
+      },
     }
 
     private constructor() {
-      EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state(utils.convert.deep.state.objToMap(state) as State.AsMap.Branded.Partial))
+      EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete' }>))
 
       window.addEventListener('storage', ({ key, oldValue, newValue }) => {
         switch (key) {
           // prettier ignore
-          case engine.storageKeys.state: {
-            const deserNew = newValue ? utils.deserialize.state(newValue) : undefined
-            const deserOld = oldValue ? utils.deserialize.state(oldValue) : undefined
+          case engine.storageKeys.state:
+            {
+              const deserNew = newValue ? utils.deserialize.state(newValue) : undefined
+              const deserOld = oldValue ? utils.deserialize.state(oldValue) : undefined
 
-            const normalized = utils.normalize.state.state(deserNew ?? deserOld ?? engine.fallbacks, deserOld)
-            StorageManager.set.state(normalized as unknown as State.AsMap.Branded.Partial)
-            Main.set.state.base(normalized as unknown as State.AsMap.Branded.Complete)
-          }; break
-          case engine.storageKeys.modes: {
-            if (engine.modes.strategy === 'split') return
-            
-            const fallbackModes = utils.construct.modes(engine.fallbacks as State.AsMap.Branded.Complete)
-            const deserNew = newValue ? utils.deserialize.modes(newValue) : undefined
-            const deserOld = oldValue ? utils.deserialize.modes(oldValue) : undefined
+              const normalized = utils.normalize.state.state(deserNew ?? deserOld ?? engine.fallbacks, deserOld)
+              StorageManager.set.state(normalized)
+              Main.set.state.base(normalized as unknown as Brand<State.Static.AsMap, { completeness: 'partial' }>)
+            }
+            break
+          case engine.storageKeys.modes:
+            {
+              if (!engine.modes.store) return
+              if (engine.modes.strategy === 'split') return
 
-            console.log({deserNew, deserOld})
+              const fallbackModes = utils.construct.modes(engine.fallbacks)
+              const deserNew = newValue ? utils.deserialize.modes(newValue) : undefined
+              const deserOld = oldValue ? utils.deserialize.modes(oldValue) : undefined
 
-            const normModes = utils.normalize.modes.all(deserNew ?? deserOld ?? fallbackModes, deserOld)
-            const statePartial = new Map(Array.from(normModes.entries()).map(([island, mode]) => [island, { mode }])) as State.AsMap.Branded.Partial
+              const normModes = utils.normalize.modes.all(deserNew ?? deserOld ?? fallbackModes, deserOld)
+              const statePartial = new Map(Array.from(normModes.entries()).map(([island, mode]) => [island, { mode }])) as Brand<State.Static.AsMap, { completeness: 'partial'; stage: 'normalized' }>
 
-            StorageManager.set.modes(statePartial)
-            Main.set.state.base(statePartial)
-          }; break
+              StorageManager.set.modes(statePartial)
+              Main.set.state.base(statePartial)
+            }
+            break
         }
       })
     }
@@ -857,7 +829,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (!base) return undefined
 
           const forced = Main.get.state.forced()
-          const computed = utils.merge.deep.state.maps(base, forced) as State.AsMap.Branded.Complete
+          const computed = utils.merge.deep.state.maps(base, forced) as typeof base
 
           return computed
         },
@@ -867,12 +839,14 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           const state = Main.get.state.base()
           if (!state) return undefined
 
-          const colorSchemes = utils.construct.colorSchemes(state as State.AsMap.Branded.Complete)
+          const colorSchemes = utils.construct.colorSchemes(state)
           return colorSchemes
         },
         forced() {
           const state = Main.get.state.forced()
-          const colorSchemes = utils.construct.colorSchemes(state as State.AsMap.Branded.Partial)
+          if (!state) return undefined
+
+          const colorSchemes = utils.construct.colorSchemes(state)
           return colorSchemes
         },
         computed() {
@@ -880,7 +854,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (!base) return undefined
 
           const forced = Main.get.colorSchemes.forced()
-          const computed = utils.merge.shallow.maps(base, forced) as State.AsMap.Color_Schemes.Complete
+          const computed = utils.merge.shallow.maps(base, forced) as typeof base
 
           return computed
         },
@@ -889,19 +863,18 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
     public static set = {
       state: {
-        base: (state: State.AsMap.Branded.Partial | State.AsMap.Branded.Complete) => {
+        base: (state: Brand<State.Static.AsMap, { completeness: 'partial' }>) => {
           const currState = Main.get.state.base()
           if (!currState) return console.error('[T3M4]: Library not initialized')
 
-          const mergedState = utils.merge.deep.state.maps(currState, state) as State.AsMap.Branded.Complete
-          console.log({ mergedState })
+          const mergedState = utils.merge.deep.state.maps(currState, state) as typeof currState
           Main.smartUpdateNotify.state.base(mergedState)
         },
-        forced: (state: State.AsMap.Branded.Partial) => {
+        forced: (state: Brand<State.Static.AsMap, { completeness: 'partial' }>) => {
           const currState = Main.get.state.forced()
           if (!currState) return console.error('[T3M4]: Library not initialized')
 
-          const mergedState = utils.merge.deep.state.maps(currState, state) as State.AsMap.Branded.Partial
+          const mergedState = utils.merge.deep.state.maps(currState, state) as typeof currState
           Main.smartUpdateNotify.state.forced(mergedState)
         },
       },
@@ -909,19 +882,19 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
     private static notifyUpdate = {
       state: {
-        base: (state: State.AsMap.Branded.Complete) => {
+        base: (state: Brand<State.Static.AsMap, { completeness: 'complete' }>) => {
           const colorSchemes = utils.construct.colorSchemes(state)
-          EventManager.emit('State:Base:Update', utils.convert.deep.state.mapToObj(state) as State.AsObj)
+          EventManager.emit('State:Base:Update', utils.convert.deep.state.mapToObj(state))
           EventManager.emit('ColorSchemes:Base:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
         },
-        forced: (state: State.AsMap.Branded.Partial) => {
+        forced: (state: Brand<State.Static.AsMap, { completeness: 'partial' }>) => {
           const colorSchemes = utils.construct.colorSchemes(state)
-          EventManager.emit('State:Forced:Update', utils.convert.deep.state.mapToObj(state) as State.AsObj)
+          EventManager.emit('State:Forced:Update', utils.convert.deep.state.mapToObj(state))
           EventManager.emit('ColorSchemes:Forced:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
         },
-        computed: (state: State.AsMap.Branded.Complete) => {
+        computed: (state: Brand<State.Static.AsMap, { completeness: 'complete' }>) => {
           const colorSchemes = utils.construct.colorSchemes(state)
-          EventManager.emit('State:Computed:Update', utils.convert.deep.state.mapToObj(state) as State.AsObj)
+          EventManager.emit('State:Computed:Update', utils.convert.deep.state.mapToObj(state))
           EventManager.emit('ColorSchemes:Computed:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
         },
       },
@@ -929,7 +902,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
     private static smartUpdateNotify = {
       state: {
-        base(newState: State.AsMap.Branded.Complete) {
+        base(newState: Brand<State.Static.AsMap, { completeness: 'complete' }>) {
           const currState = Main.get.state.base()
           if (!currState) return console.error('[T3M4] Library not initialized.')
 
@@ -942,7 +915,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           const computedState = Main.get.state.computed()!
           Main.notifyUpdate.state.computed(computedState)
         },
-        forced(newState: State.AsMap.Branded.Partial) {
+        forced(newState: Brand<State.Static.AsMap, { completeness: 'partial' }>) {
           const currState = Main.get.state.forced()
           if (!currState) return console.error('[T3M4] Library not initialized.')
 
@@ -959,8 +932,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     }
 
     private state: {
-      base: State.AsMap.Branded.Complete | undefined
-      forced: State.AsMap.Branded.Partial | undefined
+      base: Brand<State.Static.AsMap, { completeness: 'complete' }> | undefined
+      forced: Brand<State.Static.AsMap, { completeness: 'partial' }> | undefined
     } = {
       base: undefined,
       forced: undefined,
@@ -971,15 +944,15 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
       const storageState = StorageManager.get.state.normalized()
 
-      const baseState = storageState as unknown as State.AsMap.Branded.Complete
+      const baseState = storageState
       this.state.base = baseState
       Main.notifyUpdate.state.base(baseState)
 
-      const forcedState = new Map() as State.AsMap.Branded.Partial
+      const forcedState = new Map() as Brand<State.Static.AsMap, { completeness: 'partial' }>
       this.state.forced = forcedState
       Main.notifyUpdate.state.forced(forcedState)
 
-      const computedState = utils.merge.deep.state.maps(baseState, forcedState) as State.AsMap.Branded.Complete
+      const computedState = utils.merge.deep.state.maps(baseState, forcedState) as typeof baseState
       Main.notifyUpdate.state.computed(computedState)
     }
   }
@@ -1026,12 +999,12 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
     public set = {
       state: {
-        base: (state: State.AsObj) => {
-          const stateMap = utils.convert.deep.state.objToMap(state) as State.AsMap.Branded.Partial
+        base: (state: State.Static) => {
+          const stateMap = utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'partial' }>
           Main.set.state.base(stateMap)
         },
-        forced: (state: State.AsObj) => {
-          const stateMap = utils.convert.deep.state.objToMap(state) as State.AsMap.Branded.Partial
+        forced: (state: State.Static) => {
+          const stateMap = utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'partial' }>
           Main.set.state.forced(stateMap)
         },
       },
