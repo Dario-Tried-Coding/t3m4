@@ -19,7 +19,7 @@ const schema = {
     },
   },
 } as const satisfies Schema.Suggested
-type TSchema = typeof schema
+export type TSchema = typeof schema
 
 const config = {
   root: {
@@ -63,7 +63,7 @@ const config = {
     },
   },
 } as const satisfies Config<TSchema>
-type TConfig = typeof config
+export type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
   <ThemingProvider<TSchema, TConfig> schema={schema} config={config} modes={{ store: true, strategy: 'unique' }}>

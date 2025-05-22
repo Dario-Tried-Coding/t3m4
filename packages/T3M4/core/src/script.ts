@@ -57,7 +57,7 @@ type Engine = {
 }
 
 export const script = ({ schema, config, constants, preset, nonce, disableTransitionOnChange, storageKey, modes }: Script_Args) => {
-  // #region Engine
+  // #region engine
   function constructEngine({ storageKey, modes, preset }: { storageKey: Script_Args['storageKey']; modes: Script_Args['modes']; preset: Script_Args['preset'] }): Engine {
     const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([k, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
 
@@ -919,6 +919,25 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         },
         { signal: StorageManager.abortController.signal }
       )
+    }
+  }
+
+  // #region DOM MANAGER
+  class DomManager {
+    private static instance: DomManager
+
+    public static init() {
+      if (!DomManager.instance) DomManager.instance = new DomManager()
+    }
+    
+    public static set = {
+      state: {
+        
+      }
+    }
+    
+    private constructor() {
+      EventManager.on('State:Computed:Update', 'DomManager:State:Update', state => {})
     }
   }
 
