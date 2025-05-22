@@ -8,7 +8,7 @@ const schema = {
     facets: {
       color: ['zinc', 'blue', 'red', 'rose', 'orange', 'green', 'yellow', 'violet'],
       radius: ['0', '0.3', '0.5', '0.75', '1'],
-    }
+    },
   },
   switch: {
     mode: ['custom1', 'custom2'],
@@ -16,8 +16,8 @@ const schema = {
   footer: {
     facets: {
       font: ['sans', 'serif', 'mono'],
-    }
-  }
+    },
+  },
 } as const satisfies Schema.Suggested
 type TSchema = typeof schema
 
@@ -29,19 +29,19 @@ const config = {
       fallback: 'custom1',
       colorSchemes: {
         custom1: 'dark',
-        custom2: 'light'
-      }
+        custom2: 'light',
+      },
     },
     facets: {
       color: {
         strategy: 'multi',
-        default: 'violet'
+        default: 'violet',
       },
       radius: {
         strategy: 'multi',
-        default: '0.5'
-      }
-    }
+        default: '0.5',
+      },
+    },
   },
   switch: {
     mode: {
@@ -49,23 +49,24 @@ const config = {
       default: 'custom1',
       colorSchemes: {
         custom1: 'dark',
-        custom2: 'light'
-      }
-    }
+        custom2: 'light',
+      },
+      store: false
+    },
   },
   footer: {
     facets: {
       font: {
         strategy: 'multi',
-        default: 'sans'
-      }
-    }
-  }
+        default: 'sans',
+      },
+    },
+  },
 } as const satisfies Config<TSchema>
 type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config}>
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} modes={{ store: true, strategy: 'unique' }}>
     {children}
   </ThemingProvider>
 )

@@ -43,7 +43,7 @@ export namespace Config {
             ? Facet.System<Sc>
             : never
       export namespace Facet {
-        type Base = Partial<{ name: LinientAutoComplete<FACETS['mode']>; selector: Selector | Selector[]; store: boolean }>
+        type Base = Partial<{ selector: Selector | Selector[]; store: boolean }>
 
         export type Mono<Sc extends Schema.Island.Mode.Facet.Mono> = Base & { strategy: STRATS['mono']; default: Sc; colorScheme: Color_Scheme }
         export type Multi<Sc extends Schema.Island.Mode.Facet.Multi> = Base & { strategy: STRATS['multi']; default: Sc[number]; colorSchemes: Record<Sc[number], Color_Scheme> }
@@ -101,7 +101,7 @@ export namespace Config {
         // #region Config.Static.Island.Mode.Facet
         export type Facet = Facet.Mono | Facet.Multi | Facet.System
         export namespace Facet {
-          type Base = Partial<{ name: LinientAutoComplete<FACETS['mode']>; selector: Selector | Selector[]; store: boolean }>
+          type Base = Partial<{ selector: Selector | Selector[]; store: boolean }>
 
           export type Mono = Base & { strategy: STRATS['mono']; default: string; colorScheme: Color_Scheme }
           export type Multi = Base & { strategy: STRATS['multi']; default: string; colorSchemes: Record<string, Color_Scheme> }
