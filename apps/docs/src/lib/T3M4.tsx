@@ -50,8 +50,7 @@ const config = {
       colorSchemes: {
         custom1: 'dark',
         custom2: 'light',
-      },
-      store: false
+      }
     },
   },
   footer: {
@@ -66,7 +65,7 @@ const config = {
 export type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} modes={{ store: true, strategy: 'unique' }}>
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config}>
     {children}
   </ThemingProvider>
 )
