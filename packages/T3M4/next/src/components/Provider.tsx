@@ -11,8 +11,8 @@ interface T3M4Props<Sc extends Schema, C extends Config<Sc>> extends PropsWithCh
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptProps }: T3M4Props<Sc, C>) => {
   return (
     <Provider {...scriptProps}>
-      <Script scriptProps={scriptProps} />
       {children}
+      <Script scriptProps={scriptProps} />
     </Provider>
   )
 }

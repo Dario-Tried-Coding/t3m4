@@ -36,11 +36,13 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
   setRequestLocale(locale)
 
   return (
-    <html lang={locale} suppressHydrationWarning data-island='root'>
-      <body className={cn('flex min-h-svh flex-col antialiased', FontSans.variable, FontMono.variable)}>
+    <html lang={locale}>
+      <body  className={cn('flex min-h-svh flex-col antialiased', FontSans.variable, FontMono.variable)}>
         <Providers locale={locale}>
           <Navbar />
-          <main className='flex-1'>{children}</main>
+          <main suppressHydrationWarning data-island='root' className='flex-1'>
+            {children}
+          </main>
           <Footer />
         </Providers>
       </body>

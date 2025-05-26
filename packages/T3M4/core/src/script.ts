@@ -803,7 +803,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     }
 
     public static set = {
-      state(state: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>) {
+      state(state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) {
         const obj = utils.convert.deep.state.mapToObj(state)
         const serialized = JSON.stringify(obj)
 
@@ -816,8 +816,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
         StorageManager.set.modes(state)
       },
-      modes(state: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>) {
-        const unique = (state: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>) => {
+      modes(state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) {
+        const unique = (state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) => {
           if (!engine.modes.store) return
           if (engine.modes.strategy === 'split') return
 
@@ -838,7 +838,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           if (stateNeedsUpdate) StorageManager.set.state(state)
         }
 
-        const split = (state: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>) => {
+        const split = (state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) => {
           if (!engine.modes.store) return
           if (engine.modes.strategy === 'unique') return
 
@@ -872,7 +872,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     }
 
     private constructor() {
-      EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>))
+      EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>))
 
       window.addEventListener(
         'storage',
@@ -957,65 +957,206 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
         return islands
       },
       state: {
-        island: {
-          dirty: (island: Element) => {
-            const islandName = island.getAttribute('data-island')
-            if (!islandName) return undefined
+        computed: {
+          island: {
+            dirty: (island: string, el: Element) => {
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) return undefined
 
-            const isIsland = utils.isValid.value.island(islandName)
-            if (!isIsland) return undefined
+              const { mode, facets } = engine.facets.get(island)!
 
-            const { mode, facets } = engine.facets.get(islandName)!
+              const state = {} as Brand<State.Static.AsMap.Island, { stage: 'dirty'; completeness: 'partial' }>
+              if (facets) {
+                const facetsMap = new Map() as State.Static.AsMap.Island.Facets['facets']
+                for (const facet of facets) {
+                  const facetValue = el.getAttribute(`data-facet-${facet}`)
+                  if (!facetValue) continue
 
-            const state = {} as Brand<State.Static.AsMap.Island, { stage: 'dirty' }>
-            if (facets) {
-              const facetsMap = new Map() as State.Static.AsMap.Island.Facets['facets']
-              for (const facet of facets) {
-                const facetValue = island.getAttribute(`data-facet-${facet}`)
-                if (!facetValue) continue
-
-                facetsMap.set(facet, facetValue)
+                  facetsMap.set(facet, facetValue)
+                }
+                if (facetsMap.size !== 0) state.facets = facetsMap
               }
-              if (facetsMap.size !== 0) state.facets = facetsMap
-            }
-            if (mode) {
-              const modeValue = island.getAttribute(`data-mode`)
-              if (modeValue) state.mode = modeValue
-            }
+              if (mode) {
+                const modeValue = el.getAttribute(`data-mode`)
+                if (modeValue) state.mode = modeValue
+              }
 
-            return state
+              return state
+            },
+            sanitized: (island: string, el: Element) => {
+              const dirty = DomManager.get.state.computed.island.dirty(island, el)
+              if (!dirty) return undefined
+
+              const sanitized = utils.sanitize.state.island(island, dirty) as Brand<State.Static.AsMap.Island, { completeness: 'partial'; stage: 'sanitized' }>
+              return sanitized
+            },
+            normalized: (island: string, el: Element) => {
+              const sanitized = DomManager.get.state.computed.island.sanitized(island, el)
+              if (!sanitized) return undefined
+
+              const normalized = utils.normalize.state.island(island, sanitized)
+              return normalized
+            },
           },
-          sanitized: (island: Element) => {
-            const dirty = DomManager.get.state.island.dirty(island)
-            if (!dirty) return undefined
+          all: {
+            dirty: () => {
+              const islands = DomManager.get.islands()
+              const states = new Map() as Map<string, Map<Element, Brand<State.Static.AsMap.Island, { stage: 'dirty'; completeness: 'partial' }>>>
 
-            const islandName = island.getAttribute('data-island')!
+              for (const [island, elements] of islands) {
+                const islandStates = new Map() as NonNullable<ReturnType<(typeof states)['get']>>
+                for (const element of elements) {
+                  const islandElState = DomManager.get.state.computed.island.dirty(island, element)!
+                  if (Object.keys(islandElState).length > 0) islandStates.set(element, islandElState)
+                }
+                if (islandStates.size !== 0) states.set(island, islandStates)
+              }
 
-            const sanitized = utils.sanitize.state.island(islandName, dirty)
-            return sanitized
+              return states
+            },
+            sanitized: () => {
+              const islands = DomManager.get.islands()
+              const states = new Map() as Map<string, Map<Element, Brand<State.Static.AsMap.Island, { stage: 'sanitized'; completeness: 'partial' }>>>
+
+              for (const [island, elements] of islands) {
+                const islandStates = new Map() as NonNullable<ReturnType<(typeof states)['get']>>
+                for (const element of elements) {
+                  const islandElState = DomManager.get.state.computed.island.sanitized(island, element)!
+                  if (Object.keys(islandElState).length > 0) islandStates.set(element, islandElState)
+                }
+                if (islandStates.size !== 0) states.set(island, islandStates)
+              }
+
+              return states
+            },
+            normalized: () => {
+              const islands = DomManager.get.islands()
+              const states = new Map() as Map<string, Map<Element, Brand<State.Static.AsMap.Island, { stage: 'normalized'; completeness: 'complete' }>>>
+
+              for (const [island, elements] of islands) {
+                const islandStates = new Map() as NonNullable<ReturnType<(typeof states)['get']>>
+                for (const element of elements) {
+                  const islandElState = DomManager.get.state.computed.island.normalized(island, element)!
+                  islandStates.set(element, islandElState)
+                }
+                if (islandStates.size !== 0) states.set(island, islandStates)
+              }
+
+              return states
+            }
           },
-          normalized: (island: Element) => {
-            const sanitized = DomManager.get.state.island.sanitized(island)
-            if (!sanitized) return undefined
-
-            const islandName = island.getAttribute('data-island')!
-
-            const normalized = utils.normalize.state.island(islandName, sanitized)
-            return normalized
-          }
         },
+        forced: {
+          island: {
+            dirty: (island: string) => {
+              const findDeepest = (attr: string) => {
+                let deepest = null as Element | null
+                let maxDepth = -1
+
+                const dfs = (node: Element, depth: number) => {
+                  if (node.hasAttribute(attr)) {
+                    if (depth > maxDepth) {
+                      maxDepth = depth
+                      deepest = node
+                    }
+                  }
+
+                  for (const child of node.children) dfs(child, depth + 1)
+                }
+                
+                dfs(document.documentElement, 0)
+                return deepest
+              }
+
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) return undefined
+
+              const { mode, facets } = engine.facets.get(island)!
+
+              const state = {} as Brand<State.Static.AsMap.Island, { stage: 'dirty'; completeness: 'partial' }>
+              if (facets) {
+                const facetsMap = new Map() as State.Static.AsMap.Island.Facets['facets']
+                
+                for (const facet of facets) {
+                  const deepestEl = findDeepest(`data-force-${island}-${facet}`)
+                  if (!deepestEl) continue
+
+                  const forcedValue = deepestEl.getAttribute(`data-force-${island}-${facet}`)
+                  if (!forcedValue) continue
+
+                  facetsMap.set(facet, forcedValue)
+                }
+
+                if (facetsMap.size !== 0) state.facets = facetsMap
+              }
+              if (mode) {
+                const deepestEl = findDeepest(`data-force-${island}-mode`)
+                if (deepestEl) {
+                  const forcedValue = deepestEl.getAttribute(`data-force-${island}-mode`)
+                  if (forcedValue) state.mode = forcedValue
+                }
+              }
+
+              return state
+            },
+            sanitized: (island: string) => {
+              const dirty = DomManager.get.state.forced.island.dirty(island)
+              if (!dirty) return undefined
+
+              const sanitized = {} as Brand<State.Static.AsMap.Island, { stage: 'sanitized'; completeness: 'partial' }>
+              
+              if (dirty.facets) {
+                const sanitizedFacets = new Map() as State.Static.AsMap.Island.Facets['facets']
+                for (const [facet, value] of dirty.facets) {
+                  const isValid = utils.isValid.value.option.facet(island, facet, value)
+                  if (isValid) sanitizedFacets.set(facet, value)
+                }
+                if (sanitizedFacets.size !== 0) sanitized.facets = sanitizedFacets
+              }
+
+              if (dirty.mode) {
+                const isValid = utils.isValid.value.option.mode(island, dirty.mode)
+                if (isValid) sanitized.mode = dirty.mode
+              }
+
+              return sanitized
+            }
+          },
+          all: {
+            dirty: () => {
+              const state = new Map() as Brand<State.Static.AsMap, { stage: 'dirty'; completeness: 'partial' }>
+
+              for (const island of engine.islands) {
+                const islandState = DomManager.get.state.forced.island.dirty(island)!
+                if (Object.keys(islandState).length > 0) state.set(island, islandState)
+              }
+
+              return state
+            },
+            sanitized: () => {
+              const state = new Map() as Brand<State.Static.AsMap, { stage: 'sanitized'; completeness: 'partial' }>
+
+              for (const island of engine.islands) {
+                const islandState = DomManager.get.state.forced.island.sanitized(island)!
+                if (Object.keys(islandState).length > 0) state.set(island, islandState)
+              }
+
+              return state
+            }
+          }
+        }
       },
     }
 
     public static set = {
-      state: (state: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>) => {
+      state: (state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) => {
         const islands = DomManager.get.islands()
 
         for (const [island, elements] of islands) {
           const islandState = state.get(island)!
 
           for (const element of elements) {
-            const elementCurrState = DomManager.get.state.island.dirty(element)!
+            const elementCurrState = DomManager.get.state.computed.island.dirty(island, element)!
 
             if (islandState.facets) {
               for (const [facet, value] of islandState.facets) {
@@ -1033,7 +1174,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     }
 
     private constructor() {
-      EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>))
+      EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>))
     }
   }
 
@@ -1127,7 +1268,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
     private static smartUpdateNotify = {
       state: {
-        base(newState: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }>) {
+        base(newState: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) {
           const currState = Main.get.state.base()
           if (!currState) return console.error('[T3M4] Library not initialized.')
 
@@ -1157,8 +1298,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     }
 
     private state: {
-      base: AtLeast<State.Static.AsMap, { completeness: 'complete', stage: 'normalized' }> | undefined
-      forced: AtLeast<State.Static.AsMap, { completeness: 'partial' }> | undefined
+      base: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }> | undefined
+      forced: AtLeast<State.Static.AsMap, { completeness: 'partial'; }> | undefined
     } = {
       base: undefined,
       forced: undefined,
@@ -1174,7 +1315,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       this.state.base = baseState
       Main.notifyUpdate.state.base(baseState)
 
-      const forcedState = new Map() as Brand<State.Static.AsMap, { completeness: 'partial' }>
+      const forcedState = DomManager.get.state.forced.all.sanitized() as Brand<State.Static.AsMap, { completeness: 'partial'; stage: 'sanitized' }>
       this.state.forced = forcedState
       Main.notifyUpdate.state.forced(forcedState)
 
@@ -1248,7 +1389,4 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
   }
 
   window.T3M4 = new T3M4()
-
-  // const el = document.querySelector('[data-island]')
-  // console.log(DomManager.get.state.island.normalized(el!))
 }
