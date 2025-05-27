@@ -4,7 +4,7 @@ import { FC, PropsWithChildren } from 'react'
 
 const schema = {
   root: {
-    mode: { light: 'custom-light', dark: 'dark', system: 'system', custom: ['custom1', 'custom2'] },
+    mode: { light: 'light', dark: 'dark', system: 'system' },
     facets: {
       color: ['zinc', 'blue', 'red', 'rose', 'orange', 'green', 'yellow', 'violet'],
       radius: ['0', '0.3', '0.5', '0.75', '1'],
@@ -26,11 +26,7 @@ const config = {
     mode: {
       strategy: 'system',
       default: 'system',
-      fallback: 'custom1',
-      colorSchemes: {
-        custom1: 'dark',
-        custom2: 'light',
-      },
+      fallback: 'dark'
     },
     facets: {
       color: {

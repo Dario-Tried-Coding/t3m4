@@ -1471,7 +1471,6 @@ export const script = (args: Script_Args) => {
           }
 
           if (type === 'childList') {
-            
             const forcedState = DomManager.get.state.forced.all.sanitized()
             Main.set.state.forced(forcedState)
 

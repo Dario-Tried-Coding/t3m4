@@ -35,7 +35,7 @@ export const Navbar: FC = () => {
             <Link href={siteConfig.repo.url} target='_blank' className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))}>
               <Icons.github />
             </Link>
-            {/* <ModeSwitch /> */}
+            <ModeSwitch />
           </div>
         </div>
       </div>

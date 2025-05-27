@@ -1,9 +1,6 @@
-import { Moment } from "@/components/Moment1";
-
 export default function Page() {
-  return <div data-force-color='red'>
+  return <div data-force-root-mode="light">
     <span>docs</span>
     <br />
-    <Moment />
   </div>
 }
