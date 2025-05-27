@@ -65,7 +65,7 @@ type Engine = {
 export const script = (args: Script_Args) => {
   // #region engine
   function constructEngine({schema, constants, preset, config, modes, storageKey, nonce, disableTransitionOnChange}:Script_Args): Engine {
-    const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([k, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
+    const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
 
     const islands = new Set(Object.entries(polishedSchema).map(([k]) => k))
 
@@ -521,7 +521,7 @@ export const script = (args: Script_Args) => {
       structure: {
         state: {
           obj(obj: Record<string, unknown>): obj is Brand<State.Static, { stage: 'dirty' }> {
-            for (const [key, value] of Object.entries(obj)) {
+            for (const [, value] of Object.entries(obj)) {
               if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
 
               const { facets, mode } = value as Record<string, unknown>
@@ -1332,7 +1332,7 @@ export const script = (args: Script_Args) => {
       EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state.all(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>))
 
       const handleMutations = (mutations: MutationRecord[]) => {
-        for (const { type, oldValue, addedNodes, attributeName, target } of mutations) {
+        for (const { type, oldValue, attributeName, target } of mutations) {
           if (type === 'attributes' && target instanceof HTMLElement && attributeName) {
             if (attributeName === 'data-island') {
               const newIsland = target.getAttribute('data-island')

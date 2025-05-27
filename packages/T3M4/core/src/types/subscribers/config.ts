@@ -1,8 +1,5 @@
-import { LinientAutoComplete } from '@t3m4/utils'
 import { Color_Scheme } from '../constants/color-schemes'
-import { FACETS } from '../constants/facets'
 import { MODES } from '../constants/modes'
-import { Selector } from '../constants/selectors'
 import { STRATS } from '../constants/strats'
 import { Schema } from './schema'
 

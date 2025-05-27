@@ -1,5 +1,17 @@
 # @t3m4/next
 
+## 0.1.0
+
+### Minor Changes
+
+- First decent version.
+
+### Patch Changes
+
+- Updated dependencies
+  - @t3m4/react@0.1.0
+  - @t3m4/utils@0.0.2
+
 ## 0.0.6
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@t3m4/utils",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Typescript utilities for @T3M4 ecosystem.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

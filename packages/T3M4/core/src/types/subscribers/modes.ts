@@ -29,24 +29,3 @@ export namespace Modes {
     }
   }
 }
-
-const schema = {
-  root: {
-    mode: { light: 'custom-light', dark: 'dark', system: 'system', custom: ['custom1', 'custom2'] },
-    facets: {
-      color: ['zinc', 'blue', 'red', 'rose', 'orange', 'green', 'yellow', 'violet'],
-      radius: ['0', '0.3', '0.5', '0.75', '1'],
-    },
-  },
-  switch: {
-    mode: ['custom1', 'custom2'],
-  },
-  footer: {
-    facets: {
-      font: ['sans', 'serif', 'mono'],
-    },
-  },
-} as const satisfies Schema.Suggested
-export type TSchema = typeof schema
-
-type test = Modes<TSchema>['islands']
