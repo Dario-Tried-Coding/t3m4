@@ -5,17 +5,11 @@ import { FC, PropsWithChildren } from 'react'
 const schema = {
   root: {
     mode: { light: 'light', dark: 'dark', system: 'system' },
+  },
+  switch: {
     facets: {
       color: ['zinc', 'blue', 'red', 'rose', 'orange', 'green', 'yellow', 'violet'],
       radius: ['0', '0.3', '0.5', '0.75', '1'],
-    },
-  },
-  switch: {
-    mode: ['custom1', 'custom2'],
-  },
-  footer: {
-    facets: {
-      font: ['sans', 'serif', 'mono'],
     },
   },
 } as const satisfies Schema.Suggested
@@ -26,12 +20,14 @@ const config = {
     mode: {
       strategy: 'system',
       default: 'system',
-      fallback: 'dark'
+      fallback: 'dark',
     },
+  },
+  switch: {
     facets: {
       color: {
         strategy: 'multi',
-        default: 'violet',
+        default: 'zinc',
       },
       radius: {
         strategy: 'multi',
@@ -39,30 +35,10 @@ const config = {
       },
     },
   },
-  switch: {
-    mode: {
-      strategy: 'multi',
-      default: 'custom1',
-      colorSchemes: {
-        custom1: 'dark',
-        custom2: 'light',
-      },
-    },
-  },
-  footer: {
-    facets: {
-      font: {
-        strategy: 'multi',
-        default: 'sans',
-      },
-    },
-  },
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config
 
 const modes = {
-  store: true,
-  strategy: 'split',
   islands: {
     root: {
       selectors: ['data-attribute'],

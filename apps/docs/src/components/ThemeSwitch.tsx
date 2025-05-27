@@ -41,22 +41,17 @@ export const ThemeSwitch: FC = ({}) => {
 }
 
 const Switch: FC = () => {
-  const {
-    updateState,
-    values,
-    colorScheme,
-    state: { base, forced },
-  } = useT3M4('root')
+  const { base, values } = useT3M4('switch')
   const t = useTranslations('ThemeSwitch')
 
   return (
-    <div className='pt-4 md:pt-0'>
+    <div className='pt-4 md:pt-0' data-island='switch'>
       <div className='flex items-center justify-between'>
         <div className='space-y-1'>
           <h4 className='font-semibold leading-none tracking-tight'>{t('Demo.title')}</h4>
           <p className='text-muted-foreground text-xs'>{t('Demo.description')}</p>
         </div>
-        <Button variant='ghost' size='icon' onClick={() => updateState.base(({ facets: { color } }) => ({ facets: { color: color === 'zinc' ? 'blue' : 'zinc', radius: '0.5' }, mode: 'dark' }))}>
+        <Button variant='ghost' size='icon' onClick={() => base.updateState(() => ({ facets: { color: 'zinc', radius: '0.5' } }))}>
           <Repeat />
           <span className='sr-only'>{t('Demo.reset')}</span>
         </Button>
@@ -65,12 +60,12 @@ const Switch: FC = () => {
         <div className='space-y-1.5'>
           <Label className='text-xs'>{t('Demo.Props.Color.label')}</Label>
           <div className='grid grid-cols-3 gap-2'>
-            {options.color.map((c) => {
-              const isActive = state?.color === c
+            {values?.facets.color.map((c) => {
+              const isActive = base.state?.facets.color === c
 
               return (
-                <Button variant='outline' size='sm' key={c} onClick={() => updateState({ color: c })} className={cn('justify-start', isActive && 'border-primary border-2')}>
-                  <span data-color={c} data-color-scheme={resolvedMode} className='bg-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full'>
+                <Button variant='outline' size='sm' key={c} onClick={() => base.updateState({ facets: { color: c } })} className={cn('justify-start', isActive && 'border-primary border-2')}>
+                  <span data-facet-color={c} className='bg-primary flex h-5 w-5 shrink-0 items-center justify-center rounded-full'>
                     {isActive && <Check className='h-4 w-4 text-white' />}
                   </span>
                   {t(`Demo.Props.Color.Options.${c}`)}
@@ -82,18 +77,18 @@ const Switch: FC = () => {
         <div className='space-y-1.5'>
           <Label className='text-xs'>{t('Demo.Props.Radius.label')}</Label>
           <div className='grid grid-cols-5 gap-2'>
-            {options.radius.map((r) => {
-              const isActive = state?.radius === r
+            {values?.facets.radius.map((r) => {
+              const isActive = base.state?.facets.radius === r
 
               return (
-                <Button variant='outline' size='sm' key={r} onClick={() => updateState({ radius: r })} className={cn('', isActive && 'border-primary border-2')}>
+                <Button variant='outline' size='sm' key={r} onClick={() => base.updateState({ facets: { radius: r } })} className={cn('', isActive && 'border-primary border-2')}>
                   {r}
                 </Button>
               )
             })}
           </div>
         </div>
-        <div className='space-y-1.5'>
+        {/* <div className='space-y-1.5'>
           <Label className='text-xs'>{t('Demo.Props.Mode.label')}</Label>
           <div className='grid grid-cols-5 gap-2'>
             {options.mode
@@ -108,7 +103,7 @@ const Switch: FC = () => {
                 )
               })}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )
