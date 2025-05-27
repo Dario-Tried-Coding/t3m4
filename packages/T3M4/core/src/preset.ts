@@ -1,16 +1,10 @@
 import { LinientAutoComplete } from '@t3m4/utils'
 import { LIBRARY_NAME } from './types/constants/miscellaneous'
-import { Selector } from './types/constants/selectors'
-import { Store_Strat } from './types/constants/strats'
+import { Modes } from './types/subscribers/modes'
 
 export type Preset = {
   storageKey: LinientAutoComplete<LIBRARY_NAME>
-  modes: {
-    strategy: Store_Strat
-    storageKey: LinientAutoComplete<'modes' | 'themes'>
-    store: boolean
-    selectors: Selector[]
-  }
+  modes: Omit<Modes.Static, 'islands'>
   nonce: string
   disableTransitionOnChange: boolean
 }
@@ -21,7 +15,6 @@ export const PRESET = {
     store: false,
     storageKey: 'modes',
     strategy: 'unique',
-    selectors: [],
   },
   nonce: '',
   disableTransitionOnChange: false,

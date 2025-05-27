@@ -1,4 +1,5 @@
 import { T3M4 as T_T3M4 } from './types'
+import { Facet } from './types/constants/facets'
 import { Selector } from './types/constants/selectors'
 import { Store_Strat, Strat } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
@@ -40,6 +41,10 @@ type Engine = {
   fallbacks: Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>
   nonce: string
   disableTransitionOnChange: boolean
+  dataAttributes: {
+    force: Set<string>
+    computed: Set<string>
+  }
   modes: {
     store: boolean
     strategy: Store_Strat
@@ -57,9 +62,9 @@ type Engine = {
   }
 }
 
-export const script = ({ schema, config, constants, preset, nonce, disableTransitionOnChange, storageKey, modes }: Script_Args) => {
+export const script = (args: Script_Args) => {
   // #region engine
-  function constructEngine({ storageKey, modes, preset }: { storageKey: Script_Args['storageKey']; modes: Script_Args['modes']; preset: Script_Args['preset'] }): Engine {
+  function constructEngine({schema, constants, preset, config, modes, storageKey, nonce, disableTransitionOnChange}:Script_Args): Engine {
     const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([k, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
 
     const islands = new Set(Object.entries(polishedSchema).map(([k]) => k))
@@ -109,30 +114,47 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       strategy: modes?.strategy ?? preset.modes.strategy,
       storageKey: modes?.storageKey ?? preset.modes.storageKey,
       map: new Map(
-        Object.entries(config)
-          .filter(([i, { mode }]) => !!mode)
-          .map(([i, { mode }]) => {
+        Object.entries(polishedSchema ?? {})
+          .filter(([i]) => !!config[i]?.mode)
+          .map(([i]) => {
+            const stratObj = config[i]!.mode!
+            const modeSettings = modes?.islands?.[i]
+
             const obj = {
-              strategy: mode!.strategy,
-              store: mode!.store ?? true,
-              selectors: (typeof mode?.selector === 'string' ? [mode.selector] : mode!.selector) ?? preset.modes.selectors,
+              strategy: stratObj.strategy,
+              store: modeSettings?.store ?? true,
+              selectors: modeSettings?.selectors ?? [],
               colorSchemes:
-                mode!.strategy === constants.strats.mono
-                  ? new Map([[mode!.default, mode!.colorScheme]])
-                  : mode!.strategy === constants.strats.multi
-                    ? new Map(Object.entries(mode!.colorSchemes))
+                stratObj.strategy === constants.strats.mono
+                  ? new Map([[stratObj.default, stratObj.colorScheme]])
+                  : stratObj.strategy === constants.strats.multi
+                    ? new Map(Object.entries(stratObj.colorSchemes))
                     : new Map([
                         [(polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).light, constants.colorSchemes.light],
                         [(polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).dark, constants.colorSchemes.dark],
-                        ...Object.entries(mode!.colorSchemes ?? {}),
+                        ...Object.entries(stratObj.colorSchemes ?? {}),
                       ]),
               system:
-                mode?.strategy === constants.strats.system && (polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System)!.system ? { mode: (polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).system!, fallback: mode.fallback! } : undefined,
+                stratObj.strategy === constants.strats.system && (polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System)!.system
+                  ? { mode: (polishedSchema[i]!.mode as Schema.Island.Mode.Facet.System).system!, fallback: stratObj.fallback! }
+                  : undefined,
             }
             return [i, obj]
           })
       ),
     }
+
+    const forceAttributes = new Set<string>()
+    facets.forEach(({ facets, mode }, island) => {
+      if (facets) facets.forEach((v, f) => forceAttributes.add(`data-force-${island}-facet-${f}`))
+      if (mode) forceAttributes.add(`data-force-${island}-mode`)
+    })
+
+    const attributes = new Set<string>()
+    facets.forEach(({ facets, mode }) => {
+      if (facets) facets.forEach((v, f) => attributes.add(`data-facet-${f}`))
+      if (mode) attributes.add('data-mode')
+    })
 
     return {
       storageKeys: {
@@ -146,16 +168,20 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       nonce: nonce ?? preset.nonce,
       disableTransitionOnChange: disableTransitionOnChange ?? preset.disableTransitionOnChange,
       modes: modesHandling,
+      dataAttributes: {
+        force: forceAttributes,
+        computed: attributes,
+      },
     }
   }
-  const engine = constructEngine({ preset, modes, storageKey })
+  let engine = constructEngine(args)
 
   // #region utils
   const utils = {
     miscellaneous: {
       getSystemPref() {
         const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
-        const systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? constants.modes.dark : constants.modes.light) : undefined
+        const systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? args.constants.modes.dark : args.constants.modes.light) : undefined
         return systemPref
       },
       safeParse(json: string | null) {
@@ -165,6 +191,17 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           return JSON.parse(json) as unknown
         } catch (e) {
           return null
+        }
+      },
+      disableTransitions() {
+        const css = document.createElement('style')
+        if (engine.nonce) css.setAttribute('nonce', engine.nonce)
+        css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
+        document.head.appendChild(css)
+
+        return () => {
+          ;(() => window.getComputedStyle(document.body))()
+          setTimeout(() => document.head.removeChild(css), 1)
         }
       },
     },
@@ -294,6 +331,37 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
           return true
         },
+        generic: {
+          objects<T>(obj1: T, obj2: T): boolean {
+            if (obj1 === obj2) return true
+
+            if (obj1 instanceof Map && obj2 instanceof Map) return this.maps(obj1, obj2)
+
+            if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) return false
+
+            const keys1 = Object.keys(obj1) as (keyof T)[]
+            const keys2 = Object.keys(obj2) as (keyof T)[]
+
+            if (keys1.length !== keys2.length) return false
+
+            for (const key of keys1) {
+              if (!keys2.includes(key) || !this.objects(obj1[key], obj2[key])) return false
+            }
+
+            return true
+          },
+          maps<K, V>(map1: Map<K, V> | null | undefined, map2: Map<K, V> | null | undefined): boolean {
+            if (!map1 || !map2) return false
+            if (map1 === map2) return true
+            if (map1.size !== map2.size) return false
+
+            for (const [key, value] of map1) {
+              if (!map2.has(key) || !this.objects(value, map2.get(key))) return false
+            }
+
+            return true
+          },
+        },
       },
     },
     convert: {
@@ -379,7 +447,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
         for (const [island, { mode }] of state) {
           if (!mode) continue
-          if (!engine.modes.map.get(island)?.store) continue
+          if (engine.modes.map.get(island)?.store === false) continue
           modes.set(island, mode)
         }
 
@@ -411,7 +479,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       colorScheme(island: string, mode: string) {
         if (!engine.modes.map.has(island)) return
 
-        const isSystemStrat = engine.modes.map.get(island)!.strategy === constants.strats.system
+        const isSystemStrat = engine.modes.map.get(island)!.strategy === args.constants.strats.system
         const isSystemMode = engine.modes.map.get(island)!.system?.mode === mode
         const isSystem = isSystemStrat && isSystemMode
         const fallbackMode = engine.modes.map.get(island)!.system?.fallback
@@ -422,17 +490,30 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
     },
     isValid: {
       value: {
-        island(value: string) {
+        island(value: string | undefined | null): value is string {
+          if (!value) return false
           return engine.islands.has(value)
         },
-        facet(island: string, value: string) {
+        facet(island: string, value: string | undefined | null): value is string {
+          if (!value) return false
           return engine.values.get(island)?.facets?.has(value) ?? false
         },
+        mode(island: string, value: string | undefined | null): value is string {
+          if (!value) return false
+
+          const isMode = value === 'mode'
+          const islandHasMode = engine.values.get(island)?.mode ?? false
+
+          if (isMode && islandHasMode) return true
+          return false
+        },
         option: {
-          facet(island: string, facet: string, value: string) {
+          facet(island: string, facet: string, value: string | undefined | null): value is string {
+            if (!value) return false
             return engine.values.get(island)?.facets?.get(facet)?.has(value) ?? false
           },
-          mode(island: string, value: string) {
+          mode(island: string, value: string | undefined | null): value is string {
+            if (!value) return false
             return engine.values.get(island)?.mode?.has(value) ?? false
           },
         },
@@ -716,8 +797,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
   // #region STORAGE MANAGER
   class StorageManager {
-    private static instance: StorageManager
-    private static abortController = new AbortController()
+    private static instance: StorageManager | undefined
+    private static abortController: AbortController | undefined
     private static isInternalChange = false
 
     public static init() {
@@ -871,9 +952,26 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       },
     }
 
+    public static terminate() {
+      StorageManager.abortController?.abort()
+
+      localStorage.removeItem(engine.storageKeys.state)
+      if (engine.modes.store) {
+        if (engine.modes.strategy === 'unique') localStorage.removeItem(`${engine.storageKeys.modes}`)
+        else if (engine.modes.strategy === 'split') {
+          for (const island of engine.islands) {
+            localStorage.removeItem(`${engine.storageKeys.modes}:${island}`)
+          }
+        }
+      }
+
+      StorageManager.instance = undefined
+    }
+
     private constructor() {
       EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>))
 
+      StorageManager.abortController = new AbortController()
       window.addEventListener(
         'storage',
         ({ key, oldValue, newValue }) => {
@@ -940,7 +1038,8 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
   // #region DOM MANAGER
   class DomManager {
-    private static instance: DomManager
+    private static instance: DomManager | undefined
+    private static observer: MutationObserver | null = null
 
     public static init() {
       if (!DomManager.instance) DomManager.instance = new DomManager()
@@ -983,18 +1082,18 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
               return state
             },
-            sanitized: (island: string, el: Element) => {
+            sanitized: (island: string, el: Element, backup?: AtLeast<State.Static.AsMap.Island, { stage: 'dirty' }>) => {
               const dirty = DomManager.get.state.computed.island.dirty(island, el)
               if (!dirty) return undefined
 
-              const sanitized = utils.sanitize.state.island(island, dirty) as Brand<State.Static.AsMap.Island, { completeness: 'partial'; stage: 'sanitized' }>
+              const sanitized = utils.sanitize.state.island(island, dirty, backup) as Brand<State.Static.AsMap.Island, { completeness: 'partial'; stage: 'sanitized' }>
               return sanitized
             },
-            normalized: (island: string, el: Element) => {
-              const sanitized = DomManager.get.state.computed.island.sanitized(island, el)
+            normalized: (island: string, el: Element, backup?: AtLeast<State.Static.AsMap.Island, { stage: 'dirty' }>) => {
+              const sanitized = DomManager.get.state.computed.island.sanitized(island, el, backup)
               if (!sanitized) return undefined
 
-              const normalized = utils.normalize.state.island(island, sanitized)
+              const normalized = utils.normalize.state.island(island, sanitized, backup)
               return normalized
             },
           },
@@ -1043,7 +1142,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
               }
 
               return states
-            }
+            },
           },
         },
         forced: {
@@ -1063,7 +1162,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
 
                   for (const child of node.children) dfs(child, depth + 1)
                 }
-                
+
                 dfs(document.documentElement, 0)
                 return deepest
               }
@@ -1076,12 +1175,12 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
               const state = {} as Brand<State.Static.AsMap.Island, { stage: 'dirty'; completeness: 'partial' }>
               if (facets) {
                 const facetsMap = new Map() as State.Static.AsMap.Island.Facets['facets']
-                
+
                 for (const facet of facets) {
-                  const deepestEl = findDeepest(`data-force-${island}-${facet}`)
+                  const deepestEl = findDeepest(`data-force-${island}-facet-${facet}`)
                   if (!deepestEl) continue
 
-                  const forcedValue = deepestEl.getAttribute(`data-force-${island}-${facet}`)
+                  const forcedValue = deepestEl.getAttribute(`data-force-${island}-facet-${facet}`)
                   if (!forcedValue) continue
 
                   facetsMap.set(facet, forcedValue)
@@ -1104,7 +1203,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
               if (!dirty) return undefined
 
               const sanitized = {} as Brand<State.Static.AsMap.Island, { stage: 'sanitized'; completeness: 'partial' }>
-              
+
               if (dirty.facets) {
                 const sanitizedFacets = new Map() as State.Static.AsMap.Island.Facets['facets']
                 for (const [facet, value] of dirty.facets) {
@@ -1120,7 +1219,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
               }
 
               return sanitized
-            }
+            },
           },
           all: {
             dirty: () => {
@@ -1142,39 +1241,254 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
               }
 
               return state
-            }
-          }
-        }
+            },
+          },
+        },
       },
     }
 
     public static set = {
-      state: (state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) => {
-        const islands = DomManager.get.islands()
-
-        for (const [island, elements] of islands) {
-          const islandState = state.get(island)!
-
+      state: {
+        island: (island: string, elements: Set<Element>, state: AtLeast<State.Static.AsMap.Island, { completeness: 'complete'; stage: 'normalized' }>) => {
           for (const element of elements) {
             const elementCurrState = DomManager.get.state.computed.island.dirty(island, element)!
 
-            if (islandState.facets) {
-              for (const [facet, value] of islandState.facets) {
+            if (state.facets) {
+              for (const [facet, value] of state.facets) {
                 const needsUpdate = elementCurrState.facets?.get(facet) !== value
                 if (needsUpdate) element.setAttribute(`data-facet-${facet}`, value)
               }
             }
-            if (islandState.mode) {
-              const needsUpdate = elementCurrState.mode !== islandState.mode
-              if (needsUpdate) element.setAttribute(`data-mode`, islandState.mode)
+            if (state.mode) {
+              const needsUpdate = elementCurrState.mode !== state.mode
+              if (needsUpdate) element.setAttribute(`data-mode`, state.mode)
+
+              if (!(element instanceof HTMLElement)) continue
+
+              const stateCS = utils.resolve.colorScheme(island, state.mode)!
+
+              const currCS = element.style.colorScheme
+              const needsCsUpdate = currCS !== stateCS
+              if (needsCsUpdate) element.style.colorScheme = stateCS
+
+              if (engine.modes.map.get(island)?.selectors.includes('data-attribute')) {
+                const currValue = element.getAttribute('data-color-scheme')
+                const needsUpdate = currValue !== stateCS
+                if (needsUpdate) element.setAttribute('data-color-scheme', stateCS)
+              }
+
+              if (engine.modes.map.get(island)?.selectors.includes('class')) {
+                const currValue = element.classList.contains(args.constants.modes.light) ? args.constants.modes.light : element.classList.contains(args.constants.modes.dark) ? args.constants.modes.dark : undefined
+                const needsUpdate = currValue !== stateCS
+                if (needsUpdate) {
+                  const other = stateCS === args.constants.modes.light ? args.constants.modes.dark : args.constants.modes.light
+                  element.classList.replace(other, stateCS) || element.classList.add(stateCS)
+                }
+              }
             }
           }
-        }
+        },
+        all: (state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) => {
+          const enableBackTransitions = engine.disableTransitionOnChange ? utils.miscellaneous.disableTransitions() : undefined
+          
+          const islands = DomManager.get.islands()
+          for (const [island, elements] of islands) {
+            const islandState = state.get(island)!
+            DomManager.set.state.island(island, new Set(elements), islandState as Brand<State.Static.AsMap.Island, { completeness: 'complete'; stage: 'normalized' }>)
+          }
+
+          enableBackTransitions?.()
+        },
       },
     }
 
+    public static terminate() {
+      DomManager.observer?.disconnect()
+
+      const islands = DomManager.get.islands()
+      for (const [island, elements] of islands) {
+        for (const element of elements) {
+          const { mode, facets } = engine.facets.get(island)!
+          if (facets) {
+            for (const facet of facets) {
+              element.removeAttribute(`data-facet-${facet}`)
+            }
+          }
+          if (mode) {
+            element.removeAttribute(`data-mode`)
+            if (element instanceof HTMLElement) {
+              element.style.colorScheme = ''
+              element.removeAttribute('data-color-scheme')
+              element.classList.remove(args.constants.modes.light, args.constants.modes.dark)
+            }
+          }
+        }
+      }
+
+      DomManager.instance = undefined
+    }
+
     private constructor() {
-      EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>))
+      EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state.all(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>))
+
+      const handleMutations = (mutations: MutationRecord[]) => {
+        for (const { type, oldValue, addedNodes, attributeName, target } of mutations) {
+          if (type === 'attributes' && target instanceof HTMLElement && attributeName) {
+            if (attributeName === 'data-island') {
+              const newIsland = target.getAttribute('data-island')
+              const isNewIsland = utils.isValid.value.island(newIsland)
+
+              if (!isNewIsland) {
+                const isOldIsland = utils.isValid.value.island(oldValue)
+                if (isOldIsland) target.setAttribute('data-island', oldValue!)
+              }
+
+              if (isNewIsland) {
+                const compState = Main.get.state.computed()
+                const currState = new Map([[newIsland, DomManager.get.state.computed.island.normalized(newIsland!, target)!]])
+
+                const newState = utils.merge.deep.state.maps(currState, compState)
+
+                DomManager.set.state.island(newIsland!, new Set([target]), newState.get(newIsland) as Brand<State.Static.AsMap.Island, { completeness: 'complete'; stage: 'normalized' }>)
+              }
+            }
+
+            if (engine.dataAttributes.force.has(attributeName)) {
+              const parts = attributeName.split('-')
+
+              const island = parts[2]!
+              const facetType = parts[3]! as Facet
+              const facet = parts[4]
+
+              const newOption = target.getAttribute(attributeName)
+
+              if (facetType === 'facet') {
+                const isNewOption = newOption ? utils.isValid.value.option.facet(island, facet!, newOption) : false
+
+                if (!isNewOption) {
+                  const isOldOption = oldValue ? utils.isValid.value.option.facet(island, facet!, oldValue) : false
+                  if (isOldOption) target.setAttribute(attributeName, oldValue!)
+                }
+              }
+
+              if (facetType === 'mode') {
+                const isNewOption = newOption ? utils.isValid.value.option.mode(island, newOption) : false
+
+                if (!isNewOption) {
+                  const isOldOption = oldValue ? utils.isValid.value.option.mode(island, oldValue) : false
+                  if (isOldOption) target.setAttribute(attributeName, oldValue!)
+                }
+              }
+
+              const newForcedState = DomManager.get.state.forced.all.sanitized()
+              Main.set.state.forced(newForcedState)
+            }
+
+            if (engine.dataAttributes.computed.has(attributeName)) {
+              const island = target.getAttribute('data-island')
+              const isIsland = utils.isValid.value.island(island)
+
+              if (isIsland) {
+                const parts = attributeName.split('-')
+                const facetType = parts[1] as Facet
+                const facet = parts[2]
+
+                const newOption = target.getAttribute(attributeName)
+
+                if (facetType === 'facet') {
+                  const isNewOption = utils.isValid.value.option.facet(island, facet!, newOption)
+
+                  const currCompValue = Main.get.state.computed()?.get(island)?.facets?.get(facet!)
+                  const isNewCurrCompValue = isNewOption && currCompValue === newOption
+
+                  if (!isNewCurrCompValue) {
+                    const isOldOption = utils.isValid.value.option.facet(island, facet!, oldValue)
+                    const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                    if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue)
+                  }
+                }
+
+                if (facetType === 'mode') {
+                  const isNewOption = utils.isValid.value.option.mode(island, newOption)
+
+                  const currCompValue = Main.get.state.computed()?.get(island)?.mode
+                  const isNewCurrCompValue = isNewOption && currCompValue === newOption
+
+                  if (!isNewCurrCompValue) {
+                    const isOldOption = utils.isValid.value.option.mode(island, oldValue)
+                    const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                    if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue)
+                  }
+                }
+              }
+            }
+
+            if (attributeName === 'style') {
+              const island = target.getAttribute('data-island')
+              const isIsland = utils.isValid.value.island(island)
+
+              if (isIsland) {
+                const mustSetSelector = engine.modes.map.has(island)
+                const stateColorScheme = Main.get.colorSchemes.computed()?.get(island)
+
+                const newColorScheme = target.style.colorScheme
+                
+                const needsUpdate = mustSetSelector && stateColorScheme && newColorScheme !== stateColorScheme
+                if (needsUpdate) target.style.colorScheme = stateColorScheme
+              }
+            }
+
+            if (attributeName === 'data-color-scheme') {
+              const island = target.getAttribute('data-island')
+              const isIsland = utils.isValid.value.island(island)
+
+              if (isIsland) {
+                const mustSetSelector = engine.modes.map.get(island)?.selectors.includes('data-attribute')
+                const newColorScheme = target.getAttribute('data-color-scheme')
+                const stateColorScheme = Main.get.colorSchemes.computed()?.get(island)
+
+                const needsUpdate = mustSetSelector && stateColorScheme && newColorScheme !== stateColorScheme!
+                if (needsUpdate) target.setAttribute('data-color-scheme', stateColorScheme)
+              }
+            }
+
+            if (attributeName === 'class') {
+              const island = target.getAttribute('data-island')
+              const isIsland = utils.isValid.value.island(island)
+
+              if (isIsland) {
+                const mustSetSelector = engine.modes.map.get(island)?.selectors.includes('class')
+                const stateColorScheme = Main.get.colorSchemes.computed()?.get(island)
+                const newValue = target.classList.contains(args.constants.modes.light) ? args.constants.modes.light : target.classList.contains(args.constants.modes.dark) ? args.constants.modes.dark : undefined
+
+                const needsUpdate = mustSetSelector && stateColorScheme && stateColorScheme! !== newValue
+                if (needsUpdate) {
+                  const other = stateColorScheme ?? args.constants.modes.light
+                  target.classList.replace(other, stateColorScheme) || target.classList.add(stateColorScheme)
+                }
+              }
+            }
+          }
+
+          if (type === 'childList') {
+            
+            const forcedState = DomManager.get.state.forced.all.sanitized()
+            Main.set.state.forced(forcedState)
+
+            const currCompState = Main.get.state.computed()!
+            DomManager.set.state.all(currCompState)
+          }
+        }
+      }
+
+      DomManager.observer = new MutationObserver(handleMutations)
+      DomManager.observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-island', ...Array.from(engine.dataAttributes.force), ...Array.from(engine.dataAttributes.computed), 'data-color-scheme', 'class', 'style'],
+        attributeOldValue: true,
+        subtree: true,
+        childList: true,
+      })
     }
   }
 
@@ -1237,11 +1551,7 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
           Main.smartUpdateNotify.state.base(mergedState)
         },
         forced: (state: AtLeast<State.Static.AsMap, { completeness: 'partial' }>) => {
-          const currState = Main.get.state.forced()
-          if (!currState) return console.error('[T3M4]: Library not initialized')
-
-          const mergedState = utils.merge.deep.state.maps(currState, state) as typeof currState
-          Main.smartUpdateNotify.state.forced(mergedState)
+          Main.smartUpdateNotify.state.forced(state)
         },
       },
     }
@@ -1297,9 +1607,13 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       },
     }
 
+    public static reboot() {
+      Main.instance = new Main()
+    }
+
     private state: {
       base: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }> | undefined
-      forced: AtLeast<State.Static.AsMap, { completeness: 'partial'; }> | undefined
+      forced: AtLeast<State.Static.AsMap, { completeness: 'partial' }> | undefined
     } = {
       base: undefined,
       forced: undefined,
@@ -1381,7 +1695,19 @@ export const script = ({ schema, config, constants, preset, nonce, disableTransi
       EventManager.on(e, id, cb)
     }
 
-    public reboot(args: Script_Args) {}
+    public reboot(newArgs: Script_Args) {
+      const needsReboot = !utils.equal.deep.generic.objects(args, newArgs)
+      if (!needsReboot) return
+
+      EventManager.emit('Reset')
+
+      StorageManager.terminate()
+      DomManager.terminate()
+
+      engine = constructEngine(newArgs)
+
+      Main.reboot()
+    }
 
     public constructor() {
       Main.init()

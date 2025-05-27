@@ -7,7 +7,7 @@ export const Footer: FC = () => {
   const t = useTranslations('Footer')
 
   return (
-    <footer className='border-t border-dashed py-10 md:p-4'>
+    <footer suppressHydrationWarning data-island="footer" className='border-t border-dashed py-10 md:p-4'>
       <div className='container'>
         <span className='text-muted-foreground text-balance text-center text-sm leading-loose md:text-left'>
           {t.rich('tagline', {

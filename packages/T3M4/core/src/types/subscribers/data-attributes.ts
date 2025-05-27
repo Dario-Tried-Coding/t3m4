@@ -18,18 +18,20 @@ export namespace Data_Attributes {
     >
   >
 
-  export type Force<Sc extends Schema> = Partial<Flatten<{
-    [I in keyof State<Sc>]: (State<Sc>[I] extends State.Static.Island.Facets
-      ? {
-          facets: {
-            [F in keyof State<Sc>[I]['facets'] as `data-force-${I}-${Extract<F, string>}`]: State<Sc>[I]['facets'][F]
-          }
-        }['facets']
-      : {}) &
-      (State<Sc>[I] extends State.Static.Island.Mode
+  export type Force<Sc extends Schema> = Partial<
+    Flatten<{
+      [I in keyof State<Sc>]: (State<Sc>[I] extends State.Static.Island.Facets
         ? {
-            [A in `data-force-${I}-mode`]: State<Sc>[I]['mode']
-          }
-        : {})
-  }>>
+            facets: {
+              [F in keyof State<Sc>[I]['facets'] as `data-force-${I}-facet-${Extract<F, string>}`]: State<Sc>[I]['facets'][F]
+            }
+          }['facets']
+        : {}) &
+        (State<Sc>[I] extends State.Static.Island.Mode
+          ? {
+              [A in `data-force-${I}-mode`]: State<Sc>[I]['mode']
+            }
+          : {})
+    }>
+  >
 }

@@ -2,13 +2,17 @@
 
 import { constructScriptArgs } from '@t3m4/core'
 import { ScriptProps } from '@t3m4/core/types'
-import { Config, Schema } from '@t3m4/core/types/subscribers'
+import { Config, Schema, Modes } from '@t3m4/core/types/subscribers'
 import merge from 'lodash.merge'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { T3M4Context } from './context'
 
-interface T3M4Props extends PropsWithChildren, ScriptProps {}
-export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4Props) => {
+export interface T3M4ProviderProps<Sc extends Schema, C extends Config<Sc>> extends PropsWithChildren, ScriptProps {
+  schema: Sc
+  config: C
+  modes?: Modes<Sc>
+}
+export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptProps }: T3M4ProviderProps<Sc, C>) => {
   const [state, setState] = useState<T3M4Context<Sc, C>['state']>({ base: undefined, forced: undefined, computed: undefined })
   const [colorSchemes, setColorSchemes] = useState<T3M4Context<Sc, C>['colorSchemes']>({ base: undefined, forced: undefined, computed: undefined })
   const values = useRef({} as T3M4Context<Sc, C>['values'])
@@ -41,7 +45,7 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
     })
   }, [])
 
-  useEffect(() => window.T3M4.reboot(constructScriptArgs(scriptArgs)), [JSON.stringify(scriptArgs)])
+  useEffect(() => window.T3M4.reboot(constructScriptArgs(scriptProps)), [JSON.stringify(scriptProps)])
 
   const updateState: T3M4Context<Sc, C>['updateState'] = {
     base: (island, stateUpdate) => {

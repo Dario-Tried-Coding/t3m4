@@ -1,5 +1,5 @@
 import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/next'
-import { Config, Schema } from '@t3m4/next/types'
+import { Config, Schema, Modes } from '@t3m4/next/types'
 import { FC, PropsWithChildren } from 'react'
 
 const schema = {
@@ -50,7 +50,7 @@ const config = {
       colorSchemes: {
         custom1: 'dark',
         custom2: 'light',
-      }
+      },
     },
   },
   footer: {
@@ -64,8 +64,18 @@ const config = {
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config
 
+const modes = {
+  store: true,
+  strategy: 'split',
+  islands: {
+    root: {
+      selectors: ['data-attribute'],
+    },
+  },
+} as const satisfies Modes<TSchema>
+
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config}>
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} modes={modes}>
     {children}
   </ThemingProvider>
 )
