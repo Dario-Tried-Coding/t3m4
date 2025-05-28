@@ -1,21 +1,13 @@
+import { Navbar } from '@/components/Navbar'
 import { Providers } from '@/components/Providers'
+import { FontMono, FontSans } from '@/fonts'
 import { routing } from '@/lib/next-intl/routing'
+import { cn } from '@/lib/utils'
 import '@/styles/globals.css'
 import { hasLocale, Locale } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import { ReactNode } from 'react'
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
 
 interface Props {
   children: ReactNode
@@ -43,9 +35,12 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
   setRequestLocale(locale)
 
   return (
-    <html lang={locale}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Providers>{children}</Providers>
+    <html suppressHydrationWarning lang={locale} data-island='root'>
+      <body className={cn('flex min-h-svh flex-col antialiased', FontSans.variable, FontMono.variable)}>
+        <Providers>
+          <Navbar />
+          <main className='flex-1'>{children}</main>
+        </Providers>
       </body>
     </html>
   )

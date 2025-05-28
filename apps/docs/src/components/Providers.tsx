@@ -1,8 +1,13 @@
+import { T3M4Provider } from '@/lib/T3M4'
 import { NextIntlClientProvider } from 'next-intl'
 import { PropsWithChildren } from 'react'
 
 interface Props extends PropsWithChildren {}
 
 export function Providers({ children }: Props) {
-  return <NextIntlClientProvider>{children}</NextIntlClientProvider>
+  return (
+    <NextIntlClientProvider>
+      <T3M4Provider>{children}</T3M4Provider>
+    </NextIntlClientProvider>
+  )
 }

@@ -7,5 +7,5 @@ interface Props {
 export default async function Home({params}:Props) {
   const { locale } = await params
 
-  return <div>page {locale}</div>
+  return <div className="">page {locale}</div>
 }
