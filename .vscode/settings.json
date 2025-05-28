@@ -1,9 +1,4 @@
 {
-  "eslint.workingDirectories": [
-    {
-      "mode": "auto"
-    }
-  ],
   "material-icon-theme.folders.associations": {
     "react": "React-components",
     "tailwind": "../../../../icons/tailwind-folder",
