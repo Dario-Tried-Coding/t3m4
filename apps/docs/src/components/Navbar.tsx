@@ -7,6 +7,7 @@ import { ModeSwitch } from './ModeSwitch'
 import { navLinks } from '@/config/navigation.config'
 import { siteConfig } from '@/config/site.config'
 import { buttonVariants } from '@/components/ui/Button'
+import { NextThemesSwitch } from './NextThemesSwitch'
 
 export const Navbar: FC = () => {
   const t = useTranslations('Navbar.Links')
@@ -35,6 +36,7 @@ export const Navbar: FC = () => {
             <Link href={siteConfig.repo.url} target='_blank' className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))}>
               <Icons.github />
             </Link>
+            <NextThemesSwitch />
             <ModeSwitch />
           </div>
         </div>

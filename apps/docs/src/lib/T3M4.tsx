@@ -21,6 +21,8 @@ const config = {
 export type TConfig = typeof config
 
 const modes = {
+  store: true,
+  strategy: 'split',
   islands: {
     root: {
       selectors: ['data-attribute', 'class'],
