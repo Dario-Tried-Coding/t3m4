@@ -1,5 +1,6 @@
 import { Color_Scheme } from '../constants/color-schemes'
 import { MODES } from '../constants/modes'
+import { Selector } from '../constants/selectors'
 import { STRATS } from '../constants/strats'
 import { Schema } from './schema'
 
@@ -40,8 +41,10 @@ export namespace Config {
             ? Facet.System<Sc>
             : never
       export namespace Facet {
-        export type Mono<Sc extends Schema.Island.Mode.Facet.Mono> = { strategy: STRATS['mono']; default: Sc; colorScheme: Color_Scheme }
-        export type Multi<Sc extends Schema.Island.Mode.Facet.Multi> = { strategy: STRATS['multi']; default: Sc[number]; colorSchemes: Record<Sc[number], Color_Scheme> }
+        type Base = { store?: boolean; selectors?: Selector[]}
+
+        export type Mono<Sc extends Schema.Island.Mode.Facet.Mono> = Base & { strategy: STRATS['mono']; default: Sc; colorScheme: Color_Scheme }
+        export type Multi<Sc extends Schema.Island.Mode.Facet.Multi> = Base & { strategy: STRATS['multi']; default: Sc[number]; colorSchemes: Record<Sc[number], Color_Scheme> }
 
         type Flatten<Sc extends Schema.Island.Mode.Facet.System> =
           | Sc['light']
@@ -53,7 +56,7 @@ export namespace Config {
         }
         type Fallback<Sc extends Schema.Island.Mode.Facet.System> = Sc extends Required<Pick<Schema.Island.Mode.Facet.System, 'system'>> ? { fallback: Flatten<Omit<Sc, MODES['system']>> } : {}
         type Color_Schemes<Sc extends Schema.Island.Mode.Facet.System> = Sc extends Required<Pick<Schema.Island.Mode.Facet.System, 'custom'>> ? { colorSchemes: Record<Sc['custom'][number], Color_Scheme> } : {}
-        export type System<Sc extends Schema.Island.Mode.Facet.System> = { strategy: STRATS['system'] } & Default<Sc> & Fallback<Sc> & Color_Schemes<Sc>
+        export type System<Sc extends Schema.Island.Mode.Facet.System> = Base & { strategy: STRATS['system'] } & Default<Sc> & Fallback<Sc> & Color_Schemes<Sc>
       }
     }
   }
@@ -96,9 +99,11 @@ export namespace Config {
         // #region Config.Static.Island.Mode.Facet
         export type Facet = Facet.Mono | Facet.Multi | Facet.System
         export namespace Facet {
-          export type Mono = { strategy: STRATS['mono']; default: string; colorScheme: Color_Scheme }
-          export type Multi = { strategy: STRATS['multi']; default: string; colorSchemes: Record<string, Color_Scheme> }
-          export type System = { strategy: STRATS['system']; default: string; fallback?: string; colorSchemes?: Record<string, Color_Scheme> }
+          type Base = { store?: boolean; selectors?: Selector[] }
+
+          export type Mono = Base & { strategy: STRATS['mono']; default: string; colorScheme: Color_Scheme }
+          export type Multi = Base & { strategy: STRATS['multi']; default: string; colorSchemes: Record<string, Color_Scheme> }
+          export type System = Base & { strategy: STRATS['system']; default: string; fallback?: string; colorSchemes?: Record<string, Color_Scheme> }
         }
       }
     }

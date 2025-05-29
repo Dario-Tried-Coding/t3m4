@@ -43,9 +43,9 @@
       "default": "./dist/types/subscribers/index.js"
     },
     "./types/constants": {
-      "import": "./dist/types/constants/index.mjs",
-      "types": "./dist/types/constants/index.d.ts",
-      "default": "./dist/types/constants/index.js"
+      "import": "./dist/types/constants/exports.mjs",
+      "types": "./dist/types/constants/exports.d.ts",
+      "default": "./dist/types/constants/exports.js"
     }
   },
   "dependencies": {

@@ -1,5 +1,5 @@
-export type FACETS = {
+export type FACET_TYPES = {
   generic: 'facet'
   mode: 'mode'
 }
-export type Facet = FACETS[keyof FACETS]
+export type Facet_Type = FACET_TYPES[keyof FACET_TYPES]

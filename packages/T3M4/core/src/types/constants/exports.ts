@@ -1,0 +1,1 @@
+export type { Color_Scheme as ColorScheme } from './color-schemes'
