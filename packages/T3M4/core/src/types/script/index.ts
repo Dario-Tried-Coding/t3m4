@@ -16,7 +16,7 @@ export interface Script_Args<Sc extends Schema.Suggested, C extends Config<Sc>> 
       strategy?: Store_Strat
     }
     dom?: {
-      selectors?: Selector[]
+      selector?: Selector | Selector[]
     }
   }
   forcedValues?: boolean
@@ -36,7 +36,7 @@ export namespace Script_Args {
         strategy?: Store_Strat
       }
       dom?: {
-        selectors?: Selector[]
+        selector?: Selector | Selector[]
       }
     }
     storageKey?: string

@@ -5,6 +5,8 @@ import { Store_Strat, Strat, STRATS } from './types/constants/strats'
 import { PRESET } from './types/preset'
 import { Script_Args } from './types/script'
 import { ColorSchemes, Islands, Schema, State, Values } from './types/subscribers'
+import { T3M4 as T_T3M4 } from './types'
+import { CallbackID, EventMap } from './types/events'
 
 // #region TYPES
 type Brand_Map = {
@@ -61,13 +63,13 @@ type Engine = {
       | {
           strategy: Exclude<Strat, STRATS['system']>
           store: boolean
-          selectors: Selector[]
+          selectors: Set<Selector>
           colorSchemes: ColorSchemes.Static.AsMap
         }
       | {
           strategy: Extract<Strat, STRATS['system']>
           store: boolean
-          selectors: Selector[]
+          selectors: Set<Selector>
           colorSchemes: ColorSchemes.Static.AsMap
           system: { mode: string; fallback: string }
         }
@@ -92,9 +94,9 @@ export const script = (args: Script_Args.Static) => {
         },
       },
       dom: {
-        selectors: [] as Selector[],
+        selectors: ['color-scheme'],
         island: {
-          selectors: [] as Selector[],
+          selectors: [],
         },
       },
     },
@@ -113,10 +115,15 @@ export const script = (args: Script_Args.Static) => {
     strats: {
       mono: 'mono',
       multi: 'multi',
-      system: 'system'
-    }
+      system: 'system',
+    },
+    color_schemes: {
+      light: 'light',
+      dark: 'dark',
+    },
   } as const satisfies CONSTANTS
 
+  // #region Engine
   function getEngine(args: Script_Args.Static): Engine {
     /** Polished - A Schema instance containing only meaningful islands */
     const schema = Object.fromEntries(
@@ -146,7 +153,7 @@ export const script = (args: Script_Args.Static) => {
         if (facets) Object.keys(facets).forEach((f) => islandFacets.add(f))
         if (mode) islandFacets.add(CONSTANTS.facet_types.mode)
 
-        return acc
+        return acc.set(i, islandFacets)
       },
       new Map() as Engine['facets']
     )
@@ -220,35 +227,44 @@ export const script = (args: Script_Args.Static) => {
         key: args.modes?.storage?.key ?? PRESET.modes.storage.key,
         strategy: args.modes?.storage?.strategy ?? PRESET.modes.storage.strategy,
       },
-      map: Object.entries(schema).reduce((acc, [i, { mode, facets }]) => {
-        let obj = {} as NonNullable<ReturnType<Engine['modes']['map']['get']>>
-        
-        const stratObj = args.config[i]!.mode!
+      map: Object.entries(schema).reduce(
+        (acc, [i, { mode }]) => {
+          const stratObj = args.config[i]!.mode!
+          const modesConfig = args.modes
 
-        if (stratObj.strategy === CONSTANTS.strats.system) {
-          obj = {
+          let obj = {
             store: stratObj.store ?? PRESET.modes.storage.island.store,
-            selectors: stratObj.selectors ?? PRESET.modes.dom.selectors,
+            selectors: new Set([
+              ...(typeof modesConfig?.dom?.selector === 'string' ? [modesConfig.dom.selector] : Array.isArray(modesConfig?.dom?.selector) ? modesConfig.dom.selector : PRESET.modes.dom.selectors),
+              ...(typeof stratObj.selector === 'string' ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors),
+            ]),
             strategy: stratObj.strategy,
-            colorSchemes: new Map(),
-            system: {
-              mode: (mode as Schema.Island.Mode.Facet.System).system!,
-              fallback: stratObj.fallback!
-            }
+          } as NonNullable<ReturnType<Engine['modes']['map']['get']>>
+
+          const colorSchemes =
+            stratObj.strategy === CONSTANTS.strats.mono
+              ? new Map([[stratObj.default, stratObj.colorScheme]])
+              : stratObj.strategy === CONSTANTS.strats.multi
+                ? new Map(Object.entries(stratObj.colorSchemes))
+                : new Map([[(mode as Schema.Island.Mode.Facet.System).light, CONSTANTS.color_schemes.light], [(mode as Schema.Island.Mode.Facet.System).dark, CONSTANTS.color_schemes.dark], ...Object.entries(stratObj.colorSchemes ?? {})])
+
+          if (stratObj.strategy === CONSTANTS.strats.system) {
+            obj = {
+              ...obj,
+              colorSchemes,
+              system: {
+                mode: (mode as Schema.Island.Mode.Facet.System).system!,
+                fallback: stratObj.fallback!,
+              },
+            } as typeof obj
+            return acc.set(i, obj)
           }
 
+          obj = { ...obj, colorSchemes } as typeof obj
           return acc.set(i, obj)
-        }
-        
-        obj = {
-          store: stratObj.store ?? PRESET.modes.storage.island.store,
-          selectors: stratObj.selectors ?? PRESET.modes.dom.selectors,
-          strategy: stratObj.strategy,
-          colorSchemes: new Map()
-        } as NonNullable<ReturnType<Engine['modes']['map']['get']>>
-
-        return acc.set(i, obj)
-      }, new Map() as Engine['modes']['map']),
+        },
+        new Map() as Engine['modes']['map']
+      ),
     } as Engine['modes']
 
     return {
@@ -273,7 +289,88 @@ export const script = (args: Script_Args.Static) => {
         colorScheme: 'style',
       },
       observe: new Set(args.observe ?? PRESET.observe),
-      modes
+      modes,
     }
   }
+  let engine = getEngine(args)
+
+  // #region T3M4
+  class T3M4 implements T_T3M4 {
+    public get = {
+      state: {
+        base: () => {
+          // const state = Main.get.state.base()
+          // if (!state) return undefined
+          // return utils.convert.deep.state.mapToObj(state)
+          return undefined
+        },
+        forced: () => {
+          // const state = Main.get.state.forced()
+          // if (!state) return undefined
+          // return utils.convert.deep.state.mapToObj(state)
+          return undefined
+        },
+        computed: () => {
+          // const state = Main.get.state.computed()
+          // if (!state) return undefined
+          // return utils.convert.deep.state.mapToObj(state)
+          return undefined
+        },
+      },
+      colorSchemes: {
+        base: () => {
+          // const colorSchemes = Main.get.colorSchemes.base()
+          // if (!colorSchemes) return undefined
+          // return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
+          return undefined
+        },
+        forced: () => {
+          // const colorSchemes = Main.get.colorSchemes.forced()
+          // if (!colorSchemes) return undefined
+          // return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
+          return undefined
+        },
+        computed: () => {
+          // const colorSchemes = Main.get.colorSchemes.computed()
+          // if (!colorSchemes) return undefined
+          // return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
+          return undefined
+        },
+      },
+      values: () => /* utils.convert.deep.values.mapToObj(engine.values) */ ({}),
+    }
+
+    public set = {
+      state: {
+        base: (state: State.Static) => {
+          // const stateMap = utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'partial' }>
+          // Main.set.state.base(stateMap)
+        },
+        forced: (state: State.Static) => {
+          // const stateMap = utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'partial' }>
+          // Main.set.state.forced(stateMap)
+        },
+      },
+    }
+
+    public subscribe<E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) {
+      // EventManager.on(e, id, cb)
+    }
+
+    public reboot(newArgs: Script_Args.Static) {
+      // const needsReboot = !utils.equal.deep.generic.objects(args, newArgs)
+      // if (!needsReboot) return
+      // EventManager.emit('Reset')
+      // StorageManager.terminate()
+      // DomManager.terminate()
+      // engine = constructEngine(newArgs)
+      // Main.reboot()
+    }
+
+    public constructor() {
+      // Main.init()
+    }
+  }
+
+  window.T3M4 = new T3M4()
 }
