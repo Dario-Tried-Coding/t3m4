@@ -1,3 +1,4 @@
+import { Expand } from '@t3m4/utils'
 import { Schema } from './schema'
 import { State } from './state'
 
@@ -29,7 +30,32 @@ export namespace Data_Attributes {
         : {}) &
         (State<Sc>[I] extends State.Static.Island.Mode
           ? {
-              [A in `data-force-${I}-mode`]: State<Sc>[I]['mode']
+              readonly [A in `data-force-${I}-mode`]: State<Sc>[I]['mode']
+            }
+          : {})
+    }>
+  >
+
+  type AllFacets<T> = T extends Record<string, infer R> ? (R extends Record<string, any> ? keyof R : never) : never
+  type FacetValues<T, F extends PropertyKey> = {
+    [K in keyof T]: T[K] extends Record<F, infer V> ? V : never
+  }[keyof T]
+  type MergeFacets<T extends Record<string, Record<string, string> | undefined>> = {
+    [F in AllFacets<T>]: Expand<FacetValues<T, F>>
+  }
+
+  export type Base<Sc extends Schema> = Partial<
+    MergeFacets<{
+      [I in keyof State<Sc>]: (State<Sc>[I] extends State.Static.Island.Facets
+        ? {
+            facets: {
+              [F in keyof State<Sc>[I]['facets'] as `data-facet-${Extract<F, string>}`]: State<Sc>[I]['facets'][F]
+            }
+          }['facets']
+        : {}) &
+        (State<Sc>[I] extends State.Static.Island.Mode
+          ? {
+              readonly [A in `data-mode`]: State<Sc>[I]['mode']
             }
           : {})
     }>

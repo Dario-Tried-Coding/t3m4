@@ -23,7 +23,7 @@ export type TConfig = typeof config
 const modes = {
   islands: {
     root: {
-      selectors: ['data-attribute'],
+      selectors: ['data-attribute', 'class'],
     },
   },
 } as const satisfies Modes<TSchema>

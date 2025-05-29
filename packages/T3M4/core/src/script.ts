@@ -4,6 +4,7 @@ import { Selector } from './types/constants/selectors'
 import { Store_Strat, Strat } from './types/constants/strats'
 import { CallbackID, EventMap } from './types/events'
 import { Script_Args } from './types/script'
+import { Color_Scheme } from './types/constants/color-schemes'
 import { ColorSchemes, Islands, Schema, State, Values } from './types/subscribers'
 
 // #region TYPES
@@ -64,7 +65,7 @@ type Engine = {
 
 export const script = (args: Script_Args) => {
   // #region engine
-  function constructEngine({schema, constants, preset, config, modes, storageKey, nonce, disableTransitionOnChange}:Script_Args): Engine {
+  function constructEngine({ schema, constants, preset, config, modes, storageKey, nonce, disableTransitionOnChange }: Script_Args): Engine {
     const polishedSchema = Object.fromEntries(Object.entries(schema).filter(([, v]) => Object.keys(v).length > 0 && (!('facets' in v) || Object.keys(v.facets ?? {}).length > 0)))
 
     const islands = new Set(Object.entries(polishedSchema).map(([k]) => k))
@@ -1290,7 +1291,7 @@ export const script = (args: Script_Args) => {
         },
         all: (state: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>) => {
           const enableBackTransitions = engine.disableTransitionOnChange ? utils.miscellaneous.disableTransitions() : undefined
-          
+
           const islands = DomManager.get.islands()
           for (const [island, elements] of islands) {
             const islandState = state.get(island)!
@@ -1388,38 +1389,72 @@ export const script = (args: Script_Args) => {
               const island = target.getAttribute('data-island')
               const isIsland = utils.isValid.value.island(island)
 
-              if (isIsland) {
-                const parts = attributeName.split('-')
-                const facetType = parts[1] as Facet
-                const facet = parts[2]
+              if (!isIsland) continue
 
-                const newOption = target.getAttribute(attributeName)
+              const parts = attributeName.split('-')
+              const facetType = parts[1] as Facet
+              const facet = parts[2]
 
-                if (facetType === 'facet') {
-                  const isNewOption = utils.isValid.value.option.facet(island, facet!, newOption)
+              const newOption = target.getAttribute(attributeName)
 
-                  const currCompValue = Main.get.state.computed()?.get(island)?.facets?.get(facet!)
-                  const isNewCurrCompValue = isNewOption && currCompValue === newOption
+              if (facetType === 'facet' && facet) {
+                const revertToComputed = (oldValue: string | null) => {
+                  const currCompValue = Main.get.state.computed()?.get(island)?.facets?.get(facet)!
+                  const isOldOption = utils.isValid.value.option.facet(island, facet, oldValue)
 
-                  if (!isNewCurrCompValue) {
-                    const isOldOption = utils.isValid.value.option.facet(island, facet!, oldValue)
-                    const isOldCurrCompValue = isOldOption && currCompValue === oldValue
-                    if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue)
-                  }
+                  const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                  if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue!)
+                  else target.setAttribute(attributeName, currCompValue)
                 }
 
-                if (facetType === 'mode') {
-                  const isNewOption = utils.isValid.value.option.mode(island, newOption)
-
-                  const currCompValue = Main.get.state.computed()?.get(island)?.mode
-                  const isNewCurrCompValue = isNewOption && currCompValue === newOption
-
-                  if (!isNewCurrCompValue) {
-                    const isOldOption = utils.isValid.value.option.mode(island, oldValue)
-                    const isOldCurrCompValue = isOldOption && currCompValue === oldValue
-                    if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue)
-                  }
+                const isNewOption = utils.isValid.value.option.facet(island, facet, newOption)
+                if (!isNewOption) {
+                  revertToComputed(oldValue)
+                  continue
                 }
+
+                const isFacetCurrForced = Main.get.state.forced()?.get(island)?.facets?.has(facet)
+                if (isFacetCurrForced) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const currBaseValue = Main.get.state.base()?.get(island)?.facets?.get(facet)!
+                const isNewAlreadySet = currBaseValue === newOption
+                if (isNewAlreadySet) continue
+
+                Main.set.state.base(new Map([[island, { facets: new Map([[facet, newOption]]) }]]) as Brand<State.Static.AsMap, { completeness: 'partial' }>)
+                continue
+              }
+
+              if (facetType === 'mode') {
+                const revertToComputed = (oldValue: string | null) => {
+                  const currCompValue = Main.get.state.computed()?.get(island)?.mode!
+                  const isOldOption = utils.isValid.value.option.mode(island, oldValue)
+
+                  const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                  if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue!)
+                  else target.setAttribute(attributeName, currCompValue)
+                }
+
+                const isNewOption = utils.isValid.value.option.mode(island, newOption)
+                if (!isNewOption) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+                if (isModeCurrForced) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const currBaseValue = Main.get.state.base()?.get(island)?.mode!
+                const isNewAlreadySet = currBaseValue === newOption
+                if (isNewAlreadySet) continue
+
+                Main.set.state.base(new Map([[island, { mode: newOption }]]) as Brand<State.Static.AsMap, { completeness: 'partial' }>)
+                continue
               }
             }
 
@@ -1427,46 +1462,162 @@ export const script = (args: Script_Args) => {
               const island = target.getAttribute('data-island')
               const isIsland = utils.isValid.value.island(island)
 
-              if (isIsland) {
-                const mustSetSelector = engine.modes.map.has(island)
-                const stateColorScheme = Main.get.colorSchemes.computed()?.get(island)
+              if (!isIsland) continue
 
-                const newColorScheme = target.style.colorScheme
-                
-                const needsUpdate = mustSetSelector && stateColorScheme && newColorScheme !== stateColorScheme
-                if (needsUpdate) target.style.colorScheme = stateColorScheme
+              const mustSetSelector = engine.modes.map.has(island)
+              if (!mustSetSelector) continue
+              
+              const supportedColorSchemes = new Set(engine.modes.map.get(island)?.colorSchemes.values() ?? [])
+
+              const revertToComputed = (oldValue: string | null) => {
+                const currCompValue = Main.get.colorSchemes.computed()?.get(island)!
+                const isOldColorScheme = supportedColorSchemes.has(oldValue as Color_Scheme)
+
+                const isOldCurrCompColorScheme = isOldColorScheme && currCompValue === oldValue
+                if (isOldCurrCompColorScheme) target.style.colorScheme = oldValue!
+                else target.style.colorScheme = currCompValue
               }
+
+              const newColorScheme = target.style.colorScheme
+              const isNewColorScheme = supportedColorSchemes.has(newColorScheme as Color_Scheme)
+              if (!isNewColorScheme) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+              if (isModeCurrForced) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isSystemStrat = engine.modes.map.get(island)!.strategy === 'system'
+              if (!isSystemStrat) {
+                revertToComputed(oldValue)
+                continue
+              } 
+
+              const traceBackMode = (colorScheme: Color_Scheme) => {
+                for (const [mode, cs] of engine.modes.map.get(island)!.colorSchemes) {
+                  if (cs === colorScheme) return mode
+                }
+              }
+              const corrMode = traceBackMode(newColorScheme as Color_Scheme)!
+
+              const currBaseMode = Main.get.state.base()?.get(island)?.mode!
+              const isNewAlreadySet = currBaseMode === corrMode
+              if (isNewAlreadySet) continue
+
+              Main.set.state.base(new Map([[island, { mode: corrMode }]]) as Brand<State.Static.AsMap, { completeness: 'partial' }>)
+              continue
             }
 
             if (attributeName === 'data-color-scheme') {
               const island = target.getAttribute('data-island')
               const isIsland = utils.isValid.value.island(island)
 
-              if (isIsland) {
-                const mustSetSelector = engine.modes.map.get(island)?.selectors.includes('data-attribute')
-                const newColorScheme = target.getAttribute('data-color-scheme')
-                const stateColorScheme = Main.get.colorSchemes.computed()?.get(island)
+              if (!isIsland) continue
 
-                const needsUpdate = mustSetSelector && stateColorScheme && newColorScheme !== stateColorScheme!
-                if (needsUpdate) target.setAttribute('data-color-scheme', stateColorScheme)
+              const mustSetSelector = engine.modes.map.has(island)
+              if (!mustSetSelector) continue
+              
+              const supportedColorSchemes = new Set(engine.modes.map.get(island)?.colorSchemes.values() ?? [])
+
+              const revertToComputed = (oldValue: string | null) => {
+                const currCompValue = Main.get.colorSchemes.computed()?.get(island)!
+                const isOldColorScheme = supportedColorSchemes.has(oldValue as Color_Scheme)
+
+                const isOldCurrCompColorScheme = isOldColorScheme && currCompValue === oldValue
+                if (isOldCurrCompColorScheme) target.setAttribute('data-color-scheme', oldValue!)
+                else target.setAttribute('data-color-scheme', currCompValue)
               }
+
+              const newColorScheme = target.getAttribute('data-color-scheme')
+              const isNewColorScheme = supportedColorSchemes.has(newColorScheme as Color_Scheme)
+              if (!isNewColorScheme) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+              if (isModeCurrForced) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isSystemStrat = engine.modes.map.get(island)!.strategy === 'system'
+              if (!isSystemStrat) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const traceBackMode = (colorScheme: Color_Scheme) => {
+                for (const [mode, cs] of engine.modes.map.get(island)!.colorSchemes) {
+                  if (cs === colorScheme) return mode
+                }
+              }
+              const corrMode = traceBackMode(newColorScheme as Color_Scheme)!
+
+              const currBaseMode = Main.get.state.base()?.get(island)?.mode!
+              const isNewAlreadySet = currBaseMode === corrMode
+              if (isNewAlreadySet) continue
+
+              Main.set.state.base(new Map([[island, { mode: corrMode }]]) as Brand<State.Static.AsMap, { completeness: 'partial' }>)
+              continue
             }
 
             if (attributeName === 'class') {
               const island = target.getAttribute('data-island')
               const isIsland = utils.isValid.value.island(island)
 
-              if (isIsland) {
-                const mustSetSelector = engine.modes.map.get(island)?.selectors.includes('class')
-                const stateColorScheme = Main.get.colorSchemes.computed()?.get(island)
-                const newValue = target.classList.contains(args.constants.modes.light) ? args.constants.modes.light : target.classList.contains(args.constants.modes.dark) ? args.constants.modes.dark : undefined
+              if (!isIsland) continue
 
-                const needsUpdate = mustSetSelector && stateColorScheme && stateColorScheme! !== newValue
-                if (needsUpdate) {
-                  const other = stateColorScheme ?? args.constants.modes.light
-                  target.classList.replace(other, stateColorScheme) || target.classList.add(stateColorScheme)
+              const mustSetSelector = engine.modes.map.has(island)
+              if (!mustSetSelector) continue
+
+              const supportedColorSchemes = new Set(engine.modes.map.get(island)?.colorSchemes.values() ?? [])
+
+              const revertToComputed = () => {
+                const currCompColorScheme = Main.get.colorSchemes.computed()?.get(island)!
+
+                const currColorScheme = target.classList.contains(args.constants.modes.light) ? args.constants.modes.light : target.classList.contains(args.constants.modes.dark) ? args.constants.modes.dark : undefined
+                const from = currColorScheme ?? args.constants.modes.light
+
+                target.classList.replace(from, currCompColorScheme) || target.classList.add(currCompColorScheme)
+              }
+
+              const newColorScheme = target.classList.contains(args.constants.modes.light) ? args.constants.modes.light : target.classList.contains(args.constants.modes.dark) ? args.constants.modes.dark : undefined
+              const isNewColorScheme = newColorScheme ? supportedColorSchemes.has(newColorScheme) : false
+              if (!isNewColorScheme) {
+                revertToComputed()
+                continue
+              }
+
+              const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+              if (isModeCurrForced) {
+                revertToComputed()
+                continue
+              }
+
+              const isSystemStrat = engine.modes.map.get(island)!.strategy === 'system'
+              if (!isSystemStrat) {
+                revertToComputed()
+                continue
+              }
+
+              const traceBackMode = (colorScheme: Color_Scheme) => {
+                for (const [mode, cs] of engine.modes.map.get(island)!.colorSchemes) {
+                  if (cs === colorScheme) return mode
                 }
               }
+              const corrMode = traceBackMode(newColorScheme!)!
+
+              const currBaseMode = Main.get.state.base()?.get(island)?.mode!
+              const isNewAlreadySet = currBaseMode === corrMode
+              if (isNewAlreadySet) continue
+
+              Main.set.state.base(new Map([[island, { mode: corrMode }]]) as Brand<State.Static.AsMap, { completeness: 'partial' }>)
+              continue
             }
           }
 

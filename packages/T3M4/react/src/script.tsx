@@ -19,5 +19,5 @@ export const Script = ({ scriptProps, ...props }: ScriptProps) => {
   const scriptArgs = constructScriptArgs(scriptProps)
   const stringScriptArgs = JSON.stringify(scriptArgs)
 
-  return <script nonce={scriptProps.nonce} dangerouslySetInnerHTML={{ __html: `(${unsafeScript.toString()})(${stringScriptArgs})` }} {...props} />
+  return <script suppressHydrationWarning nonce={scriptProps.nonce} dangerouslySetInnerHTML={{ __html: `(${unsafeScript.toString()})(${stringScriptArgs})` }} {...props} />
 }
