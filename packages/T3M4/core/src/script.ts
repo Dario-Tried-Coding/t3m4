@@ -27,8 +27,37 @@ type Brand_Map = {
     polished: 'polished'
   }
 }
-type AtLeast<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> = T & { [K in keyof B as `__${Extract<K, string>}`]: K extends keyof Brand_Map ? (B[K] extends keyof Brand_Map[K] ? Brand_Map[K][B[K]] : never) : never }
-type Brand<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> = T & { [K in keyof B as `__${Extract<K, string>}`]: B[K] }
+
+declare const brand: unique symbol
+type Test<T, B> = T & { [brand]: B }
+
+type Brand<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> =
+  T extends Map<infer K, infer V>
+    ? Brand.Shallow<Map<K, Brand<V, B>>, B>
+    : T extends Set<infer U>
+      ? Brand.Shallow<Set<Brand<U, B>>, B>
+      : T extends Array<infer U>
+        ? Brand.Shallow<Array<Brand<U, B>>, B>
+        : T extends object
+          ? Brand.Shallow<{ [K in keyof T]: Brand<T[K], B> }, B>
+          : T
+namespace Brand {
+  export type Shallow<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> = T & { readonly [K in keyof B as `__${Extract<K, string>}`]: B[K] }
+}
+
+export type AtLeast<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> =
+  T extends Map<infer K, infer V>
+    ? AtLeast.Shallow<Map<K, AtLeast<V, B>>, B>
+    : T extends Set<infer U>
+      ? AtLeast.Shallow<Set<AtLeast<U, B>>, B>
+      : T extends Array<infer U>
+        ? AtLeast.Shallow<Array<AtLeast<U, B>>, B>
+        : T extends object
+          ? AtLeast.Shallow<{ [K in keyof T]: AtLeast<T[K], B> }, B>
+          : T
+namespace AtLeast {
+  export type Shallow<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> = T & { readonly [K in keyof B as `__${Extract<K, string>}`]: K extends keyof Brand_Map ? (B[K] extends keyof Brand_Map[K] ? Brand_Map[K][B[K]] : never) : never }
+}
 
 type Engine = {
   storageKeys: {
@@ -294,6 +323,39 @@ export const script = (args: Script_Args.Static) => {
   }
   let engine = getEngine(args)
 
+  // #region Main
+  class Main {
+    private static instance: Main
+
+    public static init() {
+      if (!Main.instance) Main.instance = new Main()
+    }
+
+    public static get = {
+      state: {
+        base: () => Main.instance.state.base,
+        forced: () => Main.instance.state.forced,
+        computed: () => {
+          const base = Main.get.state.base()
+          if (!base) return undefined
+
+          const forced = Main.get.state.forced()
+          const computed = utils.merge.deep.state.maps(base, forced) as typeof base
+
+          return computed
+        },
+      },
+    }
+
+    private state: {
+      base: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }> | undefined
+      forced: AtLeast<State.Static.AsMap, { completeness: 'partial' }> | undefined
+    } = {
+      base: undefined,
+      forced: undefined,
+    }
+  }
+
   // #region T3M4
   class T3M4 implements T_T3M4 {
     public get = {
@@ -373,4 +435,12 @@ export const script = (args: Script_Args.Static) => {
   }
 
   window.T3M4 = new T3M4()
+}
+
+
+type test = AtLeast<State.Static.AsMap, { stage: 'sanitized'; completeness: 'complete' }>
+type test2 = NonNullable<ReturnType<test['get']>>
+type test3 = NonNullable<test2>['facets']
+const test2: Test<{prova: string}, 'test'> = {
+prova: 'test'
 }
