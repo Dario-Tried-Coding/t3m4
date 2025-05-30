@@ -26,7 +26,7 @@ export const ModeSwitch: FC = ({}) => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger disabled={!computed.state || !!forced.state} asChild>
+      <DropdownMenuTrigger disabled={!computed.state && !!forced.state} asChild>
         <Button variant='ghost' size='icon'>
           {!computed.colorScheme ? <Loader2 className='animate-spin' /> : <Icon mode={computed.colorScheme} />}
           <span className='sr-only'>{computed.state ? t(`Mode.${computed.state.mode}`) : t('loading')}</span>

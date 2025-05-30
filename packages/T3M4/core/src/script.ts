@@ -9,29 +9,33 @@ import { T3M4 as T_T3M4 } from './types'
 import { CallbackID, EventMap } from './types/events'
 
 // #region TYPES
-type Brand_Map = {
-  completeness: {
+type Brand_Stages = {
+  coverage: {
     complete: 'complete'
-    partial: 'partial' | Brand_Map['completeness']['complete']
+    partial: 'partial' | Brand_Stages['coverage']['complete']
   }
-  stage: {
-    dirty: 'dirty' | Brand_Map['stage']['sanitized']
-    sanitized: 'sanitized' | Brand_Map['stage']['normalized']
+  validation: {
+    dirty: 'dirty' | Brand_Stages['validation']['sanitized']
+    sanitized: 'sanitized' | Brand_Stages['validation']['normalized']
     normalized: 'normalized'
-  }
-  toStore: {
-    yes: 'yes'
-    no: 'no' | Brand_Map['toStore']['yes']
-  }
-  cleanliness: {
-    polished: 'polished'
   }
 }
 
-declare const brand: unique symbol
-type Test<T, B> = T & { [brand]: B }
+type Brand_Map = {
+  [P in keyof Brand_Stages]: keyof Brand_Stages[P]
+}
 
-type Brand<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> =
+type Non_Primitive_Parameters = Extract<keyof Brand_Map, 'coverage'>
+
+declare const __brand: unique symbol
+
+type Brand_Metadata<B extends Partial<Brand_Map>> = {
+  [__brand]: {
+    [P in keyof B]: B[P]
+  }
+}
+
+type Brand<T, B extends Partial<{ [K in keyof Brand_Stages]: keyof Brand_Stages[K] }>> =
   T extends Map<infer K, infer V>
     ? Brand.Shallow<Map<K, Brand<V, B>>, B>
     : T extends Set<infer U>
@@ -40,12 +44,14 @@ type Brand<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>>
         ? Brand.Shallow<Array<Brand<U, B>>, B>
         : T extends object
           ? Brand.Shallow<{ [K in keyof T]: Brand<T[K], B> }, B>
-          : T
+          : keyof Omit<B, Non_Primitive_Parameters> extends never
+            ? T
+            : Brand.Shallow<T, Omit<B, Non_Primitive_Parameters>>
 namespace Brand {
-  export type Shallow<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> = T & { readonly [K in keyof B as `__${Extract<K, string>}`]: B[K] }
+  export type Shallow<T, B extends Partial<Brand_Map>> = T & Brand_Metadata<B>
 }
 
-export type AtLeast<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> =
+export type AtLeast<T, B extends Partial<{ [K in keyof Brand_Stages]: keyof Brand_Stages[K] }>> =
   T extends Map<infer K, infer V>
     ? AtLeast.Shallow<Map<K, AtLeast<V, B>>, B>
     : T extends Set<infer U>
@@ -54,12 +60,25 @@ export type AtLeast<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_M
         ? AtLeast.Shallow<Array<AtLeast<U, B>>, B>
         : T extends object
           ? AtLeast.Shallow<{ [K in keyof T]: AtLeast<T[K], B> }, B>
-          : T
+          : keyof Omit<B, Non_Primitive_Parameters> extends never
+            ? T
+            : AtLeast.Shallow<T, Omit<B, Non_Primitive_Parameters>>
 namespace AtLeast {
-  export type Shallow<T, B extends Partial<{ [K in keyof Brand_Map]: keyof Brand_Map[K] }>> = T & { readonly [K in keyof B as `__${Extract<K, string>}`]: K extends keyof Brand_Map ? (B[K] extends keyof Brand_Map[K] ? Brand_Map[K][B[K]] : never) : never }
+  export type Shallow<T, B extends Partial<{ [P in keyof Brand_Stages]: keyof Brand_Stages[P] }>> = T & {
+    [__brand]: {
+      [P in keyof B]: P extends keyof Brand_Stages ? (B[P] extends keyof Brand_Stages[P] ? Brand_Stages[P][B[P]] : never) : never
+    }
+  }
+}
+
+type Brand_Info<T> = T extends { [__brand]: infer B } ? B : never
+
+namespace Modes {
+  export type AsMap = Map<string, string>
 }
 
 type Engine = {
+  /** Keys to be used in the localStorage */
   storageKeys: {
     state: string
     modes: string
@@ -67,7 +86,7 @@ type Engine = {
   islands: Islands.Static.AsSet
   facets: Map<string, Set<string>>
   values: Values.Static.AsMap
-  fallbacks: Brand<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }>
+  fallbacks: Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>
   nonce: string
   disableTransitionOnChange: boolean
   selectors: {
@@ -87,6 +106,7 @@ type Engine = {
       strategy: Store_Strat
       key: string
     }
+    /** Only Islands with defined mode in here! */
     map: Map<
       string,
       | {
@@ -149,6 +169,12 @@ export const script = (args: Script_Args.Static) => {
     color_schemes: {
       light: 'light',
       dark: 'dark',
+    },
+    modes: {
+      light: 'light',
+      dark: 'dark',
+      system: 'system',
+      custom: 'custom',
     },
   } as const satisfies CONSTANTS
 
@@ -220,12 +246,12 @@ export const script = (args: Script_Args.Static) => {
         if (facets)
           islandFallbacks.facets = Object.entries(facets).reduce(
             (acc, [f, stratObj]) => {
-              return acc.set(f, stratObj.default)
+              return acc.set(f, stratObj.default as NonNullable<ReturnType<NonNullable<typeof islandFallbacks.facets>['get']>>)
             },
             new Map() as NonNullable<typeof islandFallbacks.facets>
           )
 
-        if (mode) islandFallbacks.mode = mode.default
+        if (mode) islandFallbacks.mode = mode.default as NonNullable<typeof islandFallbacks.mode>
 
         return acc.set(i, islandFallbacks)
       },
@@ -258,6 +284,8 @@ export const script = (args: Script_Args.Static) => {
       },
       map: Object.entries(schema).reduce(
         (acc, [i, { mode }]) => {
+          if (!mode) return acc
+
           const stratObj = args.config[i]!.mode!
           const modesConfig = args.modes
 
@@ -323,6 +351,296 @@ export const script = (args: Script_Args.Static) => {
   }
   let engine = getEngine(args)
 
+  const utils = {
+    miscellaneous: {
+      getSystemPref() {
+        const supportsPref = window.matchMedia('(prefers-color-scheme)').media !== 'not all'
+        const systemPref = supportsPref ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? CONSTANTS.modes.dark : CONSTANTS.modes.light) : undefined
+        return systemPref
+      },
+    },
+    equal: {
+      deep: {
+        state(state1: State.Static.AsMap | undefined, state2: State.Static.AsMap | undefined) {
+          if (!state1 || !state2) return false
+          if (state1.size !== state2.size) return false
+
+          for (const [key, value1] of state1) {
+            const value2 = state2.get(key)
+            if (!value2) return false
+
+            if (value1.mode !== value2.mode) return false
+
+            const facets1 = value1.facets
+            const facets2 = value2.facets
+
+            if ((facets1 && !facets2) || (!facets1 && facets2)) return false
+            if (facets1 && facets2) {
+              if (facets1.size !== facets2.size) return false
+              for (const [facetKey, facetVal1] of facets1) {
+                if (facets2.get(facetKey) !== facetVal1) return false
+              }
+            }
+          }
+
+          return true
+        },
+        generic: {
+          objects<T>(obj1: T, obj2: T): boolean {
+            if (obj1 === obj2) return true
+
+            if (obj1 instanceof Map && obj2 instanceof Map) return this.maps(obj1, obj2)
+
+            if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) return false
+
+            const keys1 = Object.keys(obj1) as (keyof T)[]
+            const keys2 = Object.keys(obj2) as (keyof T)[]
+
+            if (keys1.length !== keys2.length) return false
+
+            for (const key of keys1) {
+              if (!keys2.includes(key) || !this.objects(obj1[key], obj2[key])) return false
+            }
+
+            return true
+          },
+          maps<K, V>(map1: Map<K, V> | null | undefined, map2: Map<K, V> | null | undefined): boolean {
+            if (!map1 || !map2) return false
+            if (map1 === map2) return true
+            if (map1.size !== map2.size) return false
+
+            for (const [key, value] of map1) {
+              if (!map2.has(key) || !this.objects(value, map2.get(key))) return false
+            }
+
+            return true
+          },
+        },
+      },
+    },
+    merge: {
+      shallow: {
+        maps<T extends (AtLeast<Map<string, string>, { coverage: 'partial' }> | undefined)[]>(...sources: T) {
+          const result = new Map<string, string>()
+
+          for (const source of sources) {
+            if (!source) continue
+
+            for (const [key, value] of source) {
+              result.set(key, value)
+            }
+          }
+
+          return result as Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>> : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+        },
+      },
+      deep: {
+        state: {
+          maps<T extends (AtLeast<State.Static.AsMap, { coverage: 'partial' }> | undefined)[]>(...sources: T) {
+            const result: State.Static.AsMap = new Map()
+
+            for (const source of sources) {
+              if (!source) continue
+
+              for (const [key, sourceValue] of source) {
+                const targetValue = result.get(key)
+
+                if (!targetValue) {
+                  result.set(key, {
+                    mode: sourceValue.mode,
+                    facets: sourceValue.facets ? new Map(sourceValue.facets) : undefined,
+                  })
+                } else {
+                  const mergedFacets = new Map(targetValue.facets || [])
+                  if (sourceValue.facets) {
+                    for (const [facetKey, facetValue] of sourceValue.facets) {
+                      mergedFacets.set(facetKey, facetValue)
+                    }
+                  }
+
+                  result.set(key, {
+                    mode: sourceValue.mode ?? targetValue.mode,
+                    facets: mergedFacets.size > 0 ? mergedFacets : undefined,
+                  })
+                }
+              }
+            }
+
+            return result as Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>> : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+          },
+        },
+      },
+    },
+    convert: {
+      shallow: {
+        mapToObj: {
+          string<T extends Brand<Map<string, string>, any>>(map: T) {
+            return Object.fromEntries(map) as Brand<Record<string, string>, Brand_Info<T>>
+          },
+          set<T extends Brand<Map<string, Set<string>>, any>>(map: T) {
+            const result: Record<string, string[]> = {}
+            for (const [key, value] of map) {
+              result[key] = Array.from(value)
+            }
+            return result as Brand<Record<string, string[]>, Brand_Info<T>>
+          },
+        },
+        objToMap: {
+          string<T extends Brand<Record<string, string>, any>>(obj: T) {
+            return new Map(Object.entries(obj)) as Brand<Map<string, string>, Brand_Info<T>>
+          },
+        },
+      },
+      deep: {
+        state: {
+          mapToObj<T extends Brand<State.Static.AsMap, any>>(state: T) {
+            const result = {} as State.Static
+
+            for (const [key, { facets, mode }] of state) {
+              const obj = {} as State.Static.Island
+              if (mode) obj.mode = mode
+              if (facets) obj.facets = Object.fromEntries(facets)
+              result[key] = obj
+            }
+
+            return result as Brand<State.Static, Brand_Info<T>>
+          },
+          objToMap<T extends Brand<State.Static, any>>(state: T) {
+            const result = new Map() as State.Static.AsMap
+
+            for (const [key, { facets, mode }] of Object.entries(state)) {
+              const obj = {} as State.Static.AsMap.Island
+
+              if (mode) obj.mode = mode
+              if (facets) {
+                const map = new Map() as State.Static.AsMap.Island.Facets['facets']
+                for (const [facet, value] of Object.entries(facets)) {
+                  map.set(facet, value)
+                }
+                obj.facets = map
+              }
+
+              result.set(key, obj)
+            }
+
+            return result as Brand<State.Static.AsMap, Brand_Info<T>>
+          },
+        },
+        values: {
+          mapToObj(map: Values.Static.AsMap): Values.Static {
+            const result: Values.Static = {}
+
+            for (const [key, { facets, mode }] of map) {
+              const obj = {} as Values.Static[typeof key]
+              if (mode) obj.mode = Array.from(mode)
+              if (facets) {
+                const facetsObj = {} as NonNullable<Values.Static[typeof key]['facets']>
+                for (const [facet, value] of facets) {
+                  facetsObj[facet] = Array.from(value)
+                }
+                obj.facets = facetsObj
+              }
+              result[key] = obj
+            }
+
+            return result
+          },
+        },
+      },
+    },
+    /** Construct appropriate entities dynamically based on provided fn arguments - no additional logic */
+    construct: {
+      /**
+       * Constructs appropriate ColorSchemes map instance for each island in the given State, based on configuration settings.
+       *
+       * Skips:
+       * - Islands with no mode defined in the state
+       * - Islands not defined in the configuration (i.e., missing from engine.modes)
+       *
+       * Handles the 'system' mode case as needed, too
+       */
+      colorSchemes<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T) {
+        return utils.resolve.colorSchemes(state)
+      },
+    },
+    resolve: {
+      /**
+       * Determines the appropriate ColorScheme for a given island and mode, based on configuration settings.
+       *
+       * Skips:
+       * - islands that have no configuration defined (i.e., not present in the engine.modes map)
+       *
+       * Handles the 'system' mode case as needed, too
+       */
+      colorScheme(island: string, mode: string) {
+        const modeConfig = engine.modes.map.get(island)
+        if (!modeConfig) return
+
+        const isSystemStrat = modeConfig.strategy === CONSTANTS.strats.system
+        const isSystem = isSystemStrat && modeConfig.system.mode === mode
+        if (isSystem) return utils.miscellaneous.getSystemPref() ?? modeConfig.colorSchemes.get(modeConfig.system.fallback)
+
+        return modeConfig.colorSchemes.get(mode)
+      },
+      /**
+       * Resolves appropriate ColorSchemes for each island in the given State, based on configuration settings.
+       *
+       * Skips:
+       * - Islands with no mode defined in the state
+       * - Islands not defined in the configuration (i.e., missing from engine.modes)
+       *
+       * Handles the 'system' mode case as needed, too
+       */
+      colorSchemes<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T) {
+        const modes = Array.from(state).reduce((acc, [i, { mode }]) => {
+          if (!mode) return acc
+          return acc.set(i, mode)
+        }, new Map() as Modes.AsMap)
+
+        const colorSchemes = Array.from(modes).reduce((acc, [i, mode]) => {
+          const resolvedScheme = utils.resolve.colorScheme(i, mode)
+
+          if (!resolvedScheme) return acc
+          return acc.set(i, resolvedScheme)
+        }, new Map() as ColorSchemes.Static.AsMap)
+
+        return colorSchemes as Brand<ColorSchemes.Static.AsMap, Brand_Info<T>>
+      },
+    },
+  }
+
+  // #region EVENT MANAGER
+  class EventManager {
+    private static events: Map<string, Map<string, (...args: any[]) => void>> = new Map()
+
+    public static on<K extends keyof EventMap>(event: K, id: CallbackID, callback: (payload: EventMap[K]) => void): void {
+      if (!EventManager.events.has(event)) EventManager.events.set(event, new Map())
+
+      const eventCallbacks = EventManager.events.get(event)!
+      eventCallbacks.set(id, callback)
+    }
+
+    public static emit<K extends keyof EventMap>(event: K, ...args: EventMap[K] extends void ? [] : [payload: EventMap[K]]): void {
+      EventManager.events.get(event)?.forEach((callback) => {
+        const payload = args[0]
+        if (payload) callback(payload)
+        else callback()
+      })
+    }
+
+    public static off<K extends keyof EventMap>(event: K, id: CallbackID): void {
+      const eventCallbacks = EventManager.events.get(event)
+      if (eventCallbacks) {
+        eventCallbacks.delete(id)
+        if (eventCallbacks.size === 0) EventManager.events.delete(event)
+      }
+    }
+
+    public static dispose() {
+      EventManager.events.clear()
+    }
+  }
+
   // #region Main
   class Main {
     private static instance: Main
@@ -340,19 +658,134 @@ export const script = (args: Script_Args.Static) => {
           if (!base) return undefined
 
           const forced = Main.get.state.forced()
-          const computed = utils.merge.deep.state.maps(base, forced) as typeof base
+          const computed = utils.merge.deep.state.maps(base, forced)
+
+          return computed
+        },
+      },
+      colorSchemes: {
+        base() {
+          const state = Main.get.state.base()
+          if (!state) return undefined
+
+          const colorSchemes = utils.construct.colorSchemes(state)
+          return colorSchemes
+        },
+        forced() {
+          const state = Main.get.state.forced()
+          if (!state) return undefined
+
+          const colorSchemes = utils.construct.colorSchemes(state)
+          return colorSchemes
+        },
+        computed() {
+          const base = Main.get.colorSchemes.base()
+          if (!base) return undefined
+
+          const forced = Main.get.colorSchemes.forced()
+          const computed = utils.merge.shallow.maps(base, forced)
 
           return computed
         },
       },
     }
 
+    public static set = {
+      state: {
+        base: (state: AtLeast<State.Static.AsMap, { coverage: 'partial' }>) => {
+          const currState = Main.get.state.base()
+          if (!currState) return console.error('[T3M4]: Library not initialized')
+
+          const mergedState = utils.merge.deep.state.maps(currState, state)
+          Main.smartUpdateNotify.state.base(mergedState)
+        },
+        forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) => {
+          Main.smartUpdateNotify.state.forced(state)
+        },
+      },
+    }
+
+    private static smartUpdateNotify = {
+      state: {
+        base(newState: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>) {
+          const currState = Main.get.state.base()
+          if (!currState) return console.error('[T3M4] Library not initialized.')
+
+          const isEqual = utils.equal.deep.state(currState, newState)
+          if (isEqual) return
+
+          Main.instance.state.base = newState
+          Main.notifyUpdate.state.base(newState)
+
+          const computedState = Main.get.state.computed()!
+          Main.notifyUpdate.state.computed(computedState)
+        },
+        forced(newState: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) {
+          const currState = Main.get.state.forced()
+          if (!currState) return console.error('[T3M4] Library not initialized.')
+
+          const isEqual = utils.equal.deep.state(currState, newState)
+          if (isEqual) return
+
+          Main.instance.state.forced = newState
+          Main.notifyUpdate.state.forced(newState)
+
+          const computedState = Main.get.state.computed()!
+          Main.notifyUpdate.state.computed(computedState)
+        },
+      },
+    }
+
+    private static notifyUpdate = {
+      state: {
+        base: (state: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>) => {
+          const colorSchemes = utils.construct.colorSchemes(state)
+          EventManager.emit('State:Base:Update', utils.convert.deep.state.mapToObj(state))
+          EventManager.emit('ColorSchemes:Base:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
+        },
+        forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) => {
+          const colorSchemes = utils.construct.colorSchemes(state)
+          EventManager.emit('State:Forced:Update', utils.convert.deep.state.mapToObj(state))
+          EventManager.emit('ColorSchemes:Forced:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
+        },
+        computed: (state: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>) => {
+          const colorSchemes = utils.construct.colorSchemes(state)
+          EventManager.emit('State:Computed:Update', utils.convert.deep.state.mapToObj(state))
+          EventManager.emit('ColorSchemes:Computed:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
+        },
+      },
+    }
+
+    public static reboot() {
+      Main.instance = new Main()
+    }
+
     private state: {
-      base: AtLeast<State.Static.AsMap, { completeness: 'complete'; stage: 'normalized' }> | undefined
-      forced: AtLeast<State.Static.AsMap, { completeness: 'partial' }> | undefined
+      base: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }> | undefined
+      forced: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }> | undefined
     } = {
       base: undefined,
       forced: undefined,
+    }
+
+    private constructor() {
+      // StorageManager.init()
+      // DomManager.init()
+
+      // const storageState = StorageManager.get.state.normalized()
+      const storageState = new Map([['root', { mode: 'light' }]]) as Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>
+
+      const baseState = storageState
+      this.state.base = baseState
+      Main.notifyUpdate.state.base(baseState)
+
+      // const forcedState = DomManager.get.state.forced.all.sanitized()
+      const forcedState = new Map() as Brand<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>
+      this.state.forced = forcedState
+      Main.notifyUpdate.state.forced(forcedState)
+
+      const computedState = utils.merge.deep.state.maps(baseState, forcedState) as typeof baseState
+      Main.notifyUpdate.state.computed(computedState)
     }
   }
 
@@ -361,86 +794,72 @@ export const script = (args: Script_Args.Static) => {
     public get = {
       state: {
         base: () => {
-          // const state = Main.get.state.base()
-          // if (!state) return undefined
-          // return utils.convert.deep.state.mapToObj(state)
-          return undefined
+          const state = Main.get.state.base()
+          if (!state) return undefined
+          return utils.convert.deep.state.mapToObj(state)
         },
         forced: () => {
-          // const state = Main.get.state.forced()
-          // if (!state) return undefined
-          // return utils.convert.deep.state.mapToObj(state)
-          return undefined
+          const state = Main.get.state.forced()
+          if (!state) return undefined
+          return utils.convert.deep.state.mapToObj(state)
         },
         computed: () => {
-          // const state = Main.get.state.computed()
-          // if (!state) return undefined
-          // return utils.convert.deep.state.mapToObj(state)
-          return undefined
+          const state = Main.get.state.computed()
+          if (!state) return undefined
+          return utils.convert.deep.state.mapToObj(state)
         },
       },
       colorSchemes: {
         base: () => {
-          // const colorSchemes = Main.get.colorSchemes.base()
-          // if (!colorSchemes) return undefined
-          // return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
-          return undefined
+          const colorSchemes = Main.get.colorSchemes.base()
+          if (!colorSchemes) return undefined
+          return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
         },
         forced: () => {
-          // const colorSchemes = Main.get.colorSchemes.forced()
-          // if (!colorSchemes) return undefined
-          // return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
-          return undefined
+          const colorSchemes = Main.get.colorSchemes.forced()
+          if (!colorSchemes) return undefined
+          return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
         },
         computed: () => {
-          // const colorSchemes = Main.get.colorSchemes.computed()
-          // if (!colorSchemes) return undefined
-          // return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
-          return undefined
+          const colorSchemes = Main.get.colorSchemes.computed()
+          if (!colorSchemes) return undefined
+          return utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static
         },
       },
-      values: () => /* utils.convert.deep.values.mapToObj(engine.values) */ ({}),
+      values: () => utils.convert.deep.values.mapToObj(engine.values),
     }
 
     public set = {
       state: {
         base: (state: State.Static) => {
-          // const stateMap = utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'partial' }>
-          // Main.set.state.base(stateMap)
+          const stateMap = utils.convert.deep.state.objToMap(state as Brand<State.Static, { coverage: 'complete'; validation: 'normalized' }>)
+          Main.set.state.base(stateMap)
         },
         forced: (state: State.Static) => {
-          // const stateMap = utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { completeness: 'partial' }>
-          // Main.set.state.forced(stateMap)
+          const stateMap = utils.convert.deep.state.objToMap(state as Brand<State.Static, { coverage: 'partial'; validation: 'normalized' }>)
+          Main.set.state.forced(stateMap)
         },
       },
     }
 
     public subscribe<E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) {
-      // EventManager.on(e, id, cb)
+      EventManager.on(e, id, cb)
     }
 
     public reboot(newArgs: Script_Args.Static) {
-      // const needsReboot = !utils.equal.deep.generic.objects(args, newArgs)
-      // if (!needsReboot) return
-      // EventManager.emit('Reset')
+      const needsReboot = !utils.equal.deep.generic.objects(args, newArgs)
+      if (!needsReboot) return
+      EventManager.emit('Reset')
       // StorageManager.terminate()
       // DomManager.terminate()
-      // engine = constructEngine(newArgs)
-      // Main.reboot()
+      engine = getEngine(newArgs)
+      Main.reboot()
     }
 
     public constructor() {
-      // Main.init()
+      Main.init()
     }
   }
 
   window.T3M4 = new T3M4()
-}
-
-
-type test = AtLeast<State.Static.AsMap, { stage: 'sanitized'; completeness: 'complete' }>
-type test2 = NonNullable<ReturnType<test['get']>>
-type test3 = NonNullable<test2>['facets']
-const test2: Test<{prova: string}, 'test'> = {
-prova: 'test'
 }
