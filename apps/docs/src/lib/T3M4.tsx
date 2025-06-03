@@ -6,9 +6,6 @@ const schema = {
   root: {
     mode: { light: 'light', dark: 'dark', system: 'system' },
   },
-  island: {
-    mode: 'default'
-  }
 } as const satisfies Schema.Suggested
 export type TSchema = typeof schema
 
@@ -19,20 +16,14 @@ const config = {
       default: 'system',
       fallback: 'dark',
       selector: 'data-attribute',
-    },
-  },
-  island: {
-    mode: {
-      strategy: 'mono',
-      default: 'default',
-      colorScheme: 'dark',
+      store: false
     },
   },
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config}>
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} modes={{storage: {store: true}}}>
     {children}
   </ThemingProvider>
 )
