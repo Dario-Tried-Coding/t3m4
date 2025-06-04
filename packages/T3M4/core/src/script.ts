@@ -7,6 +7,8 @@ import { Script_Args } from './types/script'
 import { ColorSchemes, Islands, Schema, State, Values } from './types/subscribers'
 import { T3M4 as T_T3M4 } from './types'
 import { CallbackID, EventMap } from './types/events'
+import { Color_Scheme } from './types/constants/color-schemes'
+import { Facet_Type } from './types/constants/facets'
 
 // #region TYPES
 type Brand_Stages = {
@@ -45,33 +47,37 @@ namespace Brand_Metadata {
 }
 
 type Brand<T, B extends Partial<{ [K in keyof Brand_Stages]: keyof Brand_Stages[K] }>> =
-  T extends Map<infer K, infer V>
-    ? Brand.Shallow<Map<K, Brand<V, B>>, B>
-    : T extends Set<infer U>
-      ? Brand.Shallow<Set<Brand<U, B>>, B>
-      : T extends Array<infer U>
-        ? Brand.Shallow<Array<Brand<U, B>>, B>
-        : T extends object
-          ? Brand.Shallow<{ [K in keyof T]: Brand<T[K], B> }, B>
-          : keyof Omit<B, Non_Primitive_Parameters> extends never
-            ? T
-            : Brand.Shallow<T, Omit<B, Non_Primitive_Parameters>>
+  T extends NodeListOf<infer U>
+    ? Brand.Shallow<NodeListOf<Brand.Shallow<U, Omit<B, Non_Primitive_Parameters>>>, B>
+    : T extends Map<infer K, infer V>
+      ? Brand.Shallow<Map<K, Brand<V, B>>, B>
+      : T extends Set<infer U>
+        ? Brand.Shallow<Set<Brand<U, B>>, B>
+        : T extends Array<infer U>
+          ? Brand.Shallow<Array<Brand<U, B>>, B>
+          : T extends object
+            ? Brand.Shallow<{ [K in keyof T]: Brand<T[K], B> }, B>
+            : keyof Omit<B, Non_Primitive_Parameters> extends never
+              ? T
+              : Brand.Shallow<T, Omit<B, Non_Primitive_Parameters>>
 namespace Brand {
   export type Shallow<T, B extends Partial<Brand_Map>> = T & Brand_Metadata<B>
 }
 
-export type AtLeast<T, B extends Partial<{ [K in keyof Brand_Stages]: keyof Brand_Stages[K] }>> =
-  T extends Map<infer K, infer V>
-    ? AtLeast.Shallow<Map<K, AtLeast<V, B>>, B>
-    : T extends Set<infer U>
-      ? AtLeast.Shallow<Set<AtLeast<U, B>>, B>
-      : T extends Array<infer U>
-        ? AtLeast.Shallow<Array<AtLeast<U, B>>, B>
-        : T extends object
-          ? AtLeast.Shallow<{ [K in keyof T]: AtLeast<T[K], B> }, B>
-          : keyof Omit<B, Non_Primitive_Parameters> extends never
-            ? T
-            : AtLeast.Shallow<T, Omit<B, Non_Primitive_Parameters>>
+type AtLeast<T, B extends Partial<{ [K in keyof Brand_Stages]: keyof Brand_Stages[K] }>> =
+  T extends NodeListOf<infer U>
+    ? Brand.Shallow<NodeListOf<Brand.Shallow<U, Omit<B, Non_Primitive_Parameters>>>, B>
+    : T extends Map<infer K, infer V>
+      ? AtLeast.Shallow<Map<K, AtLeast<V, B>>, B>
+      : T extends Set<infer U>
+        ? AtLeast.Shallow<Set<AtLeast<U, B>>, B>
+        : T extends Array<infer U>
+          ? AtLeast.Shallow<Array<AtLeast<U, B>>, B>
+          : T extends object
+            ? AtLeast.Shallow<{ [K in keyof T]: AtLeast<T[K], B> }, B>
+            : keyof Omit<B, Non_Primitive_Parameters> extends never
+              ? T
+              : AtLeast.Shallow<T, Omit<B, Non_Primitive_Parameters>>
 namespace AtLeast {
   export type Shallow<T, B extends Partial<{ [P in keyof Brand_Stages]: keyof Brand_Stages[P] }>> = T & {
     [__brand]: {
@@ -94,19 +100,36 @@ type Engine = {
     modes: string
   }
   islands: Islands.Static.AsSet
-  facets: Map<string, Set<string>>
+  facets: Map<string, { mode?: boolean; facets?: Set<string> }>
   values: Values.Static.AsMap
   fallbacks: Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>
   nonce: string
   disableTransitionOnChange: boolean
   selectors: {
-    dataAttributes: {
-      force: Set<string>
-      computed: Set<string>
+    observe: {
+      dataAttributes: {
+        island: string
+        forced: Set<string>
+        computed: Set<string>
+        colorScheme: string
+      }
+      class: string
       colorScheme: string
     }
-    class: string
-    colorScheme: string
+    types: {
+      dataAttributes: {
+        island: string
+        computed: {
+          facet: (facet: string) => string
+          mode: string
+        }
+        forced: {
+          facet: (island: string, facet: string) => string
+          mode: (island: string) => string
+        }
+        colorScheme: string
+      }
+    }
   }
   observe: Set<Observable>
   forcedValues: boolean
@@ -114,7 +137,7 @@ type Engine = {
     storage: {
       store: boolean
       strategy: Store_Strat
-      key: string,
+      key: string
       toStore: Islands.Static.AsSet
     }
     /** Only Islands with defined mode in here! */
@@ -214,12 +237,12 @@ export const script = (args: Script_Args.Static) => {
     /** All facets provided for each meaningful island in Schema */
     const facets = Object.entries(schema).reduce(
       (acc, [i, { mode, facets }]) => {
-        const islandFacets = new Set<string>()
+        const obj = {} as NonNullable<ReturnType<Engine['facets']['get']>>
 
-        if (facets) Object.keys(facets).forEach((f) => islandFacets.add(f))
-        if (mode) islandFacets.add(CONSTANTS.facet_types.mode)
+        obj.facets = Object.keys(facets ?? {}).reduce((acc, facet) => acc.add(facet), new Set<string>())
+        if (mode) obj.mode = true
 
-        return acc.set(i, islandFacets)
+        return acc.set(i, obj)
       },
       new Map() as Engine['facets']
     )
@@ -269,13 +292,13 @@ export const script = (args: Script_Args.Static) => {
       new Map() as Engine['fallbacks']
     )
 
-    const forceDataAttrs = Object.entries(schema).reduce(
+    const forcedDataAttrs = Object.entries(schema).reduce(
       (acc, [i, { facets, mode }]) => {
         if (facets) Object.keys(facets).forEach((f) => acc.add(`data-force-${i}-facet-${f}`))
         if (mode) acc.add(`data-force-${i}-mode`)
         return acc
       },
-      new Set() as Engine['selectors']['dataAttributes']['force']
+      new Set() as Engine['selectors']['observe']['dataAttributes']['forced']
     )
 
     const computedDataAttrs = Object.entries(schema).reduce(
@@ -284,7 +307,7 @@ export const script = (args: Script_Args.Static) => {
         if (mode) acc.add('data-mode')
         return acc
       },
-      new Set() as Engine['selectors']['dataAttributes']['computed']
+      new Set() as Engine['selectors']['observe']['dataAttributes']['computed']
     )
 
     const modes = {
@@ -300,7 +323,7 @@ export const script = (args: Script_Args.Static) => {
           if (!mustStore) return acc
 
           return acc.add(i)
-        }, new Set() as Set<string>)
+        }, new Set() as Set<string>),
       },
       map: Object.entries(schema).reduce(
         (acc, [i, { mode }]) => {
@@ -357,13 +380,30 @@ export const script = (args: Script_Args.Static) => {
       disableTransitionOnChange: args.disableTransitionOnChange ?? PRESET.disable_transitions_on_change,
       forcedValues: args.forcedValues ?? PRESET.forced_values,
       selectors: {
-        dataAttributes: {
-          force: forceDataAttrs,
-          computed: computedDataAttrs,
-          colorScheme: 'data-color-scheme',
+        types: {
+          dataAttributes: {
+            island: 'data-island',
+            computed: {
+              facet: (facet) => `data-facet-${facet}`,
+              mode: 'data-mode',
+            },
+            forced: {
+              facet: (island, facet) => `data-force-${island}-facet-${facet}`,
+              mode: (island) => `data-force-${island}-mode`,
+            },
+            colorScheme: 'data-color-scheme',
+          },
         },
-        class: 'class',
-        colorScheme: 'style',
+        observe: {
+          dataAttributes: {
+            island: 'data-island',
+            forced: forcedDataAttrs,
+            computed: computedDataAttrs,
+            colorScheme: 'data-color-scheme',
+          },
+          class: 'class',
+          colorScheme: 'style',
+        },
       },
       observe: new Set(args.observe ?? PRESET.observe),
       modes,
@@ -385,6 +425,17 @@ export const script = (args: Script_Args.Static) => {
           return JSON.parse(json) as unknown
         } catch (e) {
           return null
+        }
+      },
+      disableTransitions() {
+        const css = document.createElement('style')
+        if (engine.nonce) css.setAttribute('nonce', engine.nonce)
+        css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
+        document.head.appendChild(css)
+
+        return () => {
+          ;(() => window.getComputedStyle(document.body))()
+          setTimeout(() => document.head.removeChild(css), 1)
         }
       },
     },
@@ -479,37 +530,54 @@ export const script = (args: Script_Args.Static) => {
       },
       deep: {
         state: {
-          maps<T extends (AtLeast<State.Static.AsMap, { coverage: 'partial' }> | undefined)[]>(...sources: T) {
-            const result: State.Static.AsMap = new Map()
+          maps: {
+            island<T extends (State.Static.AsMap.Island | undefined)[]>(...sources: T) {
+              let mergedMode: string | undefined = undefined
+              const mergedFacets = new Map<string, string>()
 
-            for (const source of sources) {
-              if (!source) continue
+              for (const source of sources) {
+                if (!source) continue
 
-              for (const [key, sourceValue] of source) {
-                const targetValue = result.get(key)
-
-                if (!targetValue) {
-                  result.set(key, {
-                    mode: sourceValue.mode,
-                    facets: sourceValue.facets ? new Map(sourceValue.facets) : undefined,
-                  })
-                } else {
-                  const mergedFacets = new Map(targetValue.facets || [])
-                  if (sourceValue.facets) {
-                    for (const [facetKey, facetValue] of sourceValue.facets) {
-                      mergedFacets.set(facetKey, facetValue)
-                    }
+                if (source.mode) mergedMode = source.mode
+                if (source.facets) {
+                  for (const [facet, value] of source.facets) {
+                    mergedFacets.set(facet, value)
                   }
-
-                  result.set(key, {
-                    mode: sourceValue.mode ?? targetValue.mode,
-                    facets: mergedFacets.size > 0 ? mergedFacets : undefined,
-                  })
                 }
               }
-            }
 
-            return result as Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>> : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+              return {
+                ...(mergedMode ? { mode: mergedMode } : {}),
+                ...(mergedFacets.size > 0 ? { facets: mergedFacets } : {}),
+              } as NonNullable<T[number]> extends Brand_Metadata.Static
+                ? Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never
+                  ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>>
+                  : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+                : State.Static.AsMap.Island
+            },
+            all<T extends (State.Static.AsMap | undefined)[]>(...sources: T) {
+              const islandStates = sources.reduce(
+                (islandStates, source) => {
+                  for (const [i, values] of source ?? []) {
+                    if (!islandStates?.has(i)) islandStates?.set(i, new Set())
+                    islandStates?.get(i)?.add(values)
+                  }
+                  return islandStates
+                },
+                new Map() as Map<string, Set<State.Static.AsMap.Island | undefined>>
+              )
+
+              const mergedState = Array.from(islandStates).reduce((mergedState, [i, islandStates]) => {
+                const mergedIslandState = this.island(...Array.from(islandStates))
+                return mergedState.set(i, mergedIslandState)
+              }, new Map() as State.Static.AsMap)
+
+              return mergedState as NonNullable<T[number]> extends Brand_Metadata.Static
+                ? Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never
+                  ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>>
+                  : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+                : State.Static.AsMap
+            },
           },
         },
       },
@@ -621,6 +689,9 @@ export const script = (args: Script_Args.Static) => {
 
           return state as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Omit<Brand_Info<T>, 'coverage'> & { coverage: 'partial' }> : Modes.AsMap
         },
+        fromFacet<T extends string>(island: string, facet: string, value: T) {
+          return new Map([[island, { facets: new Map([[facet, value]]) }]]) as unknown as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }> : State.Static.AsMap
+        }
       },
     },
     resolve: {
@@ -700,7 +771,7 @@ export const script = (args: Script_Args.Static) => {
     sanitize: {
       state: {
         option: {
-          facet<T extends AtLeast<string, { validation: 'dirty' }>>(island: string, facet: string, value: T, backup?: T) {
+          facet(island: string, facet: string, value: string, backup?: string) {
             const isIsland = utils.isValid.value.island(island)
             if (!isIsland) return
 
@@ -713,7 +784,7 @@ export const script = (args: Script_Args.Static) => {
 
             return (isOption ? value : isBackupOption ? backup! : fallback) as Brand<string, { validation: 'sanitized' }>
           },
-          mode(island: string, value: AtLeast<string, { validation: 'dirty' }>, backup?: AtLeast<string, { validation: 'dirty' }>) {
+          mode(island: string, value: string, backup?: string) {
             const isIsland = utils.isValid.value.island(island)
             if (!isIsland) return
 
@@ -727,7 +798,7 @@ export const script = (args: Script_Args.Static) => {
             return (isOption ? value : isBackupOption ? backup! : fallback) as Brand<string, { validation: 'sanitized' }>
           },
         },
-        island<T extends AtLeast<State.Static.AsMap.Island, { validation: 'dirty' }>>(island: string, values: T, backup?: T) {
+        island(island: string, values: State.Static.AsMap.Island, backup?: State.Static.AsMap.Island) {
           const isIsland = utils.isValid.value.island(island)
           if (!isIsland) return
 
@@ -795,11 +866,11 @@ export const script = (args: Script_Args.Static) => {
     },
     normalize: {
       state: {
-        island<T extends AtLeast<State.Static.AsMap.Island, { validation: 'dirty' }>>(island: string, values: T, backup?: T) {
+        island(island: string, values: State.Static.AsMap.Island, backup?: State.Static.AsMap.Island) {
           const isIsland = utils.isValid.value.island(island)
           if (!isIsland) return
 
-          const normalized = {} as Brand<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>
+          const normalized = {} as State.Static.AsMap.Island
 
           // fallbacks
           for (const [facet, fallback] of engine.fallbacks.get(island)!.facets ?? []) {
@@ -810,7 +881,7 @@ export const script = (args: Script_Args.Static) => {
 
           // backup
           if (backup) {
-            const sanBackup = utils.sanitize.state.island(island, backup)! as unknown as Brand<State.Static.AsMap.Island, { validation: 'normalized' }>
+            const sanBackup = utils.sanitize.state.island(island, backup)!
             if (sanBackup.facets) {
               for (const [facet, value] of sanBackup.facets) {
                 normalized.facets?.set(facet, value)
@@ -820,7 +891,7 @@ export const script = (args: Script_Args.Static) => {
           }
 
           // values
-          const sanValues = utils.sanitize.state.island(island, values, backup)! as unknown as Brand<State.Static.AsMap.Island, { validation: 'normalized' }>
+          const sanValues = utils.sanitize.state.island(island, values, backup)!
           if (sanValues.facets) {
             for (const [facet, value] of sanValues.facets) {
               normalized.facets?.set(facet, value)
@@ -828,10 +899,10 @@ export const script = (args: Script_Args.Static) => {
           }
           if (sanValues.mode) normalized.mode = sanValues.mode
 
-          return normalized
+          return normalized as Brand<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>
         },
-        state<T extends AtLeast<State.Static.AsMap, { validation: 'dirty' }>>(state: T | undefined, backup?: T) {
-          const normalized = new Map() as Brand<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>
+        state(state: State.Static.AsMap | undefined, backup?: State.Static.AsMap) {
+          const normalized = new Map() as State.Static.AsMap
 
           for (const [island, values] of engine.fallbacks) {
             normalized.set(island, values)
@@ -851,7 +922,7 @@ export const script = (args: Script_Args.Static) => {
             normalized.set(island, normIsland)
           }
 
-          return normalized
+          return normalized as Brand<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>
         },
       },
       modes: {
@@ -1078,7 +1149,7 @@ export const script = (args: Script_Args.Static) => {
           const currState = Main.get.state.base()!
           const newStatePartial = new Map([[island, { facets: new Map([[facet, value]]) }]]) as unknown as Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }>
 
-          const newState = utils.merge.deep.state.maps(currState, newStatePartial)
+          const newState = utils.merge.deep.state.maps.all(currState, newStatePartial)
           const newStateObj = utils.convert.deep.state.mapToObj(newState)
           const newSerState = JSON.stringify(newStateObj) as Brand<string, { validation: 'normalized' }>
 
@@ -1091,7 +1162,7 @@ export const script = (args: Script_Args.Static) => {
           const currState = Main.get.state.base()!
           const newStatePartial = new Map([[island, values]]) as unknown as Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }>
 
-          const newState = utils.merge.deep.state.maps(currState, newStatePartial)
+          const newState = utils.merge.deep.state.maps.all(currState, newStatePartial)
           const newStateObj = utils.convert.deep.state.mapToObj(newState)
           const newSerState = JSON.stringify(newStateObj) as Brand<string, { validation: 'normalized' }>
 
@@ -1173,13 +1244,13 @@ export const script = (args: Script_Args.Static) => {
             if (needsUpdate) StorageManager.updateStorage.modes.unique.all(modesToStore)
           },
         },
-        set: (state: AtLeast<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>) => { 
+        set: (state: AtLeast<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>) => {
           if (!engine.modes.storage.store) return
 
           const modes = utils.construct.modes(state)
           if (engine.modes.storage.strategy === 'unique') StorageManager.set.modes.unique.all(modes)
           else if (engine.modes.storage.strategy === 'split') StorageManager.set.modes.split.all(modes)
-        }
+        },
       },
     }
 
@@ -1317,6 +1388,461 @@ export const script = (args: Script_Args.Static) => {
     }
   }
 
+  // #region Dom Mananger
+  class DomManager {
+    private static instance: DomManager | undefined
+    private static observer: MutationObserver | undefined
+
+    public static init() {
+      if (!DomManager.instance) DomManager.instance = new DomManager()
+    }
+
+    private static findDeepest(attr: string) {
+      let deepest = null as Element | null
+      let maxDepth = -1
+
+      const dfs = (node: Element, depth: number) => {
+        if (node.hasAttribute(attr)) {
+          if (depth > maxDepth) {
+            maxDepth = depth
+            deepest = node
+          }
+        }
+
+        for (const child of node.children) dfs(child, depth + 1)
+      }
+
+      dfs(document.documentElement, 0)
+      return deepest
+    }
+
+    public static get = {
+      islands: {
+        byIsland(island: string) {
+          const elements = document.querySelectorAll(`[${engine.selectors.types.dataAttributes.island}=${island}]`)
+          if (elements.length === 0) return undefined
+          return new Set(elements)
+        },
+        all() {
+          const elements = Array.from(engine.islands).reduce(
+            (acc, island) => {
+              const elements = DomManager.get.islands.byIsland(island)
+              if (!elements) return acc
+
+              return acc.set(island, elements)
+            },
+            new Map() as Map<string, Set<Element>>
+          )
+          return elements
+        },
+      },
+      state: {
+        computed: {
+          island: {
+            dirty: (island: string, el: Element) => {
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) return undefined
+
+              const { mode, facets } = engine.facets.get(island)!
+
+              const state = {} as State.Static.AsMap.Island
+              if (facets && facets.size > 0) {
+                const facetsMap = Array.from(facets).reduce(
+                  (acc, facet) => {
+                    const facetValue = el.getAttribute(engine.selectors.types.dataAttributes.computed.facet(facet))
+                    if (!facetValue) return acc
+
+                    return acc.set(facet, facetValue)
+                  },
+                  new Map() as State.Static.AsMap.Island.Facets['facets']
+                )
+                state.facets = facetsMap
+              }
+              if (mode) {
+                const modeValue = el.getAttribute(engine.selectors.types.dataAttributes.computed.mode)
+                if (modeValue) state.mode = modeValue
+              }
+
+              return state as Brand<typeof state, { validation: 'dirty' }>
+            },
+            sanitized(island: string, el: Element, backup?: State.Static.AsMap.Island) {
+              const dirty = DomManager.get.state.computed.island.dirty(island, el)
+              if (!dirty) return undefined
+
+              const sanitized = utils.sanitize.state.island(island, dirty, backup)
+              return sanitized as Brand<State.Static.AsMap.Island, { validation: 'sanitized' }>
+            },
+            normalized: (island: string, el: Element, backup?: State.Static.AsMap.Island) => {
+              const sanitized = DomManager.get.state.computed.island.sanitized(island, el, backup)
+              if (!sanitized) return undefined
+
+              const normalized = utils.normalize.state.island(island, sanitized, backup)
+              return normalized
+            },
+          },
+          all: {
+            dirty: () => {
+              const islands = DomManager.get.islands.all()
+
+              const states = Array.from(islands).reduce(
+                (states, [i, els]) => {
+                  const islandStates = Array.from(els).reduce(
+                    (islandStates, el) => {
+                      const state = DomManager.get.state.computed.island.dirty(i, el)
+                      if (state && Object.keys(state).length > 0) return islandStates.set(el, state)
+                      return islandStates
+                    },
+                    new Map() as Map<Element, State.Static.AsMap.Island>
+                  )
+                  if (islandStates.size > 0) return states.set(i, islandStates)
+                  return states
+                },
+                new Map() as Map<string, Map<Element, State.Static.AsMap.Island>>
+              )
+
+              return states as Brand<typeof states, { validation: 'dirty' }>
+            },
+            sanitized: () => {
+              const islands = DomManager.get.islands.all()
+
+              const states = Array.from(islands).reduce(
+                (states, [i, els]) => {
+                  const islandStates = Array.from(els).reduce(
+                    (islandStates, el) => {
+                      const state = DomManager.get.state.computed.island.sanitized(i, el)
+                      if (state) return islandStates.set(el, state)
+                      return islandStates
+                    },
+                    new Map() as Map<Element, State.Static.AsMap.Island>
+                  )
+                  if (islandStates.size > 0) return states.set(i, islandStates)
+                  return states
+                },
+                new Map() as Map<string, Map<Element, State.Static.AsMap.Island>>
+              )
+
+              return states as Brand<typeof states, { validation: 'sanitized' }>
+            },
+            normalized: () => {
+              const islands = DomManager.get.islands.all()
+
+              const states = Array.from(islands).reduce(
+                (states, [i, els]) => {
+                  const islandStates = Array.from(els).reduce(
+                    (islandStates, el) => {
+                      const state = DomManager.get.state.computed.island.normalized(i, el)
+                      if (state) return islandStates.set(el, state)
+                      return islandStates
+                    },
+                    new Map() as Map<Element, State.Static.AsMap.Island>
+                  )
+                  if (islandStates.size > 0) return states.set(i, islandStates)
+                  return states
+                },
+                new Map() as Map<string, Map<Element, State.Static.AsMap.Island>>
+              )
+
+              return states as Brand<typeof states, { validation: 'normalized'; coverage: 'complete' }>
+            },
+          },
+        },
+        forced: {
+          island: {
+            dirty: (island: string) => {
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) return undefined
+
+              const { mode, facets } = engine.facets.get(island)!
+
+              const state = {} as State.Static.AsMap.Island
+
+              if (facets)
+                state.facets = Array.from(facets).reduce(
+                  (facets, facet) => {
+                    const deepestEl = DomManager.findDeepest(engine.selectors.types.dataAttributes.forced.facet(island, facet))
+                    if (!deepestEl) return facets
+
+                    const forcedValue = deepestEl.getAttribute(engine.selectors.types.dataAttributes.forced.facet(island, facet))
+                    if (!forcedValue) return facets
+
+                    return facets.set(facet, forcedValue)
+                  },
+                  new Map() as State.Static.AsMap.Island.Facets['facets']
+                )
+
+              if (mode) {
+                const deepestEl = DomManager.findDeepest(engine.selectors.types.dataAttributes.forced.mode(island))
+                if (deepestEl) {
+                  const forcedValue = deepestEl.getAttribute(engine.selectors.types.dataAttributes.forced.mode(island))
+                  if (forcedValue) state.mode = forcedValue
+                }
+              }
+
+              return state as Brand<typeof state, { validation: 'dirty' }>
+            },
+            sanitized: (island: string) => {
+              const dirty = DomManager.get.state.forced.island.dirty(island)
+              if (!dirty) return undefined
+
+              const sanitized = {} as State.Static.AsMap.Island
+
+              if (dirty.facets && dirty.facets.size > 0)
+                sanitized.facets = Array.from(dirty.facets).reduce(
+                  (facets, [facet, value]) => {
+                    const isValid = utils.isValid.value.option.facet(island, facet, value)
+                    if (!isValid) return facets
+
+                    return facets.set(facet, value)
+                  },
+                  new Map() as State.Static.AsMap.Island.Facets['facets']
+                )
+
+              if (dirty.mode) {
+                const isValid = utils.isValid.value.option.mode(island, dirty.mode)
+                if (isValid) sanitized.mode = dirty.mode
+              }
+
+              return sanitized as Brand<typeof sanitized, { validation: 'sanitized' }>
+            },
+          },
+          all: {
+            dirty: () => {
+              const state = Array.from(engine.islands).reduce((state, island) => {
+                const islandState = DomManager.get.state.forced.island.dirty(island)
+                if (islandState && Object.keys(islandState).length > 0) return state.set(island, islandState)
+                return state
+              }, new Map() as State.Static.AsMap)
+              return state as Brand<State.Static.AsMap, { validation: 'dirty' }>
+            },
+            sanitized: () => {
+              const state = Array.from(engine.islands).reduce((state, island) => {
+                const islandState = DomManager.get.state.forced.island.sanitized(island)
+                if (islandState && Object.keys(islandState).length > 0) return state.set(island, islandState)
+                return state
+              }, new Map() as State.Static.AsMap)
+              return state as AtLeast<State.Static.AsMap, { validation: 'sanitized'; coverage: 'partial' }>
+            },
+          },
+        },
+      },
+    }
+
+    public static set = {
+      state: {
+        computed: {
+          island: (island: string, state: AtLeast<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Set<Element>; transitionsAlreadyDisabled?: boolean }) => {
+            const enableBackTransitions = !opts?.transitionsAlreadyDisabled && engine.disableTransitionOnChange ? utils.miscellaneous.disableTransitions() : undefined
+
+            const els = opts?.elements ?? new Set(DomManager.get.islands.byIsland(island))
+
+            els.forEach((el) => {
+              const elCurrState = DomManager.get.state.computed.island.dirty(island, el)
+
+              if (state.facets)
+                state.facets.forEach((value, facet) => {
+                  const needsUpdate = (elCurrState?.facets?.get(facet) as string) !== (value as string)
+                  if (needsUpdate) el.setAttribute(engine.selectors.types.dataAttributes.computed.facet(facet), value)
+                })
+
+              if (state.mode) {
+                const needsUpdate = (elCurrState?.mode as string) !== (state.mode as string)
+                if (needsUpdate) el.setAttribute(engine.selectors.types.dataAttributes.computed.mode, state.mode)
+
+                const colorScheme = utils.resolve.colorScheme(island, state.mode)!
+                DomManager.set.mode.set(island, el, colorScheme)
+              }
+            })
+
+            enableBackTransitions?.()
+          },
+          all: (state: AtLeast<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>, elements?: Map<string, Set<Element>>) => {
+            const enableBackTransitions = engine.disableTransitionOnChange ? utils.miscellaneous.disableTransitions() : undefined
+
+            const els = elements ?? DomManager.get.islands.all()
+            els.forEach((islandEls, island) => {
+              const islandState = state.get(island)!
+              DomManager.set.state.computed.island(island, islandState, { elements: islandEls, transitionsAlreadyDisabled: !!enableBackTransitions })
+            })
+
+            enableBackTransitions?.()
+          },
+        },
+      },
+      mode: {
+        dataAttribute: (island: string, el: Element, value: Color_Scheme) => {
+          if (!engine.modes.map.get(island)?.selectors.has('data-attribute')) return
+          if (!(el instanceof HTMLElement)) return
+
+          const currValue = el.getAttribute(engine.selectors.types.dataAttributes.colorScheme)
+
+          const needsUpdate = currValue !== value
+          if (needsUpdate) el.setAttribute(engine.selectors.types.dataAttributes.colorScheme, value)
+        },
+        colorScheme: (island: string, el: Element, value: Color_Scheme) => {
+          if (!engine.modes.map.get(island)?.selectors.has('color-scheme')) return
+          if (!(el instanceof HTMLElement)) return
+
+          const currValue = el.style.colorScheme
+
+          const needsUpdate = currValue !== value
+          if (needsUpdate) el.style.colorScheme = value
+        },
+        class: (island: string, el: Element, value: Color_Scheme) => {
+          if (!engine.modes.map.get(island)?.selectors.has('class')) return
+          if (!(el instanceof HTMLElement)) return
+
+          const currValue = el.classList.contains(CONSTANTS.modes.light) ? CONSTANTS.modes.light : el.classList.contains(CONSTANTS.modes.dark) ? CONSTANTS.modes.dark : undefined
+          const needsUpdate = currValue !== value
+          if (needsUpdate) {
+            const other = value === CONSTANTS.modes.light ? CONSTANTS.modes.dark : CONSTANTS.modes.light
+            el.classList.replace(other, value) || el.classList.add(value)
+          }
+        },
+        set: (island: string, el: Element, value: Color_Scheme) => {
+          if (!(el instanceof HTMLElement)) return
+
+          if (engine.modes.map.get(island)?.selectors.has('data-attribute')) DomManager.set.mode.dataAttribute(island, el, value)
+          if (engine.modes.map.get(island)?.selectors.has('color-scheme')) DomManager.set.mode.colorScheme(island, el, value)
+          if (engine.modes.map.get(island)?.selectors.has('class')) DomManager.set.mode.class(island, el, value)
+        },
+      },
+    }
+
+    public static terminate() {
+      DomManager.observer?.disconnect()
+
+      const islands = DomManager.get.islands.all()
+      for (const [island, elements] of islands) {
+        for (const element of elements) {
+          const { mode, facets } = engine.facets.get(island)!
+          if (facets) {
+            for (const facet of facets) {
+              element.removeAttribute(engine.selectors.types.dataAttributes.computed.facet(facet))
+            }
+          }
+          if (mode) {
+            element.removeAttribute(engine.selectors.types.dataAttributes.computed.mode)
+            if (element instanceof HTMLElement) {
+              element.style.colorScheme = ''
+              element.removeAttribute(engine.selectors.types.dataAttributes.colorScheme)
+              element.classList.remove(CONSTANTS.modes.light, CONSTANTS.modes.dark)
+            }
+          }
+        }
+      }
+
+      DomManager.instance = undefined
+    }
+
+    private constructor() {
+      EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state.computed.all(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>))
+
+      const handleMutations = (mutations: MutationRecord[]) => {
+        for (const { type, oldValue, attributeName, target } of mutations) {
+          if (type === 'attributes' && target instanceof HTMLElement && attributeName) {
+            if (attributeName === engine.selectors.types.dataAttributes.island) {
+              const newIsland = target.getAttribute(engine.selectors.types.dataAttributes.island)
+              const isIsland = utils.isValid.value.island(newIsland)
+
+              if (!isIsland) {
+                const isOldIsland = utils.isValid.value.island(oldValue)
+                if (isOldIsland) target.setAttribute(engine.selectors.types.dataAttributes.island, oldValue!)
+              }
+
+              if (isIsland) {
+                const compState = Main.get.state.computed()?.get(newIsland)!
+                const currState = DomManager.get.state.computed.island.normalized(newIsland!, target)
+
+                const newIslandState = utils.merge.deep.state.maps.island(currState, compState)
+
+                DomManager.set.state.computed.island(newIsland!, newIslandState)
+              }
+              continue
+            }
+
+            if (engine.selectors.observe.dataAttributes.forced.has(attributeName)) {
+              if (!engine.forcedValues) continue
+
+              const parts = attributeName.split('-')
+
+              const island = parts[2]!
+              const facetType = parts[3]! as Facet_Type
+              const facet = parts[4]
+
+              const newOption = target.getAttribute(attributeName)
+
+              if (facetType === 'facet') {
+                const isNewOption = newOption ? utils.isValid.value.option.facet(island, facet!, newOption) : false
+
+                if (!isNewOption) {
+                  const isOldOption = oldValue ? utils.isValid.value.option.facet(island, facet!, oldValue) : false
+                  if (isOldOption) target.setAttribute(attributeName, oldValue!)
+                }
+              }
+
+              if (facetType === 'mode') {
+                const isNewOption = newOption ? utils.isValid.value.option.mode(island, newOption) : false
+
+                if (!isNewOption) {
+                  const isOldOption = oldValue ? utils.isValid.value.option.mode(island, oldValue) : false
+                  if (isOldOption) target.setAttribute(attributeName, oldValue!)
+                }
+              }
+
+              const newForcedState = DomManager.get.state.forced.all.sanitized()
+              Main.set.state.forced(newForcedState)
+              continue
+            }
+
+            if (engine.selectors.observe.dataAttributes.computed.has(attributeName)) {
+              const island = target.getAttribute(engine.selectors.types.dataAttributes.island)
+              
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) continue
+
+              const parts = attributeName.split('-')
+              const facetType = parts[1] as Facet_Type
+              const facet = parts[2]
+
+              const newOption = target.getAttribute(attributeName)
+
+              if (facetType === 'facet' && facet) {
+                const revertToComputed = (oldValue: string | null) => {
+                  const currCompValue = Main.get.state.computed()?.get(island)?.facets?.get(facet)!
+                  const isOldOption = utils.isValid.value.option.facet(island, facet, oldValue)
+
+                  const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                  if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue!)
+                  else target.setAttribute(attributeName, currCompValue)
+                }
+
+                const isNewOption = utils.isValid.value.option.facet(island, facet, newOption)
+                if (!isNewOption) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const isFacetCurrForced = Main.get.state.forced()?.get(island)?.facets?.has(facet)
+                if (isFacetCurrForced) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const currBaseValue = Main.get.state.base()?.get(island)?.facets?.get(facet)!
+                const isNewAlreadySet = currBaseValue === newOption
+                if (isNewAlreadySet) continue
+
+                const newStatePartial = utils.construct.state.fromFacet(island, facet, newOption as Brand<string, { validation: 'sanitized'}>)
+                Main.set.state.base(newStatePartial)
+                continue
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   // #region Main
   class Main {
     private static instance: Main
@@ -1334,7 +1860,7 @@ export const script = (args: Script_Args.Static) => {
           if (!base) return undefined
 
           const forced = Main.get.state.forced()
-          const computed = utils.merge.deep.state.maps(base, forced)
+          const computed = utils.merge.deep.state.maps.all(base, forced)
 
           return computed
         },
@@ -1393,14 +1919,14 @@ export const script = (args: Script_Args.Static) => {
 
     public static set = {
       state: {
-        base: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) => {
+        base: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) => {
           const currState = Main.get.state.base()
           if (!currState) return console.error('[T3M4]: Library not initialized')
 
-          const mergedState = utils.merge.deep.state.maps(currState, state)
+          const mergedState = utils.merge.deep.state.maps.all(currState, state)
           Main.smartUpdateNotify.state.base(mergedState)
         },
-        forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) => {
+        forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) => {
           Main.smartUpdateNotify.state.forced(state)
         },
       },
@@ -1421,7 +1947,7 @@ export const script = (args: Script_Args.Static) => {
           const computedState = Main.get.state.computed()!
           Main.notifyUpdate.state.computed(computedState)
         },
-        forced(newState: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) {
+        forced(newState: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) {
           const currState = Main.get.state.forced()
           if (!currState) return console.error('[T3M4] Library not initialized.')
 
@@ -1444,7 +1970,7 @@ export const script = (args: Script_Args.Static) => {
           EventManager.emit('State:Base:Update', utils.convert.deep.state.mapToObj(state))
           EventManager.emit('ColorSchemes:Base:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
         },
-        forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>) => {
+        forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) => {
           const colorSchemes = utils.construct.colorSchemes(state)
           EventManager.emit('State:Forced:Update', utils.convert.deep.state.mapToObj(state))
           EventManager.emit('ColorSchemes:Forced:Update', utils.convert.shallow.mapToObj.string(colorSchemes) as ColorSchemes.Static)
@@ -1463,7 +1989,7 @@ export const script = (args: Script_Args.Static) => {
 
     private state: {
       base: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }> | undefined
-      forced: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }> | undefined
+      forced: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }> | undefined
     } = {
       base: undefined,
       forced: undefined,
@@ -1484,7 +2010,7 @@ export const script = (args: Script_Args.Static) => {
       this.state.forced = forcedState
       Main.notifyUpdate.state.forced(forcedState)
 
-      const computedState = utils.merge.deep.state.maps(baseState, forcedState) as typeof baseState
+      const computedState = utils.merge.deep.state.maps.all(baseState, forcedState)
       Main.notifyUpdate.state.computed(computedState)
     }
   }
@@ -1550,8 +2076,8 @@ export const script = (args: Script_Args.Static) => {
       const needsReboot = !utils.equal.deep.generic.objects(args, newArgs)
       if (!needsReboot) return
       EventManager.emit('Reset')
-      // StorageManager.terminate()
-      // DomManager.terminate()
+      StorageManager.terminate()
+      DomManager.terminate()
       engine = getEngine(newArgs)
       Main.reboot()
     }
