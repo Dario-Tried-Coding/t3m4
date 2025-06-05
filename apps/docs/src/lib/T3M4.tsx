@@ -17,7 +17,6 @@ const config = {
     mode: {
       strategy: 'system',
       default: 'dark',
-      selector: 'data-attribute'
     },
     facets: {
       layout: {

@@ -7,6 +7,14 @@
     "Links": {
       "docs": "Docs",
       "playground": "Playground"
+    },
+    "CommandMenu": {
+      "Trigger": {
+        "Placeholder": {
+          "extended": "Search documentation...",
+          "brief": "Search..."
+        }
+      }
     }
   },
   "ThemeSwitch": {

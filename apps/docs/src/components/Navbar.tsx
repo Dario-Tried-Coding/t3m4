@@ -9,6 +9,7 @@ import { Github } from './Github'
 import { Separator } from './ui/Separator'
 import { LayoutSwitch } from './LayoutSwitch'
 import { ModeSwitch } from './ModeSwitch'
+import { CommandMenu } from './CommandMenu'
 
 export const Navbar: FC = () => {
   const t = useTranslations('Navbar.Links')
@@ -30,10 +31,12 @@ export const Navbar: FC = () => {
               ))}
           </nav>
           <div className='ml-auto flex items-center gap-2 md:flex-1 md:justify-end'>
+            <CommandMenu className='hidden md:flex md:flex-none' />
+            <Separator orientation='vertical' className='ml-2 hidden !h-4 lg:block' />
             <Github />
             <Separator orientation='vertical' className='!h-4' />
-            <LayoutSwitch />
-            <Separator orientation='vertical' className='!h-4' />
+            <LayoutSwitch className='3xl:flex hidden' />
+            <Separator orientation='vertical' className='3xl:flex hidden !h-4' />
             <ModeSwitch />
           </div>
         </div>
