@@ -171,7 +171,7 @@ export const script = (args: Script_Args.Static) => {
         },
       },
       dom: {
-        selectors: ['color-scheme'],
+        selectors: [],
         island: {
           selectors: [],
         },

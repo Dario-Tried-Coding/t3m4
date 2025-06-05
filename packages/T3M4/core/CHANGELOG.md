@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.2
+
+### Patch Changes
+
+- DOM - no color scheme selectors now by default
+
 ## 0.1.1
 
 ### Patch Changes
