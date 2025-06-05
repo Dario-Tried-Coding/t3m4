@@ -5,7 +5,7 @@ import { FC, PropsWithChildren } from 'react'
 const schema = {
   root: {
     facets: {
-      layout: ['full', 'fixed']
+      layout: ['full', 'fixed'],
     },
     mode: { light: 'light', dark: 'dark' },
   },
@@ -21,9 +21,9 @@ const config = {
     facets: {
       layout: {
         strategy: 'multi',
-        default: 'full'
-      }
-    }
+        default: 'full',
+      },
+    },
   },
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config

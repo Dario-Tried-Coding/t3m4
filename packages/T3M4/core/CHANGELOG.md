@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.3
+
+### Patch Changes
+
+- Core - modes now separated from state
+
 ## 0.1.2
 
 ### Patch Changes

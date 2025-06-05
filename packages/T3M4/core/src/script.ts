@@ -131,6 +131,7 @@ type Engine = {
       }
     }
   }
+  store: boolean
   observe: Set<Observable>
   forcedValues: boolean
   modes: {
@@ -159,7 +160,7 @@ export const script = (args: Script_Args.Static) => {
   const PRESET = {
     storage: {
       key: 'T3M4',
-      store: true,
+      store: false,
     },
     modes: {
       storage: {
@@ -177,7 +178,7 @@ export const script = (args: Script_Args.Static) => {
         },
       },
     },
-    enable_forced_values: false,
+    forced_values: false,
     observe: ['DOM', 'storage'],
     disable_transitions_on_change: false,
     nonce: '',
@@ -306,14 +307,14 @@ export const script = (args: Script_Args.Static) => {
 
     const modes = {
       storage: {
-        store: PRESET.modes.storage.store,
-        key: PRESET.modes.storage.key,
-        strategy: PRESET.modes.storage.strategy,
+        store: args.modes?.store ?? PRESET.modes.storage.store,
+        key: args.modes?.storageKey ?? PRESET.modes.storage.key,
+        strategy: args.modes?.storageStrategy ?? PRESET.modes.storage.strategy,
         toStore: Object.entries(schema).reduce((acc, [i, { mode }]) => {
           if (!mode) return acc
 
           const stratObj = args.config[i]!.mode!
-          const mustStore = stratObj.store ?? PRESET.modes.storage.island.store
+          const mustStore = (args.modes?.store ?? PRESET.modes.storage.store) && (stratObj.store ?? PRESET.modes.storage.island.store)
           if (!mustStore) return acc
 
           return acc.add(i)
@@ -326,7 +327,7 @@ export const script = (args: Script_Args.Static) => {
           const stratObj = args.config[i]!.mode!
 
           let obj = {
-            store: stratObj.store ?? PRESET.modes.storage.island.store,
+            store: (args.modes?.store ?? PRESET.modes.storage.store) && (stratObj.store ?? PRESET.modes.storage.island.store),
             selectors: new Set([...PRESET.modes.dom.selectors, ...(typeof stratObj.selector === 'string' ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors)]),
             strategy: stratObj.strategy,
           } as NonNullable<ReturnType<Engine['modes']['map']['get']>>
@@ -360,7 +361,7 @@ export const script = (args: Script_Args.Static) => {
     return {
       storageKeys: {
         state: args.storageKey || PRESET.storage.key,
-        modes: `${args.storageKey ?? PRESET.storage.key}:${PRESET.modes.storage.key}`,
+        modes: `${args.storageKey ?? PRESET.storage.key}:${args.modes?.storageKey ?? PRESET.modes.storage.key}`,
       },
       islands,
       facets,
@@ -368,7 +369,7 @@ export const script = (args: Script_Args.Static) => {
       fallbacks,
       nonce: args.nonce || PRESET.nonce,
       disableTransitionOnChange: args.disableTransitionOnChange ?? PRESET.disable_transitions_on_change,
-      forcedValues: args.enableForcedValues ?? PRESET.enable_forced_values,
+      forcedValues: args.forcedValues ?? PRESET.forced_values,
       selectors: {
         types: {
           dataAttributes: {
@@ -395,6 +396,7 @@ export const script = (args: Script_Args.Static) => {
           colorScheme: 'style',
         },
       },
+      store: args.store ?? PRESET.storage.store,
       observe: new Set(args.observe ? (typeof args.observe === 'string' ? [args.observe] : args.observe) : PRESET.observe),
       modes,
     }
@@ -746,7 +748,7 @@ export const script = (args: Script_Args.Static) => {
         return dirtyState
       },
       modes(string: string) {
-        const fallback = new Map() as Brand<Modes.AsMap, { validation: 'dirty'; coverage: 'partial' | 'complete' }>
+        const fallback = new Map() as AtLeast<Modes.AsMap, { validation: 'dirty'; coverage: 'partial' }>
 
         const parsed = utils.miscellaneous.safeParse(string)
         if (!parsed) return fallback
@@ -758,7 +760,7 @@ export const script = (args: Script_Args.Static) => {
         if (!isModesObj) return fallback
 
         const dirtyModes = utils.convert.shallow.objToMap.string(parsed)
-        return dirtyModes as Brand<Modes.AsMap, { validation: 'dirty'; coverage: 'partial' | 'complete' }>
+        return dirtyModes as AtLeast<Modes.AsMap, { validation: 'dirty'; coverage: 'partial' }>
       },
     },
     sanitize: {
@@ -795,7 +797,7 @@ export const script = (args: Script_Args.Static) => {
           const isIsland = utils.isValid.value.island(island)
           if (!isIsland) return
 
-          const obj = {} as Brand<State.Static.AsMap.Island, { validation: 'sanitized' }>
+          const obj = {} as Brand<State.Static.AsMap.Island, { validation: 'sanitized'; coverage: 'partial' | 'complete' }>
 
           if (values.facets) {
             const facets = new Map() as NonNullable<typeof obj.facets>
@@ -813,8 +815,8 @@ export const script = (args: Script_Args.Static) => {
 
           return obj
         },
-        all<T extends AtLeast<State.Static.AsMap, { validation: 'dirty' }>>(state: T, backup?: T) {
-          const sanState = new Map() as Brand<State.Static.AsMap, { validation: 'sanitized' }>
+        all<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T, backup?: T) {
+          const sanState = new Map() as AtLeast<State.Static.AsMap, { validation: 'sanitized'; coverage: 'partial' }>
 
           for (const [island, values] of state) {
             const sanIsland = utils.sanitize.state.island(island, values, backup?.get(island))
@@ -843,8 +845,8 @@ export const script = (args: Script_Args.Static) => {
 
           return (isMode ? value : isBackupMode ? backup! : fallback) as Brand<string, { validation: 'sanitized' }>
         },
-        all<T extends AtLeast<Modes.AsMap, { validation: 'dirty' }>>(modes: T, backup?: T) {
-          const sanModes = new Map() as Brand<Modes.AsMap, { validation: 'sanitized' }>
+        all<T extends AtLeast<Modes.AsMap, { coverage: 'partial' }>>(modes: T, backup?: T) {
+          const sanModes = new Map() as AtLeast<Modes.AsMap, { validation: 'sanitized'; coverage: 'partial' }>
 
           for (const [island, value] of modes) {
             const sanMode = utils.sanitize.modes.mode(island, value, backup?.get(island))
@@ -981,7 +983,7 @@ export const script = (args: Script_Args.Static) => {
       },
       structure: {
         state: {
-          obj(obj: Record<string, unknown>): obj is Brand<State.Static, { validation: 'dirty' }> {
+          obj(obj: Record<string, unknown>): obj is AtLeast<State.Static, { validation: 'dirty'; coverage: 'partial' }> {
             for (const [, value] of Object.entries(obj)) {
               if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
 
@@ -1061,15 +1063,31 @@ export const script = (args: Script_Args.Static) => {
     public static get = {
       state: {
         serialized: () => {
+          if (!engine.store) return undefined
+
           const retrieved = window.localStorage.getItem(engine.storageKeys.state)
           return retrieved ?? undefined
         },
         deserialized: () => {
-          const serialized = StorageManager.get.state.serialized()
-          if (!serialized) return undefined
+          let dirtyState: AtLeast<State.Static.AsMap, { coverage: 'partial' }> | undefined = undefined
 
-          const deserialized = utils.deserialize.state(serialized)
-          return deserialized
+          if (engine.store) {
+            const serialized = StorageManager.get.state.serialized()
+            if (!serialized) return dirtyState
+
+            dirtyState = utils.deserialize.state(serialized)
+            return dirtyState
+          }
+
+          if (engine.modes.storage.store) {
+            const dirtyModes = StorageManager.get.modes.get.dirty()
+            if (!dirtyModes) return dirtyState
+
+            dirtyState = utils.construct.state.fromModes(dirtyModes)
+            return dirtyState
+          }
+
+          return dirtyState
         },
         sanitized: () => {
           const deserialized = StorageManager.get.state.deserialized()
@@ -1091,16 +1109,16 @@ export const script = (args: Script_Args.Static) => {
             const retrieved = window.localStorage.getItem(`${engine.storageKeys.modes}`)
             return retrieved ?? undefined
           },
-          deserialized: () => {
+          dirty: () => {
             const serialized = StorageManager.get.modes.unique.serialized()
-            if (!serialized) return new Map() as Brand<Modes.AsMap, { validation: 'dirty' }>
+            if (!serialized) return new Map() as AtLeast<Modes.AsMap, { validation: 'dirty'; coverage: 'partial' }>
 
-            const deserialized = utils.deserialize.modes(serialized)
-            return deserialized
+            const dirty = utils.deserialize.modes(serialized)
+            return dirty
           },
           sanitized: () => {
-            const deserialized = StorageManager.get.modes.unique.deserialized()
-            const sanitized = utils.sanitize.modes.all(deserialized)
+            const dirty = StorageManager.get.modes.unique.dirty()
+            const sanitized = utils.sanitize.modes.all(dirty)
             return sanitized
           },
           normalized: () => {
@@ -1111,10 +1129,10 @@ export const script = (args: Script_Args.Static) => {
         },
         split: {
           dirty: () => {
-            const dirty = new Map() as Brand<Modes.AsMap, { validation: 'dirty' }>
+            const dirty = new Map() as AtLeast<Modes.AsMap, { validation: 'dirty'; coverage: 'partial' }>
 
             for (const island of engine.islands) {
-              const retrieved = window.localStorage.getItem(`${engine.storageKeys.modes}-${island}`) as Brand<string, { validation: 'dirty' }> | null
+              const retrieved = window.localStorage.getItem(`${engine.storageKeys.modes}:${island}`) as AtLeast<string, { validation: 'dirty' }> | null
               if (!retrieved) continue
 
               dirty.set(island, retrieved)
@@ -1133,12 +1151,28 @@ export const script = (args: Script_Args.Static) => {
             return normalized
           },
         },
+        get: {
+          dirty: () => {
+            if (engine.modes.storage.strategy === 'unique') return StorageManager.get.modes.unique.dirty()
+            if (engine.modes.storage.strategy === 'split') return StorageManager.get.modes.split.dirty()
+          },
+          sanitized: () => {
+            if (engine.modes.storage.strategy === 'unique') return StorageManager.get.modes.unique.sanitized()
+            if (engine.modes.storage.strategy === 'split') return StorageManager.get.modes.split.sanitized()
+          },
+          normalized: () => {
+            if (engine.modes.storage.strategy === 'unique') return StorageManager.get.modes.unique.normalized()
+            if (engine.modes.storage.strategy === 'split') return StorageManager.get.modes.split.normalized()
+          },
+        },
       },
     }
 
     public static set = {
       state: {
         facet<T extends Brand<string, { validation: 'normalized' }>>(island: string, facet: string, value: T) {
+          if (!engine.store) return
+
           const currState = Main.get.state.base()!
           const newStatePartial = new Map([[island, { facets: new Map([[facet, value]]) }]]) as unknown as Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }>
 
@@ -1152,6 +1186,8 @@ export const script = (args: Script_Args.Static) => {
           if (needsUpdate) StorageManager.updateStorage.state(newSerState)
         },
         island<T extends Brand<State.Static.AsMap.Island, { coverage: 'complete'; validation: 'normalized' }>>(island: string, values: T) {
+          if (!engine.store) return
+
           const currState = Main.get.state.base()!
           const newStatePartial = new Map([[island, values]]) as unknown as Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }>
 
@@ -1170,8 +1206,9 @@ export const script = (args: Script_Args.Static) => {
 
           const currSerState = StorageManager.get.state.serialized()
 
+          const mustStoreState = engine.store
           const needsUpdate = currSerState !== newSerState
-          if (needsUpdate) StorageManager.updateStorage.state(newSerState)
+          if (mustStoreState && needsUpdate) StorageManager.updateStorage.state(newSerState)
 
           StorageManager.set.modes.set(state)
         },
@@ -1181,7 +1218,7 @@ export const script = (args: Script_Args.Static) => {
           island(island: string, mode: Brand<string, { validation: 'normalized' }>) {
             if (!engine.modes.storage.store) return
             if (engine.modes.storage.strategy !== 'split') return
-            if (!engine.modes.map.get(island)?.store) return
+            if (!engine.modes.storage.toStore.has(island)) return
 
             const currMode = StorageManager.get.modes.split.dirty().get(island)
 
@@ -1213,14 +1250,14 @@ export const script = (args: Script_Args.Static) => {
           island: (island: string, mode: Brand<string, { validation: 'normalized' }>) => {
             if (!engine.modes.storage.store) return
             if (engine.modes.storage.strategy !== 'unique') return
-            if (!engine.modes.map.get(island)?.store) return
+            if (!engine.modes.storage.toStore.has(island)) return
 
             const currModes = Main.get.modes.base()!
             const currModesToStore = StorageManager.constructModesToStore(currModes)
 
             const newModes = currModesToStore.set(island, mode as Brand<string, Brand_Info<typeof mode> & { toStore: 'yes' }>)
 
-            const currStorageModes = StorageManager.get.modes.unique.deserialized()
+            const currStorageModes = StorageManager.get.modes.unique.dirty()
 
             const needsUpdate = !utils.equal.shallow.map.string(currStorageModes, newModes)
             if (needsUpdate) StorageManager.updateStorage.modes.unique.all(newModes)
@@ -1231,7 +1268,7 @@ export const script = (args: Script_Args.Static) => {
 
             const modesToStore = StorageManager.constructModesToStore(modes)
 
-            const currStorageModes = StorageManager.get.modes.unique.deserialized()
+            const currStorageModes = StorageManager.get.modes.unique.dirty()
 
             const needsUpdate = !utils.equal.shallow.map.string(currStorageModes, modesToStore)
             if (needsUpdate) StorageManager.updateStorage.modes.unique.all(modesToStore)
@@ -1294,7 +1331,7 @@ export const script = (args: Script_Args.Static) => {
     private static constructModesToStore<T extends Modes.AsMap>(modes: T) {
       const modesToStore = Array.from(modes).reduce(
         (acc, [i, mode]) => {
-          if (!engine.modes.map.get(i)?.store) return acc
+          if (!engine.modes.storage.toStore.has(i)) return acc
           return acc.set(i, mode as T extends Brand_Metadata.Static ? Brand<string, Brand_Info<T> & { toStore: 'yes' }> : Brand<string, { toStore: 'yes' }>)
         },
         new Map() as T extends Brand_Metadata.Static ? Brand<Modes.AsMap, Brand_Info<T> & { toStore: 'yes' }> : Brand<Modes.AsMap, { toStore: 'yes' }>
@@ -1306,7 +1343,7 @@ export const script = (args: Script_Args.Static) => {
     public static terminate() {
       StorageManager.abortController?.abort()
 
-      localStorage.removeItem(engine.storageKeys.state)
+      if (engine.store) localStorage.removeItem(engine.storageKeys.state)
       if (engine.modes.storage.store) {
         if (engine.modes.storage.strategy === 'unique') localStorage.removeItem(`${engine.storageKeys.modes}`)
         else if (engine.modes.storage.strategy === 'split') {
@@ -1330,6 +1367,8 @@ export const script = (args: Script_Args.Static) => {
             switch (true) {
               case key === engine.storageKeys.state:
                 {
+                  if (!engine.store) return
+
                   const deserNew = newValue ? utils.deserialize.state(newValue) : undefined
                   const deserOld = oldValue ? utils.deserialize.state(oldValue) : undefined
 

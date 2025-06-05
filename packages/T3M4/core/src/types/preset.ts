@@ -25,7 +25,7 @@ export type PRESET = {
       }
     }
   }
-  enable_forced_values: boolean
+  forced_values: boolean
   observe: Observable[]
   disable_transitions_on_change: boolean
   nonce: string
