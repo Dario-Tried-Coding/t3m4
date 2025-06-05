@@ -1,3 +1,43 @@
+@utility container-wrapper {
+  & {
+    width: 100%;
+    padding-inline: calc(var(--spacing) * 2);
+    margin-inline: auto;
+  }
+
+  @media (width >= 1600px) {
+    .container-wrapper: is([data-island="root"][data-facet-layout="fixed"] *) {
+      max-width: calc(var(--breakpoint-2xl) + 2rem);
+    }
+  }
+}
+
+@utility container {
+  & {
+    max-width: 1400px;
+    padding-inline: calc(var(--spacing) * 4);
+    margin-inline: auto;
+  }
+
+  @media (width >= 1600px) {
+    & {
+      max-width: var(--breakpoint-2xl);
+    }
+  }
+}
+
+@custom-variant 3xl {
+  @media (width >= 1600px) {
+    @slot;
+  }
+}
+
+@custom-variant fixed {
+  &:where([data-island='root'][data-facet-layout='fixed'] *) {
+    @slot;
+  }
+}
+
 [data-island='root'] {
   --radius: 0.625rem;
 }

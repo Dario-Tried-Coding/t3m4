@@ -4,7 +4,10 @@ import { FC, PropsWithChildren } from 'react'
 
 const schema = {
   root: {
-    mode: { light: 'light', dark: 'dark', system: 'system' },
+    facets: {
+      layout: ['full', 'fixed']
+    },
+    mode: { light: 'light', dark: 'dark' },
   },
 } as const satisfies Schema.Suggested
 export type TSchema = typeof schema
@@ -13,10 +16,15 @@ const config = {
   root: {
     mode: {
       strategy: 'system',
-      default: 'system',
-      fallback: 'dark',
+      default: 'dark',
       selector: 'data-attribute'
     },
+    facets: {
+      layout: {
+        strategy: 'multi',
+        default: 'full'
+      }
+    }
   },
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config
