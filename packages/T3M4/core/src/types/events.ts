@@ -2,6 +2,7 @@ import { T3M4 } from './interface'
 
 export type EventMap = {
   'Reset': void
+  'Reset:Success': void
   'State:Base:Update': NonNullable<ReturnType<T3M4['get']['state']['base']>>
   'State:Forced:Update': NonNullable<ReturnType<T3M4['get']['state']['forced']>>
   'State:Computed:Update': NonNullable<ReturnType<T3M4['get']['state']['computed']>>

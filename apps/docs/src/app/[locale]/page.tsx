@@ -1,3 +1,4 @@
+import { Moment } from "@/components/Moment"
 import { Locale } from "next-intl"
 
 interface Props {
@@ -7,5 +8,7 @@ interface Props {
 export default async function Home({params}:Props) {
   const { locale } = await params
 
-  return <div className="">page {locale}</div>
+  return <div className="">page {locale}
+    <Moment />
+  </div>
 }

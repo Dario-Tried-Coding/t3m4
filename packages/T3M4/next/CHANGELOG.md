@@ -1,5 +1,14 @@
 # @t3m4/next
 
+## 0.1.1
+
+### Patch Changes
+
+- Refactoring & Performance improvement & Better config implementation
+- Updated dependencies
+  - @t3m4/react@0.1.1
+  - @t3m4/utils@0.0.3
+
 ## 0.1.0
 
 ### Minor Changes

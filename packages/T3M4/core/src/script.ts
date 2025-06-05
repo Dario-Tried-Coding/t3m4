@@ -143,19 +143,13 @@ type Engine = {
     /** Only Islands with defined mode in here! */
     map: Map<
       string,
-      | {
-          strategy: Exclude<Strat, STRATS['system']>
-          store: boolean
-          selectors: Set<Selector>
-          colorSchemes: ColorSchemes.Static.AsMap
-        }
-      | {
-          strategy: Extract<Strat, STRATS['system']>
-          store: boolean
-          selectors: Set<Selector>
-          colorSchemes: ColorSchemes.Static.AsMap
-          system: { mode: string; fallback: string }
-        }
+      {
+        strategy: Strat
+        store: boolean
+        selectors: Set<Selector>
+        colorSchemes: ColorSchemes.Static.AsMap
+        system: { mode: string; fallback: string }
+      }
     >
   }
 }
@@ -183,8 +177,8 @@ export const script = (args: Script_Args.Static) => {
         },
       },
     },
-    forced_values: false,
-    observe: [],
+    enable_forced_values: false,
+    observe: ['DOM', 'storage'],
     disable_transitions_on_change: false,
     nonce: '',
   } as const satisfies PRESET
@@ -312,9 +306,9 @@ export const script = (args: Script_Args.Static) => {
 
     const modes = {
       storage: {
-        store: args.modes?.storage?.store ?? PRESET.modes.storage.store,
-        key: args.modes?.storage?.key ?? PRESET.modes.storage.key,
-        strategy: args.modes?.storage?.strategy ?? PRESET.modes.storage.strategy,
+        store: PRESET.modes.storage.store,
+        key: PRESET.modes.storage.key,
+        strategy: PRESET.modes.storage.strategy,
         toStore: Object.entries(schema).reduce((acc, [i, { mode }]) => {
           if (!mode) return acc
 
@@ -330,14 +324,10 @@ export const script = (args: Script_Args.Static) => {
           if (!mode) return acc
 
           const stratObj = args.config[i]!.mode!
-          const modesConfig = args.modes
 
           let obj = {
             store: stratObj.store ?? PRESET.modes.storage.island.store,
-            selectors: new Set([
-              ...(typeof modesConfig?.dom?.selector === 'string' ? [modesConfig.dom.selector] : Array.isArray(modesConfig?.dom?.selector) ? modesConfig.dom.selector : PRESET.modes.dom.selectors),
-              ...(typeof stratObj.selector === 'string' ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors),
-            ]),
+            selectors: new Set([...PRESET.modes.dom.selectors, ...(typeof stratObj.selector === 'string' ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors)]),
             strategy: stratObj.strategy,
           } as NonNullable<ReturnType<Engine['modes']['map']['get']>>
 
@@ -370,7 +360,7 @@ export const script = (args: Script_Args.Static) => {
     return {
       storageKeys: {
         state: args.storageKey || PRESET.storage.key,
-        modes: `${args.storageKey ?? PRESET.storage.key}:${args.modes?.storage?.key ?? PRESET.modes.storage.key}`,
+        modes: `${args.storageKey ?? PRESET.storage.key}:${PRESET.modes.storage.key}`,
       },
       islands,
       facets,
@@ -378,7 +368,7 @@ export const script = (args: Script_Args.Static) => {
       fallbacks,
       nonce: args.nonce || PRESET.nonce,
       disableTransitionOnChange: args.disableTransitionOnChange ?? PRESET.disable_transitions_on_change,
-      forcedValues: args.forcedValues ?? PRESET.forced_values,
+      forcedValues: args.enableForcedValues ?? PRESET.enable_forced_values,
       selectors: {
         types: {
           dataAttributes: {
@@ -405,7 +395,7 @@ export const script = (args: Script_Args.Static) => {
           colorScheme: 'style',
         },
       },
-      observe: new Set(args.observe ?? PRESET.observe),
+      observe: new Set(args.observe ? (typeof args.observe === 'string' ? [args.observe] : args.observe) : PRESET.observe),
       modes,
     }
   }
@@ -691,7 +681,10 @@ export const script = (args: Script_Args.Static) => {
         },
         fromFacet<T extends string>(island: string, facet: string, value: T) {
           return new Map([[island, { facets: new Map([[facet, value]]) }]]) as unknown as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }> : State.Static.AsMap
-        }
+        },
+        fromMode<T extends string>(island: string, value: T) {
+          return new Map([[island, { mode: value }]]) as unknown as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }> : State.Static.AsMap
+        },
       },
     },
     resolve: {
@@ -1330,61 +1323,62 @@ export const script = (args: Script_Args.Static) => {
       EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state.all(utils.convert.deep.state.objToMap(state as Brand<State.Static, { validation: 'normalized'; coverage: 'complete' }>)))
 
       StorageManager.abortController = new AbortController()
-      window.addEventListener(
-        'storage',
-        ({ key, oldValue, newValue }) => {
-          switch (true) {
-            case key === engine.storageKeys.state:
-              {
-                const deserNew = newValue ? utils.deserialize.state(newValue) : undefined
-                const deserOld = oldValue ? utils.deserialize.state(oldValue) : undefined
+      if (engine.observe.has('storage'))
+        window.addEventListener(
+          'storage',
+          ({ key, oldValue, newValue }) => {
+            switch (true) {
+              case key === engine.storageKeys.state:
+                {
+                  const deserNew = newValue ? utils.deserialize.state(newValue) : undefined
+                  const deserOld = oldValue ? utils.deserialize.state(oldValue) : undefined
 
-                const normalized = utils.normalize.state.state(deserNew ?? deserOld, deserOld)
-                StorageManager.set.state.all(normalized)
-                Main.set.state.base(normalized)
-              }
-              break
-            case key === `${engine.storageKeys.modes}`:
-              {
-                if (!engine.modes.storage.store) return
-                if (engine.modes.storage.toStore.size === 0) return
-                if (engine.modes.storage.strategy !== 'unique') return
+                  const normalized = utils.normalize.state.state(deserNew ?? deserOld, deserOld)
+                  StorageManager.set.state.all(normalized)
+                  Main.set.state.base(normalized)
+                }
+                break
+              case key === `${engine.storageKeys.modes}`:
+                {
+                  if (!engine.modes.storage.store) return
+                  if (engine.modes.storage.toStore.size === 0) return
+                  if (engine.modes.storage.strategy !== 'unique') return
 
-                const deserNew = newValue ? utils.deserialize.modes(newValue) : undefined
-                const deserOld = oldValue ? utils.deserialize.modes(oldValue) : undefined
+                  const deserNew = newValue ? utils.deserialize.modes(newValue) : undefined
+                  const deserOld = oldValue ? utils.deserialize.modes(oldValue) : undefined
 
-                const normModes = utils.normalize.modes.all(deserNew ?? deserOld, deserOld)
-                const statePartial = utils.construct.state.fromModes(normModes)
+                  const normModes = utils.normalize.modes.all(deserNew ?? deserOld, deserOld)
+                  const statePartial = utils.construct.state.fromModes(normModes)
 
-                StorageManager.set.modes.unique.all(normModes)
-                Main.set.state.base(statePartial)
-              }
-              break
-            case key?.startsWith(`${engine.storageKeys.modes}:`):
-              {
-                if (!engine.modes.storage.store) return
-                if (engine.modes.storage.toStore.size === 0) return
-                if (engine.modes.storage.strategy !== 'split') return
+                  StorageManager.set.modes.unique.all(normModes)
+                  Main.set.state.base(statePartial)
+                }
+                break
+              case key?.startsWith(`${engine.storageKeys.modes}:`):
+                {
+                  if (!engine.modes.storage.store) return
+                  if (engine.modes.storage.toStore.size === 0) return
+                  if (engine.modes.storage.strategy !== 'split') return
 
-                const island = key?.split(`${engine.storageKeys.modes}:`)[1]
-                if (!island) return
+                  const island = key?.split(`${engine.storageKeys.modes}:`)[1]
+                  if (!island) return
 
-                const isIsland = utils.isValid.value.island(island)
-                if (!isIsland) return
+                  const isIsland = utils.isValid.value.island(island)
+                  if (!isIsland) return
 
-                const normMode = utils.normalize.modes.mode(island, newValue ?? oldValue ?? undefined, oldValue ?? undefined)!
-                const statePartial = utils.construct.state.fromModes(new Map([[island, normMode]]) as Brand<Modes.AsMap, { validation: 'normalized' }>)
+                  const normMode = utils.normalize.modes.mode(island, newValue ?? oldValue ?? undefined, oldValue ?? undefined)!
+                  const statePartial = utils.construct.state.fromModes(new Map([[island, normMode]]) as Brand<Modes.AsMap, { validation: 'normalized' }>)
 
-                StorageManager.set.modes.split.island(island, normMode)
-                Main.set.state.base(statePartial)
-              }
-              break
+                  StorageManager.set.modes.split.island(island, normMode)
+                  Main.set.state.base(statePartial)
+                }
+                break
+            }
+          },
+          {
+            signal: StorageManager.abortController.signal,
           }
-        },
-        {
-          signal: StorageManager.abortController.signal,
-        }
-      )
+        )
     }
   }
 
@@ -1552,6 +1546,8 @@ export const script = (args: Script_Args.Static) => {
               const isIsland = utils.isValid.value.island(island)
               if (!isIsland) return undefined
 
+              if (!engine.forcedValues) return {} as Brand<State.Static.AsMap.Island, { validation: 'dirty' }>
+
               const { mode, facets } = engine.facets.get(island)!
 
               const state = {} as State.Static.AsMap.Island
@@ -1584,6 +1580,8 @@ export const script = (args: Script_Args.Static) => {
               const dirty = DomManager.get.state.forced.island.dirty(island)
               if (!dirty) return undefined
 
+              if (!engine.forcedValues) return {} as Brand<State.Static.AsMap.Island, { validation: 'sanitized' }>
+
               const sanitized = {} as State.Static.AsMap.Island
 
               if (dirty.facets && dirty.facets.size > 0)
@@ -1607,6 +1605,8 @@ export const script = (args: Script_Args.Static) => {
           },
           all: {
             dirty: () => {
+              if (!engine.forcedValues) return new Map() as Brand<State.Static.AsMap, { validation: 'dirty' }>
+
               const state = Array.from(engine.islands).reduce((state, island) => {
                 const islandState = DomManager.get.state.forced.island.dirty(island)
                 if (islandState && Object.keys(islandState).length > 0) return state.set(island, islandState)
@@ -1615,6 +1615,8 @@ export const script = (args: Script_Args.Static) => {
               return state as Brand<State.Static.AsMap, { validation: 'dirty' }>
             },
             sanitized: () => {
+              if (!engine.forcedValues) return new Map() as Brand<State.Static.AsMap, { validation: 'sanitized'; coverage: 'partial' }>
+
               const state = Array.from(engine.islands).reduce((state, island) => {
                 const islandState = DomManager.get.state.forced.island.sanitized(island)
                 if (islandState && Object.keys(islandState).length > 0) return state.set(island, islandState)
@@ -1734,6 +1736,17 @@ export const script = (args: Script_Args.Static) => {
       DomManager.instance = undefined
     }
 
+    private static constructAttributeFilters() {
+      return [
+        engine.selectors.observe.dataAttributes.island,
+        ...Array.from(engine.selectors.observe.dataAttributes.computed),
+        ...engine.selectors.observe.dataAttributes.forced,
+        engine.selectors.observe.dataAttributes.colorScheme,
+        engine.selectors.observe.class,
+        engine.selectors.observe.colorScheme,
+      ]
+    }
+
     private constructor() {
       EventManager.on('State:Computed:Update', 'DomManager:State:Update', (state) => DomManager.set.state.computed.all(utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>))
 
@@ -1796,7 +1809,7 @@ export const script = (args: Script_Args.Static) => {
 
             if (engine.selectors.observe.dataAttributes.computed.has(attributeName)) {
               const island = target.getAttribute(engine.selectors.types.dataAttributes.island)
-              
+
               const isIsland = utils.isValid.value.island(island)
               if (!isIsland) continue
 
@@ -1822,6 +1835,9 @@ export const script = (args: Script_Args.Static) => {
                   continue
                 }
 
+                const isEffectiveUpdate = oldValue !== newOption
+                if (!isEffectiveUpdate) continue
+
                 const isFacetCurrForced = Main.get.state.forced()?.get(island)?.facets?.has(facet)
                 if (isFacetCurrForced) {
                   revertToComputed(oldValue)
@@ -1832,14 +1848,264 @@ export const script = (args: Script_Args.Static) => {
                 const isNewAlreadySet = currBaseValue === newOption
                 if (isNewAlreadySet) continue
 
-                const newStatePartial = utils.construct.state.fromFacet(island, facet, newOption as Brand<string, { validation: 'sanitized'}>)
+                const newStatePartial = utils.construct.state.fromFacet(island, facet, newOption as Brand<string, { validation: 'sanitized' }>)
+                Main.set.state.base(newStatePartial)
+                continue
+              }
+
+              if (facetType === 'mode') {
+                const revertToComputed = (oldValue: string | null) => {
+                  const currCompValue = Main.get.state.computed()?.get(island)?.mode!
+                  const isOldOption = utils.isValid.value.option.mode(island, oldValue)
+
+                  const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                  if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue!)
+                  else target.setAttribute(attributeName, currCompValue)
+                }
+
+                const isNewOption = utils.isValid.value.option.mode(island, newOption)
+                if (!isNewOption) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const isEffectiveUpdate = oldValue !== newOption
+                if (!isEffectiveUpdate) continue
+
+                const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+                if (isModeCurrForced) {
+                  revertToComputed(oldValue)
+                  continue
+                }
+
+                const currBaseValue = Main.get.state.base()?.get(island)?.mode!
+                const isNewAlreadySet = currBaseValue === newOption
+                if (isNewAlreadySet) continue
+
+                const newStatePartial = utils.construct.state.fromMode(island, newOption as Brand<string, { validation: 'sanitized' }>)
+
                 Main.set.state.base(newStatePartial)
                 continue
               }
             }
+
+            if (attributeName === engine.selectors.observe.colorScheme) {
+              const island = target.getAttribute(engine.selectors.types.dataAttributes.island)
+
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) continue
+
+              const isSelectorEnabled = engine.modes.map.get(island)?.selectors.has('color-scheme')
+              if (!isSelectorEnabled) continue
+
+              const supportedColorSchemes = new Set(engine.modes.map.get(island)?.colorSchemes.values() ?? [])
+
+              const revertToComputed = (oldValue: string | null) => {
+                const currCompValue = Main.get.colorSchemes.computed()?.get(island)!
+                const isOldColorScheme = supportedColorSchemes.has(oldValue as Color_Scheme)
+
+                const isOldCurrCompColorScheme = isOldColorScheme && currCompValue === oldValue
+                if (isOldCurrCompColorScheme) target.style.colorScheme = oldValue!
+                else target.style.colorScheme = currCompValue
+              }
+
+              const newColorScheme = target.style.colorScheme
+              const isNewColorScheme = supportedColorSchemes.has(newColorScheme as Color_Scheme)
+              if (!isNewColorScheme) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isEffectiveUpdate = oldValue !== newColorScheme
+              if (!isEffectiveUpdate) continue
+
+              const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+              if (isModeCurrForced) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isSystemStrat = engine.modes.map.get(island)!.strategy === 'system'
+              if (!isSystemStrat) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const traceBackMode = (colorScheme: Color_Scheme) => {
+                for (const [mode, cs] of engine.modes.map.get(island)!.colorSchemes) {
+                  if (cs === colorScheme) return mode
+                }
+              }
+              const corrMode = traceBackMode(newColorScheme as Color_Scheme)!
+
+              const currBaseMode = Main.get.state.base()?.get(island)?.mode!
+
+              const isCurrBaseModeSystem = engine.modes.map.get(island)?.system.mode === currBaseMode
+              if (isCurrBaseModeSystem) {
+                const isNewPrefColorScheme = newColorScheme === utils.miscellaneous.getSystemPref()
+                if (isNewPrefColorScheme) continue
+              }
+
+              const isNewAlreadySet = currBaseMode === corrMode
+              if (isNewAlreadySet) continue
+
+              const newStatePartial = utils.construct.state.fromMode(island, corrMode as Brand<string, { validation: 'sanitized' }>)
+              Main.set.state.base(newStatePartial)
+              continue
+            }
+
+            if (attributeName === engine.selectors.observe.dataAttributes.colorScheme) {
+              const island = target.getAttribute(engine.selectors.types.dataAttributes.island)
+
+              const isIsland = utils.isValid.value.island(island)
+              if (!isIsland) continue
+
+              const isSelectorEnabled = engine.modes.map.get(island)?.selectors.has('data-attribute')
+              if (!isSelectorEnabled) continue
+
+              const supportedColorSchemes = new Set(engine.modes.map.get(island)?.colorSchemes.values() ?? [])
+
+              const revertToComputed = (oldValue: string | null) => {
+                const currCompValue = Main.get.colorSchemes.computed()?.get(island)!
+                const isOldColorScheme = supportedColorSchemes.has(oldValue as Color_Scheme)
+
+                const isOldCurrCompColorScheme = isOldColorScheme && currCompValue === oldValue
+                if (isOldCurrCompColorScheme) target.setAttribute(engine.selectors.types.dataAttributes.colorScheme, oldValue!)
+                else target.setAttribute(engine.selectors.types.dataAttributes.colorScheme, currCompValue)
+              }
+
+              const newColorScheme = target.getAttribute(engine.selectors.types.dataAttributes.colorScheme)
+              const isNewColorScheme = supportedColorSchemes.has(newColorScheme as Color_Scheme)
+              if (!isNewColorScheme) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isEffectiveUpdate = oldValue !== newColorScheme
+              if (!isEffectiveUpdate) continue
+
+              const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+              if (isModeCurrForced) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const isSystemStrat = engine.modes.map.get(island)!.strategy === 'system'
+              if (!isSystemStrat) {
+                revertToComputed(oldValue)
+                continue
+              }
+
+              const traceBackMode = (colorScheme: Color_Scheme) => {
+                for (const [mode, cs] of engine.modes.map.get(island)!.colorSchemes) {
+                  if (cs === colorScheme) return mode
+                }
+              }
+              const corrMode = traceBackMode(newColorScheme as Color_Scheme)!
+
+              const currBaseMode = Main.get.state.base()?.get(island)?.mode!
+
+              const isCurrBaseModeSystem = engine.modes.map.get(island)?.system.mode === currBaseMode
+              if (isCurrBaseModeSystem) {
+                const isNewPrefColorScheme = newColorScheme === utils.miscellaneous.getSystemPref()
+                if (isNewPrefColorScheme) continue
+              }
+
+              const isNewAlreadySet = currBaseMode === corrMode
+              if (isNewAlreadySet) continue
+
+              const newStatePartial = utils.construct.state.fromMode(island, corrMode as Brand<string, { validation: 'sanitized' }>)
+
+              Main.set.state.base(newStatePartial)
+              continue
+            }
+
+            if (attributeName === engine.selectors.observe.class) {
+              const island = target.getAttribute(engine.selectors.types.dataAttributes.island)
+              const isIsland = utils.isValid.value.island(island)
+
+              if (!isIsland) continue
+
+              const isSelectorEnabled = engine.modes.map.get(island)?.selectors.has('class')
+              if (!isSelectorEnabled) continue
+
+              const supportedColorSchemes = new Set(engine.modes.map.get(island)?.colorSchemes.values() ?? [])
+
+              const revertToComputed = () => {
+                const currCompColorScheme = Main.get.colorSchemes.computed()?.get(island)!
+
+                const currColorScheme = target.classList.contains(CONSTANTS.modes.light) ? CONSTANTS.modes.light : target.classList.contains(CONSTANTS.modes.dark) ? CONSTANTS.modes.dark : undefined
+                const from = currColorScheme ?? CONSTANTS.modes.light
+
+                target.classList.replace(from, currCompColorScheme) || target.classList.add(currCompColorScheme)
+              }
+
+              const newColorScheme = target.classList.contains(CONSTANTS.modes.light) ? CONSTANTS.modes.light : target.classList.contains(CONSTANTS.modes.dark) ? CONSTANTS.modes.dark : undefined
+              const isNewColorScheme = newColorScheme ? supportedColorSchemes.has(newColorScheme) : false
+              if (!isNewColorScheme) {
+                revertToComputed()
+                continue
+              }
+
+              const isEffectiveUpdate = oldValue !== newColorScheme
+              if (!isEffectiveUpdate) continue
+
+              const isModeCurrForced = !!Main.get.state.forced()?.get(island)?.mode
+              if (isModeCurrForced) {
+                revertToComputed()
+                continue
+              }
+
+              const isSystemStrat = engine.modes.map.get(island)!.strategy === 'system'
+              if (!isSystemStrat) {
+                revertToComputed()
+                continue
+              }
+
+              const traceBackMode = (colorScheme: Color_Scheme) => {
+                for (const [mode, cs] of engine.modes.map.get(island)!.colorSchemes) {
+                  if (cs === colorScheme) return mode
+                }
+              }
+              const corrMode = traceBackMode(newColorScheme!)!
+
+              const currBaseMode = Main.get.state.base()?.get(island)?.mode!
+
+              const isCurrBaseModeSystem = engine.modes.map.get(island)?.system.mode === currBaseMode
+              if (isCurrBaseModeSystem) {
+                const isNewPrefColorScheme = newColorScheme === utils.miscellaneous.getSystemPref()
+                if (isNewPrefColorScheme) continue
+              }
+
+              const isNewAlreadySet = currBaseMode === corrMode
+              if (isNewAlreadySet) continue
+
+              const newStatePartial = utils.construct.state.fromMode(island, corrMode as Brand<string, { validation: 'sanitized' }>)
+
+              Main.set.state.base(newStatePartial)
+              continue
+            }
+          }
+
+          if (type === 'childList') {
+            const forcedState = DomManager.get.state.forced.all.sanitized()
+            Main.set.state.forced(forcedState)
+
+            const currCompState = Main.get.state.computed()!
+            DomManager.set.state.computed.all(currCompState)
           }
         }
       }
+
+      DomManager.observer = new MutationObserver(handleMutations)
+      if (engine.observe.has('DOM'))
+        DomManager.observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: DomManager.constructAttributeFilters(),
+          attributeOldValue: true,
+          subtree: true,
+          childList: true,
+        })
     }
   }
 
@@ -1997,7 +2263,7 @@ export const script = (args: Script_Args.Static) => {
 
     private constructor() {
       StorageManager.init()
-      // DomManager.init()
+      DomManager.init()
 
       const storageState = StorageManager.get.state.normalized()
 
@@ -2005,8 +2271,7 @@ export const script = (args: Script_Args.Static) => {
       this.state.base = baseState
       Main.notifyUpdate.state.base(baseState)
 
-      // const forcedState = DomManager.get.state.forced.all.sanitized()
-      const forcedState = new Map() as Brand<State.Static.AsMap, { coverage: 'partial'; validation: 'normalized' }>
+      const forcedState = DomManager.get.state.forced.all.sanitized()
       this.state.forced = forcedState
       Main.notifyUpdate.state.forced(forcedState)
 
@@ -2080,6 +2345,7 @@ export const script = (args: Script_Args.Static) => {
       DomManager.terminate()
       engine = getEngine(newArgs)
       Main.reboot()
+      EventManager.emit('Reset:Success')
     }
 
     public constructor() {
@@ -2088,5 +2354,4 @@ export const script = (args: Script_Args.Static) => {
   }
 
   window.T3M4 = new T3M4()
-  console.log(engine.modes)
 }

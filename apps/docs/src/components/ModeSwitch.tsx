@@ -2,13 +2,13 @@
 
 import { Button } from '@/components/ui/Button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu'
-import { useT3M4 } from '@/lib/T3M4'
+import { T3M4, useT3M4 } from '@/lib/T3M4'
 import { Check, Laptop, Loader2, LucideProps, Moon, Sun } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { FC } from 'react'
 
 interface IconProps extends LucideProps {
-  mode: 'light' | 'dark' | 'system'
+  mode: T3M4<'root'>['mode']
 }
 const Icon: FC<IconProps> = ({ mode, ...rest }) => {
   const icons = {
@@ -26,7 +26,7 @@ export const ModeSwitch: FC = ({}) => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger disabled={!computed.state && !!forced.state} asChild>
+      <DropdownMenuTrigger disabled={!!forced.state?.mode} asChild>
         <Button variant='ghost' size='icon'>
           {!computed.colorScheme ? <Loader2 className='animate-spin' /> : <Icon mode={computed.colorScheme} />}
           <span className='sr-only'>{computed.state ? t(`Mode.${computed.state.mode}`) : t('loading')}</span>

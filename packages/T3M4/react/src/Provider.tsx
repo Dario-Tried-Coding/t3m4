@@ -38,6 +38,8 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
       setColorSchemes({ base: undefined, forced: undefined, computed: undefined })
       values.current = {} as T3M4Context<Sc, C>['values']
     })
+
+    window.T3M4.subscribe('Reset:Success', 'React:Reset', () => (values.current = window.T3M4.get.values() as T3M4Context<Sc, C>['values']))
   }, [])
 
   useEffect(() => window.T3M4.reboot(scriptArgs), [JSON.stringify(scriptArgs)])

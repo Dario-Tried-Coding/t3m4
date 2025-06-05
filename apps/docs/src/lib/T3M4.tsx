@@ -1,4 +1,4 @@
-import { Config, Schema } from '@t3m4/next/types'
+import { Config, Schema, State } from '@t3m4/next/types'
 import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/next'
 import { FC, PropsWithChildren } from 'react'
 
@@ -15,15 +15,16 @@ const config = {
       strategy: 'system',
       default: 'system',
       fallback: 'dark',
-      selector: 'data-attribute',
-      store: false
+      selector: 'data-attribute'
     },
   },
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config
 
+export type T3M4<I extends keyof TSchema> = State<TSchema>[I]
+
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} modes={{storage: {store: true}}}>
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config}>
     {children}
   </ThemingProvider>
 )

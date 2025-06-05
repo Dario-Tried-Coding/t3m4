@@ -1,13 +1,12 @@
+import { Icons } from '@/components/Icons'
+import { buttonVariants } from '@/components/ui/Button'
+import { navLinks } from '@/config/navigation.config'
+import { siteConfig } from '@/config/site.config'
 import { Link } from '@/lib/next-intl/navigation'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import { FC } from 'react'
-import { Icons } from '@/components/Icons'
 import { ModeSwitch } from './ModeSwitch'
-import { navLinks } from '@/config/navigation.config'
-import { siteConfig } from '@/config/site.config'
-import { buttonVariants } from '@/components/ui/Button'
-import { NextThemesSwitch } from './NextThemesSwitch'
 
 export const Navbar: FC = () => {
   const t = useTranslations('Navbar.Links')
