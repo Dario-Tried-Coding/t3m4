@@ -1,5 +1,11 @@
 # @t3m4/react
 
+## 0.1.2
+
+### Patch Changes
+
+- APIs refactoring for better usability
+
 ## 0.1.1
 
 ### Patch Changes
