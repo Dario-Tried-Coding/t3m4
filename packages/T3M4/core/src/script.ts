@@ -2293,17 +2293,17 @@ export const script = (args: Script_Args.Static) => {
     private constructor() {
       StorageManager.init()
       DomManager.init()
-
+      
       const storageState = StorageManager.get.state.normalized()
 
       const baseState = storageState
       this.state.base = baseState
       Main.notifyUpdate.state.base(baseState)
-
+      
       const forcedState = DomManager.get.state.forced.all.sanitized()
       this.state.forced = forcedState
       Main.notifyUpdate.state.forced(forcedState)
-
+      
       const computedState = utils.merge.deep.state.maps.all(baseState, forcedState)
       Main.notifyUpdate.state.computed(computedState)
     }

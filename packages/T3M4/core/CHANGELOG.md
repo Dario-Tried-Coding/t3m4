@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.5
+
+### Patch Changes
+
+- Improved first paint performances
+
 ## 0.1.4
 
 ### Patch Changes
