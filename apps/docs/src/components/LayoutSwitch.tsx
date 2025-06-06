@@ -6,12 +6,18 @@ import { Button } from './ui/Button'
 import { HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface Props extends Omit<HTMLAttributes<HTMLButtonElement>, 'children'> {}
-export function LayoutSwitch({className, ...rest}: Props) {
+export function LayoutSwitch({ className, ...rest }: Omit<HTMLAttributes<HTMLButtonElement>, 'children'>) {
   const { updateState, state } = useT3M4('root')
 
   return (
-    <Button variant='ghost' size='icon' disabled={!state.computed || !!state.forced?.facets?.layout} onClick={() => updateState({ facets: { layout: state.computed?.facets.layout === 'full' ? 'fixed' : 'full' } })} className={cn('', className)} {...rest}>
+    <Button
+      variant='ghost'
+      size='icon'
+      disabled={!state.computed || !!state.forced?.facets?.layout}
+      onClick={() => updateState({ facets: { layout: state.computed?.facets.layout === 'full' ? 'fixed' : 'full' } })}
+      className={cn('', className)}
+      {...rest}
+    >
       <GalleryHorizontal />
     </Button>
   )

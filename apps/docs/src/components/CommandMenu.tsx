@@ -6,8 +6,7 @@ import { HTMLAttributes } from 'react'
 import { Button } from './ui/Button'
 import { useTranslations } from 'next-intl'
 
-interface Props extends Omit<HTMLAttributes<HTMLButtonElement>, 'children' | 'onClick'> {}
-export function CommandMenu({className, ...rest}:Props) {
+export function CommandMenu({ className, ...rest }: Omit<HTMLAttributes<HTMLButtonElement>, 'children' | 'onClick'>) {
   const isMac = useIsMac()
   const t = useTranslations('Navbar.CommandMenu')
 

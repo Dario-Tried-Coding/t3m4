@@ -9,7 +9,7 @@ async function getStars() {
     if (!res.ok) throw new Error(`Github API error: ${res.status}`)
 
     return (await res.json()).stargazers_count as number
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -20,7 +20,7 @@ export async function Github() {
   return (
     <Link href={siteConfig.repo.url} target='_blank' className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
       <Icons.github />
-      {stars && <span className='text-xs text-muted-foreground tabular-nums'>{stars}</span>}
+      {stars && <span className='text-muted-foreground text-xs tabular-nums'>{stars}</span>}
     </Link>
   )
 }

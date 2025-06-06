@@ -12,7 +12,7 @@ export function ThemeCustomizer({ className, ...props }: ComponentProps<'div'>) 
   const { state, updateState } = useT3M4('demo')
 
   return (
-    <div className={cn('flex w-full items-center gap-2', className)}>
+    <div className={cn('flex w-full items-center gap-2', className)} {...props}>
       {/* wide displays */}
       <ScrollArea className='hidden lg:flex'>
         {schema.demo.facets.color.map((color) => (

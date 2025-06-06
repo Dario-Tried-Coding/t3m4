@@ -1,3 +1,4 @@
+import { Demo } from '@/components/demo'
 import { Header } from '@/components/Header'
 import { PageNav } from '@/components/PageNav'
 import { buttonVariants } from '@/components/ui/Button'
@@ -6,8 +7,6 @@ import { Pump } from 'basehub/react-pump'
 import { Locale } from 'next-intl'
 import { draftMode } from 'next/headers'
 import { basehub } from '../../../../.basehub'
-import { ThemeCustomizer } from '@/components/demo/ThemeCustomizer'
-import { Demo } from '@/components/demo'
 
 interface Props {
   params: Promise<{ locale: Locale }>
