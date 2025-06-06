@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.4
+
+### Patch Changes
+
+- Now local storage is always based on local storage if there are valid instances
+
 ## 0.1.3
 
 ### Patch Changes

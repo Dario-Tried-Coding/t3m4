@@ -1063,31 +1063,21 @@ export const script = (args: Script_Args.Static) => {
     public static get = {
       state: {
         serialized: () => {
-          if (!engine.store) return undefined
-
           const retrieved = window.localStorage.getItem(engine.storageKeys.state)
           return retrieved ?? undefined
         },
         deserialized: () => {
-          let dirtyState: AtLeast<State.Static.AsMap, { coverage: 'partial' }> | undefined = undefined
-
-          if (engine.store) {
-            const serialized = StorageManager.get.state.serialized()
-            if (!serialized) return dirtyState
-
-            dirtyState = utils.deserialize.state(serialized)
-            return dirtyState
+          const serialized = StorageManager.get.state.serialized()
+          if (serialized) {
+            const dirty = utils.deserialize.state(serialized)
+            return dirty
           }
 
-          if (engine.modes.storage.store) {
-            const dirtyModes = StorageManager.get.modes.get.dirty()
-            if (!dirtyModes) return dirtyState
-
-            dirtyState = utils.construct.state.fromModes(dirtyModes)
+          const dirtyModes = StorageManager.get.modes.get.dirty()
+          if (dirtyModes) {
+            const dirtyState = utils.construct.state.fromModes(dirtyModes)
             return dirtyState
           }
-
-          return dirtyState
         },
         sanitized: () => {
           const deserialized = StorageManager.get.state.deserialized()
