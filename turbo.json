@@ -5,7 +5,8 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", ".basehub/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", ".basehub/**"],
+      "env": ["BASEHUB_TOKEN"]
     },
     "lint": {},
     "check-types": {
