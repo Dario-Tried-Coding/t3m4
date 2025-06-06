@@ -8,9 +8,7 @@ interface Props extends PropsWithChildren {}
 export function Providers({ children }: Props) {
   return (
     <NextIntlClientProvider>
-      {/* <ThemeProvider attribute={['data-color-scheme']} enableSystem storageKey='T3M4:modes:root'> */}
         <T3M4Provider>{children}</T3M4Provider>
-      {/* </ThemeProvider> */}
     </NextIntlClientProvider>
   )
 }

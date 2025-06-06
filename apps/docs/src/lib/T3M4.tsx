@@ -2,17 +2,22 @@ import { Config, Schema, State } from '@t3m4/next/types'
 import { T3M4Provider as ThemingProvider, useT3M4 as useTheming } from '@t3m4/next'
 import { FC, PropsWithChildren } from 'react'
 
-const schema = {
+export const schema = {
   root: {
     facets: {
       layout: ['full', 'fixed'],
     },
     mode: { light: 'light', dark: 'dark' },
   },
+  demo: {
+    facets: {
+      color: ['default', 'red', 'rose', 'orange', 'green', 'blue', 'yellow', 'violet']
+    }
+  }
 } as const satisfies Schema.Suggested
 export type TSchema = typeof schema
 
-const config = {
+export const config = {
   root: {
     mode: {
       strategy: 'system',
@@ -25,6 +30,14 @@ const config = {
       },
     },
   },
+  demo: {
+    facets: {
+      color: {
+        strategy: 'multi',
+        default: 'default'
+      }
+    }
+  }
 } as const satisfies Config<TSchema>
 export type TConfig = typeof config
 

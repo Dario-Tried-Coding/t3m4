@@ -17,7 +17,7 @@ export const Navbar: FC = () => {
   return (
     <header className='bg-background sticky top-0 z-50 w-full'>
       <div className='container-wrapper 3xl:fixed:px-0 px-6'>
-        <div className='3xl:fixed:container flex h-14 items-center gap-2'>
+        <div className='3xl:fixed:container flex h-14 items-center gap-2 **:data-[slot=separator]:!h-4'>
           <Link href='/' className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'hideen lg:flex' })}>
             <Icons.logo className='h-5 w-5' />
           </Link>
@@ -32,11 +32,11 @@ export const Navbar: FC = () => {
           </nav>
           <div className='ml-auto flex items-center gap-2 md:flex-1 md:justify-end'>
             <CommandMenu className='hidden md:flex md:flex-none' />
-            <Separator orientation='vertical' className='ml-2 hidden !h-4 lg:block' />
+            <Separator orientation='vertical' className='ml-2 hidden lg:block' />
             <Github />
-            <Separator orientation='vertical' className='!h-4' />
+            <Separator orientation='vertical' className='' />
             <LayoutSwitch className='3xl:flex hidden' />
-            <Separator orientation='vertical' className='3xl:flex hidden !h-4' />
+            <Separator orientation='vertical' className='3xl:flex hidden' />
             <ModeSwitch />
           </div>
         </div>
