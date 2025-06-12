@@ -1,9 +1,8 @@
 import { LinientAutoComplete } from '@t3m4/utils'
-import { LIBRARY_NAME, MODES_SK } from './constants/miscellaneous'
+import { LIBRARY_NAME } from './constants/miscellaneous'
 import { Observable } from './constants/observables'
 import { Selector } from './constants/selectors'
 import { Config, Schema } from './subscribers'
-import { Store_Strat } from './constants/strats'
 
 export interface Script_Args<Sc extends Schema.Suggested, C extends Config<Sc>> {
   schema: Sc
@@ -15,11 +14,6 @@ export interface Script_Args<Sc extends Schema.Suggested, C extends Config<Sc>> 
   observe?: Observable | Observable[]
   disableTransitionOnChange?: boolean
   nonce?: string
-  modes?: {
-    store?: boolean
-    storageKey?: LinientAutoComplete<MODES_SK>
-    storageStrategy?: Store_Strat
-  }
 }
 
 export namespace Script_Args {
@@ -33,10 +27,5 @@ export namespace Script_Args {
     observe?: Observable | Observable[]
     disableTransitionOnChange?: boolean
     nonce?: string
-    modes?: {
-      store?: boolean
-      storageKey?: string
-      storageStrategy?: Store_Strat
-    }
   }
 }

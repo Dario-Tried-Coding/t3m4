@@ -7,21 +7,16 @@ import { LIBRARY_NAME, MODES_SK } from './constants/miscellaneous'
 export type PRESET = {
   storage: {
     key: LinientAutoComplete<LIBRARY_NAME>
-    store: boolean
+    store: {
+      values: false
+      value: true
+    }
   }
   modes: {
-    storage: {
-      store: boolean
-      key: LinientAutoComplete<MODES_SK>
-      strategy: Store_Strat
-      island?: {
-        store?: boolean
-      }
-    }
     dom: {
       selectors: Selector[]
-      island?: {
-        selectors?: Selector[]
+      island: {
+        selectors: Selector[]
       }
     }
   }

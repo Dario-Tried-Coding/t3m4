@@ -1,7 +1,5 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './root.css';
-@import './demo.css';
 
 @custom-variant dark (&:is([data-mode="dark"] *));
 
@@ -46,6 +44,9 @@
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
 }
+
+@import './root.css';
+@import './demo.css';
 
 @layer base {
   * {

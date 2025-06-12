@@ -22,8 +22,10 @@ export namespace Config {
       // #region Config.Island.Facets.Facet
       export type Facet<Sc extends Schema.Island.Facets.Facet> = Sc extends Schema.Island.Facets.Facet.Mono ? Facet.Mono<Sc> : Sc extends Schema.Island.Facets.Facet.Multi ? Facet.Multi<Sc> : never
       export namespace Facet {
-        export type Mono<Sc extends Schema.Island.Facets.Facet.Mono> = { strategy: STRATS['mono']; default: Sc }
-        export type Multi<Sc extends Schema.Island.Facets.Facet.Multi> = { strategy: STRATS['multi']; default: Sc[number] }
+        type Base = { store?: boolean }
+
+        export type Mono<Sc extends Schema.Island.Facets.Facet.Mono> = Base & { strategy: STRATS['mono']; default: Sc }
+        export type Multi<Sc extends Schema.Island.Facets.Facet.Multi> = Base & { strategy: STRATS['multi']; default: Sc[number] }
       }
     }
 
@@ -86,8 +88,10 @@ export namespace Config {
         // #region Config.Static.Island.Facets.Facet
         export type Facet = Facet.Mono | Facet.Multi
         export namespace Facet {
-          export type Mono = { strategy: STRATS['mono']; default: string }
-          export type Multi = { strategy: STRATS['multi']; default: string }
+          type Base = { store?: boolean }
+
+          export type Mono = Base & { strategy: STRATS['mono']; default: string }
+          export type Multi = Base & { strategy: STRATS['multi']; default: string }
         }
       }
 
