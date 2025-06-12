@@ -25,6 +25,16 @@ type Brand_Stages = {
     yes: 'yes'
     no: 'no' | Brand_Stages['toStore']['yes']
   }
+  type: {
+    island: 'island'
+    facet: 'facet'
+    mode: 'mode'
+    option: 'option'
+  }
+  option: {
+    facet: 'facet'
+    mode: 'mode'
+  }
 }
 
 type Brand_Map = {
@@ -94,12 +104,11 @@ namespace Modes {
 }
 
 type Engine = {
-  /** Keys to be used in the localStorage */
   storageKeys: {
     state: string
     modes: string
   }
-  islands: Islands.Static.AsSet
+  islands: Set<Brand<string, { type: 'island' }>>
   facets: Map<string, { mode?: boolean; facets?: Set<string> }>
   values: Values.Static.AsMap
   fallbacks: Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>
@@ -141,7 +150,6 @@ type Engine = {
       key: string
       toStore: Islands.Static.AsSet
     }
-    /** Only Islands with defined mode in here! */
     map: Map<
       string,
       {
@@ -227,7 +235,7 @@ export const script = (args: Script_Args.Static) => {
     )
 
     /** All meaningful islands provided by Schema */
-    const islands = new Set(Object.entries(schema).map(([k]) => k))
+    const islands = new Set(Object.entries(schema).map(([k]) => k)) as Engine['islands']
 
     /** All facets provided for each meaningful island in Schema */
     const facets = Object.entries(schema).reduce(
@@ -506,7 +514,7 @@ export const script = (args: Script_Args.Static) => {
     },
     merge: {
       shallow: {
-        maps<T extends (AtLeast<Map<string, string>, { coverage: 'partial' }> | undefined)[]>(...sources: T) {
+        maps<T extends (Map<string, string> | undefined)[]>(...sources: T) {
           const result = new Map<string, string>()
 
           for (const source of sources) {
@@ -517,7 +525,11 @@ export const script = (args: Script_Args.Static) => {
             }
           }
 
-          return result as Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>> : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+          return result as NonNullable<T[number]> extends Brand_Metadata.Static
+            ? Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>> extends never
+              ? Extract<T[number], Brand_Metadata<{ coverage: 'partial' }>>
+              : Extract<T[number], Brand_Metadata<{ coverage: 'complete' }>>
+            : NonNullable<T[number]>
         },
       },
       deep: {
@@ -577,20 +589,20 @@ export const script = (args: Script_Args.Static) => {
     convert: {
       shallow: {
         mapToObj: {
-          string<T extends Brand<Map<string, string>, Partial<Brand_Map>>>(map: T) {
-            return Object.fromEntries(map) as Brand<Record<string, string>, Brand_Info<T>>
+          string<T extends Map<string, string>>(map: T) {
+            return Object.fromEntries(map) as T extends Brand_Metadata.Static ? Brand<Record<string, string>, Brand_Info<T>> : T
           },
-          set<T extends Brand<Map<string, Set<string>>, any>>(map: T) {
+          set<T extends Map<string, Set<string>>>(map: T) {
             const result: Record<string, string[]> = {}
             for (const [key, value] of map) {
               result[key] = Array.from(value)
             }
-            return result as Brand<Record<string, string[]>, Brand_Info<T>>
+            return result as T extends Brand_Metadata.Static ? Brand<Record<string, string[]>, Brand_Info<T>> : T
           },
         },
         objToMap: {
-          string<T extends Brand<Record<string, string>, any>>(obj: T) {
-            return new Map(Object.entries(obj)) as Brand<Map<string, string>, Brand_Info<T>>
+          string<T extends Record<string, string>>(obj: T) {
+            return new Map(Object.entries(obj)) as T extends Brand_Metadata.Static ? Brand<Map<string, string>, Brand_Info<T>> : T
           },
         },
       },
@@ -651,53 +663,37 @@ export const script = (args: Script_Args.Static) => {
         },
       },
     },
-    /** Construct appropriate entities dynamically based on provided fn arguments - no additional logic */
     construct: {
-      /**
-       * Constructs appropriate ColorSchemes map instance for each island in the given State, based on configuration settings.
-       *
-       * Skips:
-       * - Islands with no mode defined in the state
-       * - Islands not defined in the configuration (i.e., missing from engine.modes)
-       *
-       * Handles the 'system' mode case as needed, too
-       */
-      colorSchemes<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T) {
+      colorSchemes<T extends State.Static.AsMap>(state: T) {
         return utils.resolve.colorSchemes(state)
       },
-      modes<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T) {
+      modes<T extends State.Static.AsMap>(state: T) {
         const modes = Array.from(state).reduce((acc, [i, { mode }]) => {
           if (!mode) return acc
           return acc.set(i, mode)
         }, new Map() as Modes.AsMap)
 
-        return modes as Brand<Modes.AsMap, Brand_Info<T>>
+        return modes as T extends Brand_Metadata.Static ? Brand<Modes.AsMap, Brand_Info<T>> : T
       },
       state: {
+        fromMode<T extends string>(island: Brand<string, { type: 'island' }>, mode: T) {
+          const state = new Map([[island, { mode }]]) as State.Static.AsMap
+
+          return state as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Omit<Brand_Info<T>, 'coverage'> & { coverage: 'partial' }> : Brand<State.Static.AsMap, { coverage: 'partial' }>
+        },
         fromModes<T extends Modes.AsMap>(modes: T) {
           const state = Array.from(modes).reduce((acc, [i, mode]) => {
             return acc.set(i, { mode })
           }, new Map() as State.Static.AsMap)
 
-          return state as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Omit<Brand_Info<T>, 'coverage'> & { coverage: 'partial' }> : Modes.AsMap
+          return state as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Omit<Brand_Info<T>, 'coverage'> & { coverage: 'partial' }> : Brand<Modes.AsMap, { coverage: 'partial' }>
         },
         fromFacet<T extends string>(island: string, facet: string, value: T) {
-          return new Map([[island, { facets: new Map([[facet, value]]) }]]) as unknown as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }> : State.Static.AsMap
-        },
-        fromMode<T extends string>(island: string, value: T) {
-          return new Map([[island, { mode: value }]]) as unknown as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }> : State.Static.AsMap
+          return new Map([[island, { facets: new Map([[facet, value]]) }]]) as unknown as T extends Brand_Metadata.Static ? Brand<State.Static.AsMap, Brand_Info<T> & { coverage: 'partial' }> : Brand<State.Static.AsMap, { coverage: 'partial' }>
         },
       },
     },
     resolve: {
-      /**
-       * Determines the appropriate ColorScheme for a given island and mode, based on configuration settings.
-       *
-       * Skips:
-       * - islands that have no configuration defined (i.e., not present in the engine.modes map)
-       *
-       * Handles the 'system' mode case as needed, too
-       */
       colorScheme(island: string, mode: string) {
         const modeConfig = engine.modes.map.get(island)
         if (!modeConfig) return
@@ -708,16 +704,7 @@ export const script = (args: Script_Args.Static) => {
 
         return modeConfig.colorSchemes.get(mode)
       },
-      /**
-       * Resolves appropriate ColorSchemes for each island in the given State, based on configuration settings.
-       *
-       * Skips:
-       * - Islands with no mode defined in the state
-       * - Islands not defined in the configuration (i.e., missing from engine.modes)
-       *
-       * Handles the 'system' mode case as needed, too
-       */
-      colorSchemes<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T) {
+      colorSchemes<T extends State.Static.AsMap>(state: T) {
         const modes = Array.from(state).reduce((acc, [i, { mode }]) => {
           if (!mode) return acc
           return acc.set(i, mode)
@@ -730,7 +717,7 @@ export const script = (args: Script_Args.Static) => {
           return acc.set(i, resolvedScheme)
         }, new Map() as ColorSchemes.Static.AsMap)
 
-        return colorSchemes as Brand<ColorSchemes.Static.AsMap, Brand_Info<T>>
+        return colorSchemes as T extends Brand_Metadata.Static ? Brand<ColorSchemes.Static.AsMap, Brand_Info<T>> : T
       },
     },
     deserialize: {
@@ -815,7 +802,7 @@ export const script = (args: Script_Args.Static) => {
 
           return obj
         },
-        all<T extends AtLeast<State.Static.AsMap, { coverage: 'partial' }>>(state: T, backup?: T) {
+        all<T extends State.Static.AsMap>(state: T, backup?: T) {
           const sanState = new Map() as AtLeast<State.Static.AsMap, { validation: 'sanitized'; coverage: 'partial' }>
 
           for (const [island, values] of state) {
@@ -845,7 +832,7 @@ export const script = (args: Script_Args.Static) => {
 
           return (isMode ? value : isBackupMode ? backup! : fallback) as Brand<string, { validation: 'sanitized' }>
         },
-        all<T extends AtLeast<Modes.AsMap, { coverage: 'partial' }>>(modes: T, backup?: T) {
+        all<T extends Modes.AsMap>(modes: T, backup?: T) {
           const sanModes = new Map() as AtLeast<Modes.AsMap, { validation: 'sanitized'; coverage: 'partial' }>
 
           for (const [island, value] of modes) {
@@ -924,7 +911,7 @@ export const script = (args: Script_Args.Static) => {
         mode: (island: string, value: string | undefined, backup?: string) => {
           return utils.sanitize.modes.mode(island, value, backup) as unknown as Brand<string, { validation: 'normalized' }> | undefined
         },
-        all: <T extends AtLeast<Modes.AsMap, { validation: 'dirty' }>>(values: T | undefined, backup?: T) => {
+        all: <T extends Modes.AsMap>(values: T | undefined, backup?: T) => {
           const normalized = new Map() as Brand<Modes.AsMap, { validation: 'normalized'; coverage: 'complete' }>
 
           for (const [island, value] of utils.construct.modes(engine.fallbacks)) {
@@ -953,15 +940,15 @@ export const script = (args: Script_Args.Static) => {
     },
     isValid: {
       value: {
-        island(value: string | undefined | null): value is string {
+        island(value: string | undefined | null): value is Brand<string, { type: 'island' }> {
           if (!value) return false
-          return engine.islands.has(value)
+          return engine.islands.has(value as Brand<string, { type: 'island' }>)
         },
-        facet(island: string, value: string | undefined | null): value is string {
+        facet(island: string, value: string | undefined | null): value is Brand<string, { type: 'facet' }> {
           if (!value) return false
           return engine.values.get(island)?.facets?.has(value) ?? false
         },
-        mode(island: string, value: string | undefined | null): value is string {
+        mode(island: string, value: string | undefined | null): value is Brand<string, { type: 'mode' }> {
           if (!value) return false
 
           const isMode = value === 'mode'
@@ -971,11 +958,11 @@ export const script = (args: Script_Args.Static) => {
           return false
         },
         option: {
-          facet(island: string, facet: string, value: string | undefined | null): value is string {
+          facet(island: string, facet: string, value: string | undefined | null): value is AtLeast<string, { type: 'option'; option: 'facet'; validation: 'sanitized' }> {
             if (!value) return false
             return engine.values.get(island)?.facets?.get(facet)?.has(value) ?? false
           },
-          mode(island: string, value: string | undefined | null): value is string {
+          mode(island: string, value: string | undefined | null): value is AtLeast<string, { type: 'option'; option: 'mode'; validation: 'sanitized' }> {
             if (!value) return false
             return engine.values.get(island)?.mode?.has(value) ?? false
           },
@@ -1396,7 +1383,7 @@ export const script = (args: Script_Args.Static) => {
                   if (!isIsland) return
 
                   const normMode = utils.normalize.modes.mode(island, newValue ?? oldValue ?? undefined, oldValue ?? undefined)!
-                  const statePartial = utils.construct.state.fromModes(new Map([[island, normMode]]) as Brand<Modes.AsMap, { validation: 'normalized' }>)
+                  const statePartial = utils.construct.state.fromMode(island, normMode)
 
                   StorageManager.set.modes.split.island(island, normMode)
                   Main.set.state.base(statePartial)
@@ -1605,7 +1592,7 @@ export const script = (args: Script_Args.Static) => {
 
               return state as Brand<typeof state, { validation: 'dirty' }>
             },
-            sanitized: (island: string) => {
+            sanitized: (island: Brand<string, { type: 'island' }>) => {
               const dirty = DomManager.get.state.forced.island.dirty(island)
               if (!dirty) return undefined
 
@@ -1853,7 +1840,7 @@ export const script = (args: Script_Args.Static) => {
                   const currCompValue = Main.get.state.computed()?.get(island)?.facets?.get(facet)!
                   const isOldOption = utils.isValid.value.option.facet(island, facet, oldValue)
 
-                  const isOldCurrCompValue = isOldOption && currCompValue === oldValue
+                  const isOldCurrCompValue = isOldOption && (currCompValue as string) === oldValue
                   if (isOldCurrCompValue) target.setAttribute(attributeName, oldValue!)
                   else target.setAttribute(attributeName, currCompValue)
                 }
@@ -1874,10 +1861,10 @@ export const script = (args: Script_Args.Static) => {
                 }
 
                 const currBaseValue = Main.get.state.base()?.get(island)?.facets?.get(facet)!
-                const isNewAlreadySet = currBaseValue === newOption
+                const isNewAlreadySet = (currBaseValue as string) === newOption
                 if (isNewAlreadySet) continue
 
-                const newStatePartial = utils.construct.state.fromFacet(island, facet, newOption as Brand<string, { validation: 'sanitized' }>)
+                const newStatePartial = utils.construct.state.fromFacet(island, facet, newOption)
                 Main.set.state.base(newStatePartial)
                 continue
               }
@@ -2293,17 +2280,17 @@ export const script = (args: Script_Args.Static) => {
     private constructor() {
       StorageManager.init()
       DomManager.init()
-      
+
       const storageState = StorageManager.get.state.normalized()
 
       const baseState = storageState
       this.state.base = baseState
       Main.notifyUpdate.state.base(baseState)
-      
+
       const forcedState = DomManager.get.state.forced.all.sanitized()
       this.state.forced = forcedState
       Main.notifyUpdate.state.forced(forcedState)
-      
+
       const computedState = utils.merge.deep.state.maps.all(baseState, forcedState)
       Main.notifyUpdate.state.computed(computedState)
     }
