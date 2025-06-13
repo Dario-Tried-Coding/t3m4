@@ -161,7 +161,7 @@ export const script = (args: Script_Args.Static) => {
       key: 'T3M4',
       store: {
         values: false,
-        value: true
+        value: true,
       },
     },
     modes: {
@@ -411,17 +411,6 @@ export const script = (args: Script_Args.Static) => {
           return JSON.parse(json) as unknown
         } catch (e) {
           return null
-        }
-      },
-      disableTransitions() {
-        const css = document.createElement('style')
-        if (engine.nonce) css.setAttribute('nonce', engine.nonce)
-        css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
-        document.head.appendChild(css)
-
-        return () => {
-          ;(() => window.getComputedStyle(document.body))()
-          setTimeout(() => document.head.removeChild(css), 1)
         }
       },
     },
@@ -1171,6 +1160,7 @@ export const script = (args: Script_Args.Static) => {
   class DomManager {
     private static instance: DomManager | undefined
     private static observer: MutationObserver | undefined
+    private static isPerfomingMutation = false
 
     public static init() {
       if (!DomManager.instance) DomManager.instance = new DomManager()
@@ -1414,11 +1404,28 @@ export const script = (args: Script_Args.Static) => {
       },
     }
 
+    private static disableTransitions() {
+      DomManager.isPerfomingMutation = true
+
+      const css = document.createElement('style')
+      if (engine.nonce) css.setAttribute('nonce', engine.nonce)
+      css.appendChild(document.createTextNode(`*,*::before,*::after{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}`))
+      document.head.appendChild(css)
+
+      return () => {
+        ;(() => window.getComputedStyle(document.body))()
+        setTimeout(() => {
+          document.head.removeChild(css)
+          DomManager.isPerfomingMutation = false
+        }, 1)
+      }
+    }
+
     public static set = {
       state: {
         computed: {
-          island: (island: string, state: AtLeast<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Set<Element>; transitionsAlreadyDisabled?: boolean }) => {
-            const enableBackTransitions = !opts?.transitionsAlreadyDisabled && engine.disableTransitionOnChange ? utils.miscellaneous.disableTransitions() : undefined
+          island: (island: string, state: AtLeast<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Set<Element>; transitionsAlreadyDisabled?: boolean; isAlreadyMutatingDom?: boolean }) => {
+            const enableBackTransitions = engine.disableTransitionOnChange ? DomManager.disableTransitions() : undefined
 
             const els = opts?.elements ?? new Set(DomManager.get.islands.byIsland(island))
 
@@ -1443,15 +1450,11 @@ export const script = (args: Script_Args.Static) => {
             enableBackTransitions?.()
           },
           all: (state: AtLeast<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>, elements?: Map<string, Set<Element>>) => {
-            const enableBackTransitions = engine.disableTransitionOnChange ? utils.miscellaneous.disableTransitions() : undefined
-
             const els = elements ?? DomManager.get.islands.all()
             els.forEach((islandEls, island) => {
               const islandState = state.get(island)!
-              DomManager.set.state.computed.island(island, islandState, { elements: islandEls, transitionsAlreadyDisabled: !!enableBackTransitions })
+              DomManager.set.state.computed.island(island, islandState, { elements: islandEls, isAlreadyMutatingDom: true })
             })
-
-            enableBackTransitions?.()
           },
         },
       },
@@ -1537,6 +1540,8 @@ export const script = (args: Script_Args.Static) => {
 
       const handleMutations = (mutations: MutationRecord[]) => {
         for (const { type, oldValue, attributeName, target } of mutations) {
+          if (DomManager.isPerfomingMutation) continue
+
           if (type === 'attributes' && target instanceof HTMLElement && attributeName) {
             if (attributeName === engine.selectors.types.dataAttributes.island) {
               const newIsland = target.getAttribute(engine.selectors.types.dataAttributes.island)
@@ -1872,13 +1877,13 @@ export const script = (args: Script_Args.Static) => {
             }
           }
 
-          // if (type === 'childList') {
-          //   const forcedState = DomManager.get.state.forced.all.sanitized()
-          //   Main.set.state.forced(forcedState)
+          if (type === 'childList') {
+            const forcedState = DomManager.get.state.forced.all.sanitized()
+            Main.set.state.forced(forcedState)
 
-          //   const currCompState = Main.get.state.computed()!
-          //   DomManager.set.state.computed.all(currCompState)
-          // }
+            const currCompState = Main.get.state.computed()!
+            DomManager.set.state.computed.all(currCompState)
+          }
         }
       }
 

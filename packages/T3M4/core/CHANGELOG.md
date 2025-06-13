@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.6
+
+### Patch Changes
+
+- Modes deprecation & transition disabling bug fix
+
 ## 0.1.5
 
 ### Patch Changes
