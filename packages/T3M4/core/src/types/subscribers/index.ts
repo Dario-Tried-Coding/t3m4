@@ -1,7 +1,0 @@
-export type { Schema } from './schema'
-export type { Config } from './config'
-export type { State } from './state'
-export type { Values } from './values'
-export type { Islands } from './islands'
-export type { Color_Schemes as ColorSchemes } from './color-schemes'
-export type { Data_Attributes as DataAttributes } from './data-attributes'

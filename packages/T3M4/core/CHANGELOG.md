@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.7
+
+### Patch Changes
+
+- CDN approach migration
+
 ## 0.1.6
 
 ### Patch Changes

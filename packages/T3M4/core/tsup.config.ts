@@ -1,12 +1,19 @@
 import { defineConfig } from 'tsup'
 
-export default defineConfig({
-  entry: ['src/index.ts', 'src/types/index.ts', 'src/types/subscribers/index.ts', 'src/types/constants/exports.ts'],
-  sourcemap: false,
-  minify: true,
-  dts: true,
-  clean: true,
-  format: ['esm', 'cjs'],
-  splitting: false,
-  bundle: true,
-})
+export default defineConfig([
+  {
+    entry: ['src/index.ts'],
+    format: 'iife',
+    platform: 'browser',
+  },
+  {
+    entry: ['src/types/exports/index.ts', 'src/types/exports/constants.ts', 'src/types/exports/subscribers.ts'],
+    sourcemap: false,
+    minify: true,
+    dts: true,
+    clean: true,
+    format: ['esm', 'cjs'],
+    splitting: false,
+    bundle: true,
+  },
+])

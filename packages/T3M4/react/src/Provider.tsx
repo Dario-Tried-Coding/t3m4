@@ -1,12 +1,12 @@
 'use client'
 
-import { ScriptArgs } from '@t3m4/core/types'
+import { Args } from '@t3m4/core/types'
 import { Config, Schema } from '@t3m4/core/types/subscribers'
 import merge from 'lodash.merge'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { T3M4Context } from './context'
 
-export interface T3M4ProviderProps<Sc extends Schema, C extends Config<Sc>> extends PropsWithChildren, ScriptArgs<Sc, C> {}
+export interface T3M4ProviderProps<Sc extends Schema, C extends Config<Sc>> extends PropsWithChildren, Args<Sc, C> {}
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...scriptArgs }: T3M4ProviderProps<Sc, C>) => {
   const [state, setState] = useState<T3M4Context<Sc, C>['state']>({ base: undefined, forced: undefined, computed: undefined })
   const [colorSchemes, setColorSchemes] = useState<T3M4Context<Sc, C>['colorSchemes']>({ base: undefined, forced: undefined, computed: undefined })

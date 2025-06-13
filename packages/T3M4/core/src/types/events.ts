@@ -1,4 +1,4 @@
-import { T3M4 } from './interface'
+import { T3M4 } from './T3M4'
 
 export type EventMap = {
   'Reset': void
@@ -11,4 +11,4 @@ export type EventMap = {
   'ColorSchemes:Computed:Update': NonNullable<ReturnType<T3M4['get']['colorSchemes']['computed']>>
 }
 
-export type CallbackID = 'React:State:Update' | 'React:ColorSchemes:Update' | 'React:Reset' | 'StorageManager:State:Update' | 'DomManager:State:Update'
+export type CallbackID = 'React:State:Update' | 'React:ColorSchemes:Update' | 'React:Reset' | 'StorageManager:Reset' | 'DomManager:Reset' | 'StorageManager:State:Update' | 'DomManager:State:Update'

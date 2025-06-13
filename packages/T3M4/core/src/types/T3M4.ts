@@ -1,6 +1,8 @@
-import { ColorSchemes as Color_Schemes, State, Values } from './subscribers'
 import { CallbackID, EventMap } from './events'
-import { Script_Args } from './script'
+import { Args } from './args'
+import { State } from './subscribers/state'
+import { Color_Schemes } from './subscribers/color-schemes'
+import { Values } from './subscribers/values'
 
 export interface T3M4 {
   get: {
@@ -23,5 +25,6 @@ export interface T3M4 {
     }
   }
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
-  reboot: (args: Script_Args.Static) => void
+  reboot: (args: Args.Static) => void
+  init: (args: Args.Static) => void
 }

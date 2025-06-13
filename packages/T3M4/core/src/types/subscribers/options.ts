@@ -1,6 +1,5 @@
 import { LinientAutoComplete } from '@t3m4/utils'
-import { DEFAULT } from '../constants/miscellaneous'
-import { MODES } from '../constants/modes'
+import { DEFAULT, MODES } from '../../constants'
 
 export namespace Options {
   export type Mono = string
