@@ -35,6 +35,7 @@ export const config = {
       color: {
         strategy: 'multi',
         default: 'default',
+        store: false
       }
     }
   }
