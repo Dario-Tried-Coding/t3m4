@@ -136,7 +136,7 @@ export class StorageManager {
 
   private constructor() {
     EventManager.on('Reset', 'StorageManager:Reset', () => StorageManager.terminate())
-    EventManager.on('State:Base:Update', 'StorageManager:State:Update', (state) => StorageManager.set.state.all(Engine.utils.convert.deep.state.objToMap(state as Brand<State.Static, { validation: 'normalized'; coverage: 'complete' }>)))
+    EventManager.on('State:Base:Update', 'StorageManager:State:Update', ({state}) => StorageManager.set.state.all(Engine.utils.convert.deep.state.objToMap(state as Brand<State.Static, { validation: 'normalized'; coverage: 'complete' }>)))
 
     StorageManager.abortController = new AbortController()
     if (Engine.getInstance().observe.has('storage'))

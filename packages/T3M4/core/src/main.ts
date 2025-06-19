@@ -134,18 +134,15 @@ export class Main {
     state: {
       base: (state: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>) => {
         const colorSchemes = Engine.utils.construct.colorSchemes(state)
-        EventManager.emit('State:Base:Update', Engine.utils.convert.deep.state.mapToObj(state))
-        EventManager.emit('ColorSchemes:Base:Update', Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static)
+        EventManager.emit('State:Base:Update', { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static })
       },
       forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) => {
         const colorSchemes = Engine.utils.construct.colorSchemes(state)
-        EventManager.emit('State:Forced:Update', Engine.utils.convert.deep.state.mapToObj(state))
-        EventManager.emit('ColorSchemes:Forced:Update', Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static)
+        EventManager.emit('State:Forced:Update', { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static })
       },
       computed: (state: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>, opts?: { isUserMutation?: boolean }) => {
         const colorSchemes = Engine.utils.construct.colorSchemes(state)
-        EventManager.emit('State:Computed:Update', { state: Engine.utils.convert.deep.state.mapToObj(state), isUserMutation: opts?.isUserMutation })
-        EventManager.emit('ColorSchemes:Computed:Update', Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static)
+        EventManager.emit('State:Computed:Update', { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static, isUserMutation: opts?.isUserMutation })
       },
     },
   }

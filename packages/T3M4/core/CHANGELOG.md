@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.9
+
+### Patch Changes
+
+- Transition disabling - bug fixing
+
 ## 0.1.8
 
 ### Patch Changes

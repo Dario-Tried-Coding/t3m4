@@ -818,7 +818,7 @@
     }
     constructor() {
       EventManager.on("Reset", "StorageManager:Reset", () => _StorageManager.terminate());
-      EventManager.on("State:Base:Update", "StorageManager:State:Update", (state) => _StorageManager.set.state.all(Engine.utils.convert.deep.state.objToMap(state)));
+      EventManager.on("State:Base:Update", "StorageManager:State:Update", ({ state }) => _StorageManager.set.state.all(Engine.utils.convert.deep.state.objToMap(state)));
       _StorageManager.abortController = new AbortController();
       if (Engine.getInstance().observe.has("storage"))
         window.addEventListener(
@@ -1553,18 +1553,15 @@
       state: {
         base: (state) => {
           const colorSchemes = Engine.utils.construct.colorSchemes(state);
-          EventManager.emit("State:Base:Update", Engine.utils.convert.deep.state.mapToObj(state));
-          EventManager.emit("ColorSchemes:Base:Update", Engine.utils.convert.shallow.mapToObj.string(colorSchemes));
+          EventManager.emit("State:Base:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) });
         },
         forced: (state) => {
           const colorSchemes = Engine.utils.construct.colorSchemes(state);
-          EventManager.emit("State:Forced:Update", Engine.utils.convert.deep.state.mapToObj(state));
-          EventManager.emit("ColorSchemes:Forced:Update", Engine.utils.convert.shallow.mapToObj.string(colorSchemes));
+          EventManager.emit("State:Forced:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) });
         },
         computed: (state, opts) => {
           const colorSchemes = Engine.utils.construct.colorSchemes(state);
-          EventManager.emit("State:Computed:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), isUserMutation: opts?.isUserMutation });
-          EventManager.emit("ColorSchemes:Computed:Update", Engine.utils.convert.shallow.mapToObj.string(colorSchemes));
+          EventManager.emit("State:Computed:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes), isUserMutation: opts?.isUserMutation });
         }
       }
     };
