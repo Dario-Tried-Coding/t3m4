@@ -65,9 +65,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.7
         version: 1.2.7(@types/react-dom@19.0.3(@types/react@19.0.10))(@types/react@19.0.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@t3m4/next':
+      '@t3m4/react':
         specifier: workspace:*
-        version: link:../../packages/T3M4/next
+        version: link:../../packages/T3M4/react
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -175,43 +175,6 @@ importers:
       vitest:
         specifier: ^3.0.6
         version: 3.0.6(@types/debug@4.1.12)(@types/node@20.17.19)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.7.0)
-
-  packages/T3M4/next:
-    dependencies:
-      '@t3m4/react':
-        specifier: workspace:*
-        version: link:../react
-      '@t3m4/utils':
-        specifier: workspace:*
-        version: link:../utils
-    devDependencies:
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../../typescript-config
-      '@types/react':
-        specifier: 19.0.10
-        version: 19.0.10
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.24.1
-        version: 8.24.1(@typescript-eslint/parser@8.24.1(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3))(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.24.1
-        version: 8.24.1(eslint@9.21.0(jiti@2.4.2))(typescript@5.7.3)
-      eslint:
-        specifier: ^9.20.1
-        version: 9.21.0(jiti@2.4.2)
-      react:
-        specifier: ^19.0.0
-        version: 19.0.0
-      tsup:
-        specifier: ^8.3.5
-        version: 8.3.6(jiti@2.4.2)(postcss@8.5.3)(typescript@5.7.3)(yaml@2.7.0)
-      typescript:
-        specifier: ^5.7.3
-        version: 5.7.3
-      vitest:
-        specifier: ^3.0.4
-        version: 3.0.7(@types/debug@4.1.12)(@types/node@20.17.19)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.7.0)
 
   packages/T3M4/react:
     dependencies:

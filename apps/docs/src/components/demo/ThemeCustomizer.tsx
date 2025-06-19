@@ -20,7 +20,8 @@ export function ThemeCustomizer({ className, ...props }: ComponentProps<'div'>) 
             key={color}
             variant='link'
             size='sm'
-            data-active={color === state.computed?.facets.color}
+            data-active={color === state.base?.facets.color}
+            disabled={!state.base || !!state.forced?.facets?.color}
             onClick={() => updateState({ facets: { color } })}
             className='text-muted-foreground hover:text-primary data-[active=true]:text-primary mr-4 cursor-pointer text-base capitalize transition-colors hover:no-underline'
           >
@@ -35,7 +36,7 @@ export function ThemeCustomizer({ className, ...props }: ComponentProps<'div'>) 
         <Label htmlFor='theme-selector' className='sr-only'>
           Theme
         </Label>
-        <Select value={state.computed?.facets.color ?? config.demo.facets.color.default} onValueChange={(color: T3M4<'demo'>['facets']['color']) => updateState({ facets: { color } })}>
+        <Select disabled={!state.base || !!state.forced?.facets?.color} value={state.base?.facets.color ?? config.demo.facets.color.default} onValueChange={(color: T3M4<'demo'>['facets']['color']) => updateState({ facets: { color } })}>
           <SelectTrigger id='theme-selector' size='sm' className='capitalize shadow-none *:data-[slot=select-value]:w-12'>
             <span className='font-medium'>Theme:</span>
             <SelectValue placeholder='Select a theme' />

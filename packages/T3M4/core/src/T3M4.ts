@@ -12,7 +12,7 @@ export class T3M4 implements T_T3M4 {
   public get = {
     state: {
       base: () => {
-        const state = Main.get.state.base()
+        const state = Main.get.state.computed()
         if (!state) return undefined
         return Engine.utils.convert.deep.state.mapToObj(state)
       },
@@ -21,25 +21,15 @@ export class T3M4 implements T_T3M4 {
         if (!state) return undefined
         return Engine.utils.convert.deep.state.mapToObj(state)
       },
-      computed: () => {
-        const state = Main.get.state.computed()
-        if (!state) return undefined
-        return Engine.utils.convert.deep.state.mapToObj(state)
-      },
     },
     colorSchemes: {
       base: () => {
-        const colorSchemes = Main.get.colorSchemes.base()
+        const colorSchemes = Main.get.colorSchemes.computed()
         if (!colorSchemes) return undefined
         return Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static
       },
       forced: () => {
         const colorSchemes = Main.get.colorSchemes.forced()
-        if (!colorSchemes) return undefined
-        return Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static
-      },
-      computed: () => {
-        const colorSchemes = Main.get.colorSchemes.computed()
         if (!colorSchemes) return undefined
         return Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static
       },

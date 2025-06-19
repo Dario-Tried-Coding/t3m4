@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.10
+
+### Patch Changes
+
+- t3m4@next deprecation
+
 ## 0.1.9
 
 ### Patch Changes

@@ -13,8 +13,8 @@ export function LayoutSwitch({ className, ...rest }: Omit<HTMLAttributes<HTMLBut
     <Button
       variant='ghost'
       size='icon'
-      disabled={!state.computed || !!state.forced?.facets?.layout}
-      onClick={() => updateState({ facets: { layout: state.computed?.facets.layout === 'full' ? 'fixed' : 'full' } })}
+      disabled={!state.base || !!state.forced?.facets?.layout}
+      onClick={() => updateState({ facets: { layout: state.base?.facets.layout === 'full' ? 'fixed' : 'full' } })}
       className={cn('', className)}
       {...rest}
     >
