@@ -48,15 +48,9 @@ export class T3M4 implements T_T3M4 {
   }
 
   public set = {
-    state: {
-      base: (state: State.Static) => {
-        const stateMap = Engine.utils.convert.deep.state.objToMap(state as Brand<State.Static, { coverage: 'complete'; validation: 'normalized' }>)
-        Main.set.state.base(stateMap)
-      },
-      forced: (state: State.Static) => {
-        const stateMap = Engine.utils.convert.deep.state.objToMap(state as Brand<State.Static, { coverage: 'partial'; validation: 'normalized' }>)
-        Main.set.state.forced(stateMap)
-      },
+    state: (state: State.Static) => {
+      const stateMap = Engine.utils.convert.deep.state.objToMap(state as Brand<State.Static, { coverage: 'complete'; validation: 'normalized' }>)
+      Main.set.state.base(stateMap, { isUserMutation: true })
     },
   }
 

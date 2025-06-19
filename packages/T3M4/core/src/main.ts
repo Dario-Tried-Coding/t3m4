@@ -86,22 +86,22 @@ export class Main {
 
   public static set = {
     state: {
-      base: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) => {
+      base: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>, opts?: { isUserMutation?: boolean }) => {
         const currState = Main.get.state.base()
         if (!currState) return console.warn('[T3M4]: Library not initialized')
 
         const mergedState = Engine.utils.merge.deep.state.maps.all(currState, state)
-        Main.smartUpdateNotify.state.base(mergedState)
+        Main.smartUpdateNotify.state.base(mergedState, opts)
       },
-      forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) => {
-        Main.smartUpdateNotify.state.forced(state)
+      forced: (state: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>, opts?: { isUserMutation?: boolean }) => {
+        Main.smartUpdateNotify.state.forced(state, opts)
       },
     },
   }
 
   private static smartUpdateNotify = {
     state: {
-      base(newState: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>) {
+      base(newState: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>, opts?: { isUserMutation?: boolean }) {
         const currState = Main.get.state.base()
         if (!currState) return console.warn('[T3M4] Library not initialized.')
 
@@ -112,9 +112,9 @@ export class Main {
         Main.notifyUpdate.state.base(newState)
 
         const computedState = Main.get.state.computed()!
-        Main.notifyUpdate.state.computed(computedState)
+        Main.notifyUpdate.state.computed(computedState, opts)
       },
-      forced(newState: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>) {
+      forced(newState: AtLeast<State.Static.AsMap, { coverage: 'partial'; validation: 'sanitized' }>, opts?: { isUserMutation?: boolean }) {
         const currState = Main.get.state.forced()
         if (!currState) return console.warn('[T3M4] Library not initialized.')
 
@@ -125,7 +125,7 @@ export class Main {
         Main.notifyUpdate.state.forced(newState)
 
         const computedState = Main.get.state.computed()!
-        Main.notifyUpdate.state.computed(computedState)
+        Main.notifyUpdate.state.computed(computedState, opts)
       },
     },
   }
@@ -142,9 +142,9 @@ export class Main {
         EventManager.emit('State:Forced:Update', Engine.utils.convert.deep.state.mapToObj(state))
         EventManager.emit('ColorSchemes:Forced:Update', Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static)
       },
-      computed: (state: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>) => {
+      computed: (state: AtLeast<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>, opts?: { isUserMutation?: boolean }) => {
         const colorSchemes = Engine.utils.construct.colorSchemes(state)
-        EventManager.emit('State:Computed:Update', Engine.utils.convert.deep.state.mapToObj(state))
+        EventManager.emit('State:Computed:Update', { state: Engine.utils.convert.deep.state.mapToObj(state), isUserMutation: opts?.isUserMutation })
         EventManager.emit('ColorSchemes:Computed:Update', Engine.utils.convert.shallow.mapToObj.string(colorSchemes) as Color_Schemes.Static)
       },
     },

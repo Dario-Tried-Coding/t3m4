@@ -16,10 +16,7 @@ export type T3M4Context<Sc extends Schema, C extends Config<Sc>> = {
     forced: ColorSchemes<C> | undefined
     computed: ColorSchemes<C> | undefined
   }
-  updateState: {
-    base: <I extends keyof Sc, S extends State.Island<Sc[I]>>(island: I, state: S | ((state: S) => State.Optional.Island<Sc[I]>)) => void
-    forced: <I extends keyof Sc, S extends State.Optional.Island<Sc[I]>>(island: I, state: S | ((state: S) => S)) => void
-  }
+  updateState: <I extends keyof Sc, S extends State.Island<Sc[I]>>(island: I, state: S | ((state: S) => State.Optional.Island<Sc[I]>)) => void
   values: Values<Sc> | undefined
 }
 export const T3M4Context = createContext<T3M4Context<Schema, Config<Schema>> | null>(null)
@@ -44,7 +41,7 @@ export const useT3M4 = <Sc extends Schema, C extends Config<Sc>, I extends keyof
   if (!context) throw new Error('useT3M4 must be used within a NextThemesProvider')
 
   return {
-    updateState: (state) => context.updateState.base(island, state as State.Island<Sc[typeof island]>),
+    updateState: (state) => context.updateState(island, state as State.Island<Sc[typeof island]>),
     state: {
       base: context.state.base?.[island] as useT3M4<Sc, C, I>['state']['base'],
       forced: (context.state.forced ? context.state.forced?.[island] ?? {} : undefined) as useT3M4<Sc, C, I>['state']['forced'],

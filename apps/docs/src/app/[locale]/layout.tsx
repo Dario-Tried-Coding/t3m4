@@ -44,7 +44,7 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
     <html suppressHydrationWarning lang={locale} data-island='root'>
       <head>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script crossOrigin='anonymous' src='//unpkg.com/@t3m4/core/dist/index.global.js' />
+        <script crossOrigin='anonymous' src={process.env.NODE_ENV === 'production' ? '//unpkg.com/@t3m4/core/dist/index.global.js' : '/index.global.js'} />
       </head>
       <body className={cn('flex min-h-svh flex-col', FontSans.variable, FontMono.variable)}>
         <Providers>

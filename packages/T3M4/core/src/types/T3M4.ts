@@ -19,10 +19,7 @@ export interface T3M4 {
     values: () => Values.Static
   }
   set: {
-    state: {
-      base: (state: State.Static) => void
-      forced: (state: State.Static) => void
-    }
+    state: (state: State.Static) => void
   }
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
   reboot: (args: Args.Static) => void

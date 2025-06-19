@@ -127,14 +127,14 @@ export default async function Home({ params }: Props) {
               return null
             })}
 
-            {/* <PageNav>
+            <PageNav>
               <Demo.ThemeCustomizer />
             </PageNav>
             <div className='container-wrapper section-soft flex flex-1 flex-col pb-6'>
               <div className='theme-container container flex flex-1 flex-col'>
                 <Demo.Cards />
               </div>
-            </div> */}
+            </div>
           </div>
         )
       }}
