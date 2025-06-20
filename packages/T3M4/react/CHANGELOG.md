@@ -1,5 +1,11 @@
 # @t3m4/react
 
+## 0.1.12
+
+### Patch Changes
+
+- @t3m4/next deprecation - abort
+
 ## 0.1.11
 
 ### Patch Changes

@@ -5,7 +5,6 @@ import { Config, Schema } from '@t3m4/core/types/subscribers'
 import merge from 'lodash.merge'
 import { PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { T3M4Context } from './context'
-import { Initializer } from './Initializer'
 
 export interface T3M4ProviderProps<Sc extends Schema, C extends Config<Sc>> extends PropsWithChildren, Args<Sc, C> {}
 export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children, ...args }: T3M4ProviderProps<Sc, C>) => {
@@ -53,7 +52,6 @@ export const T3M4Provider = <Sc extends Schema, C extends Config<Sc>>({ children
 
   return (
     <T3M4Context.Provider value={{ state, updateState, colorSchemes, values: values.current }}>
-      <Initializer args={args} />
       {children}
     </T3M4Context.Provider>
   )
