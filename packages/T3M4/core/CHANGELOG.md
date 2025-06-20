@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.12
+
+### Patch Changes
+
+- Bug fix
+
 ## 0.1.11
 
 ### Patch Changes
