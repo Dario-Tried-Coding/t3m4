@@ -1,5 +1,11 @@
 # @t3m4/react
 
+## 0.1.15
+
+### Patch Changes
+
+- API improvement - from colorSchemes to colorScheme - more semantic naming
+
 ## 0.1.14
 
 ### Patch Changes

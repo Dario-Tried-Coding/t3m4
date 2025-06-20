@@ -29,7 +29,7 @@ export type useT3M4<Sc extends Schema, C extends Config<Sc>, I extends keyof Sch
     forced: Expand<State.Optional.Island<Sc[I]>> | undefined
     computed: Expand<State.Island<Sc[I]>> | undefined
   },
-  colorSchemes: {
+  colorScheme: {
     base: I extends keyof C ? (Sc[I] extends Schema.Island.Mode ? ColorSchemes.Island<C[I]> | undefined : undefined) : undefined
     forced: I extends keyof C ? (Sc[I] extends Schema.Island.Mode ? ColorSchemes.Island<C[I]> | undefined : undefined) : undefined
     computed: I extends keyof C ? (Sc[I] extends Schema.Island.Mode ? ColorSchemes.Island<C[I]> | undefined : undefined) : undefined
@@ -47,10 +47,10 @@ export const useT3M4 = <Sc extends Schema, C extends Config<Sc>, I extends keyof
       forced: (context.state.forced ? context.state.forced?.[island] ?? {} : undefined) as useT3M4<Sc, C, I>['state']['forced'],
       computed: context.state.base?.[island] as useT3M4<Sc, C, I>['state']['computed'],
     },
-    colorSchemes: {
-      base: context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>] as useT3M4<Sc, C, I>['colorSchemes']['base'],
-      forced: context.colorSchemes.forced?.[island as keyof Config.Polished.Mode<C>] as useT3M4<Sc, C, I>['colorSchemes']['forced'],
-      computed: context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>] as useT3M4<Sc, C, I>['colorSchemes']['computed'],
+    colorScheme: {
+      base: context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>] as useT3M4<Sc, C, I>['colorScheme']['base'],
+      forced: context.colorSchemes.forced?.[island as keyof Config.Polished.Mode<C>] as useT3M4<Sc, C, I>['colorScheme']['forced'],
+      computed: context.colorSchemes.base?.[island as keyof Config.Polished.Mode<C>] as useT3M4<Sc, C, I>['colorScheme']['computed'],
     },
     values: context.values?.[island] as useT3M4<Sc, C, I>['values'],
   }
