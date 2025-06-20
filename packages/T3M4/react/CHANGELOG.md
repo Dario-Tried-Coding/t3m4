@@ -1,5 +1,13 @@
 # @t3m4/react
 
+## 0.1.13
+
+### Patch Changes
+
+- API improvement - got back 'base' state & from 'updateState' to 'setState'
+- Updated dependencies
+  - @t3m4/core@0.1.11
+
 ## 0.1.12
 
 ### Patch Changes

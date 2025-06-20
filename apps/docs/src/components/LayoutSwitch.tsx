@@ -7,14 +7,14 @@ import { HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 export function LayoutSwitch({ className, ...rest }: Omit<HTMLAttributes<HTMLButtonElement>, 'children'>) {
-  const { updateState, state } = useT3M4('root')
+  const { setState, state } = useT3M4('root')
 
   return (
     <Button
       variant='ghost'
       size='icon'
-      disabled={!state.base || !!state.forced?.facets?.layout}
-      onClick={() => updateState({ facets: { layout: state.base?.facets.layout === 'full' ? 'fixed' : 'full' } })}
+      disabled={!state.computed || !!state.forced?.facets?.layout}
+      onClick={() => setState({ facets: { layout: state.computed?.facets.layout === 'full' ? 'fixed' : 'full' } })}
       className={cn('', className)}
       {...rest}
     >

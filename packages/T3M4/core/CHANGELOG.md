@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.11
+
+### Patch Changes
+
+- API improvement - got back 'base' state & from 'updateState' to 'setState'
+
 ## 0.1.10
 
 ### Patch Changes
