@@ -1,5 +1,12 @@
 # @t3m4/react
 
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies
+  - @t3m4/core@0.1.13
+
 ## 0.1.15
 
 ### Patch Changes

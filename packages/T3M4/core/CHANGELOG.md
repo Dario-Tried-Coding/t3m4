@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.13
+
+### Patch Changes
+
+- Minor fixes & performance/readability improvements
+
 ## 0.1.12
 
 ### Patch Changes
