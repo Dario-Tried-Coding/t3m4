@@ -1,5 +1,32 @@
 # @t3m4/react
 
+## 0.1.15
+
+### Patch Changes
+
+- API improvement - from colorSchemes to colorScheme - more semantic naming
+
+## 0.1.14
+
+### Patch Changes
+
+- Updated dependencies
+  - @t3m4/core@0.1.12
+
+## 0.1.13
+
+### Patch Changes
+
+- API improvement - got back 'base' state & from 'updateState' to 'setState'
+- Updated dependencies
+  - @t3m4/core@0.1.11
+
+## 0.1.12
+
+### Patch Changes
+
+- @t3m4/next deprecation - abort
+
 ## 0.1.11
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
-  "name": "@t3m4/react",
-  "version": "0.1.15",
-  "description": "A typesafe abstraction for advanced theming in your React apps.",
+  "name": "@t3m4/next",
+  "version": "0.1.14",
+  "description": "A typesafe abstraction for advanced theming in your Next.js projects.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -21,7 +21,7 @@
   "author": "dariotriedcoding",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Dario-Tried-Coding/next-themes"
+    "url": "https://github.com/Dario-Tried-Coding/T3M4"
   },
   "license": "MIT",
   "files": [
@@ -40,16 +40,14 @@
     }
   },
   "dependencies": {
-    "@t3m4/core": "workspace:*",
     "@t3m4/utils": "workspace:*",
-    "lodash.merge": "^4.6.2"
+    "@t3m4/react": "workspace:*"
   },
   "peerDependencies": {
     "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/lodash.merge": "^4.6.9",
     "@types/react": "19.0.10",
     "@typescript-eslint/eslint-plugin": "^8.24.1",
     "@typescript-eslint/parser": "^8.24.1",

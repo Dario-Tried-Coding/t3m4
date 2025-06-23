@@ -22,7 +22,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-tooltip": "^1.2.7",
-    "@t3m4/react": "workspace:*",
+    "@t3m4/next": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "basehub": "^8.2.9",
     "class-variance-authority": "^0.7.1",

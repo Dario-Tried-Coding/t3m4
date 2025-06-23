@@ -1600,7 +1600,7 @@
     get = {
       state: {
         base: () => {
-          const state = Main.get.state.computed();
+          const state = Main.get.state.base();
           if (!state) return void 0;
           return Engine.utils.convert.deep.state.mapToObj(state);
         },
@@ -1608,16 +1608,26 @@
           const state = Main.get.state.forced();
           if (!state) return void 0;
           return Engine.utils.convert.deep.state.mapToObj(state);
+        },
+        computed: () => {
+          const state = Main.get.state.computed();
+          if (!state) return void 0;
+          return Engine.utils.convert.deep.state.mapToObj(state);
         }
       },
       colorSchemes: {
         base: () => {
-          const colorSchemes = Main.get.colorSchemes.computed();
+          const colorSchemes = Main.get.colorSchemes.base();
           if (!colorSchemes) return void 0;
           return Engine.utils.convert.shallow.mapToObj.string(colorSchemes);
         },
         forced: () => {
           const colorSchemes = Main.get.colorSchemes.forced();
+          if (!colorSchemes) return void 0;
+          return Engine.utils.convert.shallow.mapToObj.string(colorSchemes);
+        },
+        computed: () => {
+          const colorSchemes = Main.get.colorSchemes.computed();
           if (!colorSchemes) return void 0;
           return Engine.utils.convert.shallow.mapToObj.string(colorSchemes);
         }
