@@ -272,8 +272,8 @@ export class DomManager {
   public static set = {
     state: {
       computed: {
-        island: (island: string, state: AtLeast<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Set<Element>; isUserMutation?: boolean }) => {
-          const enableBackTransitions = Engine.getInstance().disableTransitionOnChange && opts?.isUserMutation ? DomManager.disableTransitions() : undefined
+        island: (island: string, state: AtLeast<State.Static.AsMap.Island, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Set<Element> }) => {
+          const enableBackTransitions = Engine.getInstance().disableTransitionOnChange && Main.isUserMutation ? DomManager.disableTransitions() : undefined
 
           const els = opts?.elements ?? new Set(DomManager.get.islands.byIsland(island))
 
@@ -297,11 +297,11 @@ export class DomManager {
 
           enableBackTransitions?.()
         },
-        all: (state: AtLeast<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Map<string, Set<Element>>; isUserMutation?: boolean }) => {
+        all: (state: AtLeast<State.Static.AsMap, { validation: 'normalized'; coverage: 'complete' }>, opts?: { elements?: Map<string, Set<Element>> }) => {
           const els = opts?.elements ?? DomManager.get.islands.all()
           els.forEach((islandEls, island) => {
             const islandState = state.get(island)!
-            DomManager.set.state.computed.island(island, islandState, { elements: islandEls, isUserMutation: opts?.isUserMutation })
+            DomManager.set.state.computed.island(island, islandState, { elements: islandEls })
           })
         },
       },
@@ -385,8 +385,8 @@ export class DomManager {
 
   private constructor() {
     EventManager.on('Reset', 'DomManager:Reset', () => DomManager.terminate())
-    EventManager.on('State:Computed:Update', 'DomManager:State:Update', ({ state, isUserMutation }) =>
-      DomManager.set.state.computed.all(Engine.utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>, { isUserMutation })
+    EventManager.on('State:Computed:Update', 'DomManager:State:Update', ({ state }) =>
+      DomManager.set.state.computed.all(Engine.utils.convert.deep.state.objToMap(state) as Brand<State.Static.AsMap, { coverage: 'complete'; validation: 'normalized' }>)
     )
 
     const handleMutations = (mutations: MutationRecord[]) => {

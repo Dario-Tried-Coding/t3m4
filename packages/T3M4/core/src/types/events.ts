@@ -5,7 +5,7 @@ export type EventMap = {
   'Reset:Success': void
   'State:Base:Update': { state: NonNullable<ReturnType<T3M4['get']['state']['base']>>; colorScheme: NonNullable<ReturnType<T3M4['get']['colorSchemes']['base']>> }
   'State:Forced:Update': { state: NonNullable<ReturnType<T3M4['get']['state']['forced']>>; colorScheme: NonNullable<ReturnType<T3M4['get']['colorSchemes']['forced']>> }
-  'State:Computed:Update': { state: NonNullable<ReturnType<T3M4['get']['state']['base']>>; colorScheme: NonNullable<ReturnType<T3M4['get']['colorSchemes']['base']>>; isUserMutation?: boolean }
+  'State:Computed:Update': { state: NonNullable<ReturnType<T3M4['get']['state']['base']>>; colorScheme: NonNullable<ReturnType<T3M4['get']['colorSchemes']['base']>> }
 }
 
 export type CallbackID = 'React:State:Update' | 'React:ColorSchemes:Update' | 'React:Reset' | 'StorageManager:Reset' | 'DomManager:Reset' | 'StorageManager:State:Update' | 'DomManager:State:Update'

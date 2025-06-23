@@ -693,7 +693,7 @@
           if (!mode) return acc;
           const stratObj = _Engine.args.config[i].mode;
           const obj = {
-            selectors: /* @__PURE__ */ new Set([...PRESET.modes.dom.selectors, ...typeof stratObj.selector === "string" ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors]),
+            selectors: /* @__PURE__ */ new Set([...PRESET.modes.dom.selectors, ..._Engine.args.selector ? typeof _Engine.args.selector === "string" ? [_Engine.args.selector] : _Engine.args.selector : [], ...typeof stratObj.selector === "string" ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors]),
             strategy: stratObj.strategy,
             colorSchemes: stratObj.strategy === STRATS.mono ? /* @__PURE__ */ new Map([[stratObj.default, stratObj.colorScheme]]) : stratObj.strategy === STRATS.multi ? new Map(Object.entries(stratObj.colorSchemes)) : new Map([[mode.light, COLOR_SCHEMES.light], [mode.dark, COLOR_SCHEMES.dark], ...Object.entries(stratObj.colorSchemes ?? {})]),
             system: void 0
@@ -1071,7 +1071,7 @@
       state: {
         computed: {
           island: (island, state, opts) => {
-            const enableBackTransitions = Engine.getInstance().disableTransitionOnChange && opts?.isUserMutation ? _DomManager.disableTransitions() : void 0;
+            const enableBackTransitions = Engine.getInstance().disableTransitionOnChange && Main.isUserMutation ? _DomManager.disableTransitions() : void 0;
             const els = opts?.elements ?? new Set(_DomManager.get.islands.byIsland(island));
             els.forEach((el) => {
               const elCurrState = _DomManager.get.state.computed.island.dirty(island, el);
@@ -1093,7 +1093,7 @@
             const els = opts?.elements ?? _DomManager.get.islands.all();
             els.forEach((islandEls, island) => {
               const islandState = state.get(island);
-              _DomManager.set.state.computed.island(island, islandState, { elements: islandEls, isUserMutation: opts?.isUserMutation });
+              _DomManager.set.state.computed.island(island, islandState, { elements: islandEls });
             });
           }
         }
@@ -1169,7 +1169,7 @@
       EventManager.on(
         "State:Computed:Update",
         "DomManager:State:Update",
-        ({ state, isUserMutation }) => _DomManager.set.state.computed.all(Engine.utils.convert.deep.state.objToMap(state), { isUserMutation })
+        ({ state }) => _DomManager.set.state.computed.all(Engine.utils.convert.deep.state.objToMap(state))
       );
       const handleMutations = (mutations) => {
         for (const { type, oldValue, attributeName, target } of mutations) {
@@ -1450,6 +1450,13 @@
   // src/main.ts
   var Main = class _Main {
     static instance;
+    static _isUserMutation = false;
+    static get isUserMutation() {
+      return _Main._isUserMutation;
+    }
+    static set isUserMutation(value) {
+      _Main._isUserMutation = value;
+    }
     static init() {
       if (_Main.instance) return console.warn("[T3M4]: Main - Already initialized, skipping initialization.");
       _Main.instance = new _Main();
@@ -1515,19 +1522,23 @@
     static set = {
       state: {
         base: (state, opts) => {
+          if (opts?.isUserMutation) _Main.isUserMutation = true;
           const currState = _Main.get.state.base();
           if (!currState) return console.warn("[T3M4]: Library not initialized");
           const mergedState = Engine.utils.merge.deep.state.maps.all(currState, state);
-          _Main.smartUpdateNotify.state.base(mergedState, opts);
+          _Main.smartUpdateNotify.state.base(mergedState);
+          _Main.isUserMutation = false;
         },
         forced: (state, opts) => {
-          _Main.smartUpdateNotify.state.forced(state, opts);
+          if (opts?.isUserMutation) _Main.isUserMutation = true;
+          _Main.smartUpdateNotify.state.forced(state);
+          _Main.isUserMutation = false;
         }
       }
     };
     static smartUpdateNotify = {
       state: {
-        base(newState, opts) {
+        base(newState) {
           const currState = _Main.get.state.base();
           if (!currState) return console.warn("[T3M4] Library not initialized.");
           const isEqual = Engine.utils.equal.deep.state(currState, newState);
@@ -1535,9 +1546,9 @@
           _Main.instance.state.base = newState;
           _Main.notifyUpdate.state.base(newState);
           const computedState = _Main.get.state.computed();
-          _Main.notifyUpdate.state.computed(computedState, opts);
+          _Main.notifyUpdate.state.computed(computedState);
         },
-        forced(newState, opts) {
+        forced(newState) {
           const currState = _Main.get.state.forced();
           if (!currState) return console.warn("[T3M4] Library not initialized.");
           const isEqual = Engine.utils.equal.deep.state(currState, newState);
@@ -1545,7 +1556,7 @@
           _Main.instance.state.forced = newState;
           _Main.notifyUpdate.state.forced(newState);
           const computedState = _Main.get.state.computed();
-          _Main.notifyUpdate.state.computed(computedState, opts);
+          _Main.notifyUpdate.state.computed(computedState);
         }
       }
     };
@@ -1559,9 +1570,9 @@
           const colorSchemes = Engine.utils.construct.colorSchemes(state);
           EventManager.emit("State:Forced:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) });
         },
-        computed: (state, opts) => {
+        computed: (state) => {
           const colorSchemes = Engine.utils.construct.colorSchemes(state);
-          EventManager.emit("State:Computed:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes), isUserMutation: opts?.isUserMutation });
+          EventManager.emit("State:Computed:Update", { state: Engine.utils.convert.deep.state.mapToObj(state), colorScheme: Engine.utils.convert.shallow.mapToObj.string(colorSchemes) });
         }
       }
     };
