@@ -1,5 +1,17 @@
 # @T3M4/core
 
+## 0.1.15
+
+### Patch Changes
+
+- Bug fix: color scheme pref change to be reflected on all selectors enabled
+
+## 0.1.14
+
+### Patch Changes
+
+- Feature: color scheme pref change support for 'system' mode
+
 ## 0.1.13
 
 ### Patch Changes

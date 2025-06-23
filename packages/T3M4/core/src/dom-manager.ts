@@ -770,14 +770,13 @@ export class DomManager {
       currModes?.forEach((mode, island) => {
         const isSystemStrat = Engine.getInstance().modes.get(island)?.strategy === 'system'
         const isSystemMode = mode === Engine.getInstance().modes.get(island)?.system?.mode
-        const isColorSchemeEnabled = Engine.getInstance().modes.get(island)?.selectors.has('color-scheme')
         
-        if (isSystemStrat && isSystemMode && isColorSchemeEnabled) {
+        if (isSystemStrat && isSystemMode) {
           const fallbackMode = Engine.getInstance().modes.get(island)?.system?.fallback!
           const fallbackColoScheme = Engine.utils.resolve.colorScheme(island, fallbackMode)!
 
           const colorScheme = Engine.utils.miscellaneous.getSystemPref()
-          DomManager.set.mode.colorScheme(island, colorScheme ?? fallbackColoScheme)
+          DomManager.set.mode.all(island, colorScheme ?? fallbackColoScheme)
         }
       })
     })

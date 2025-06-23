@@ -1,6 +1,6 @@
 {
   "name": "@t3m4/next",
-  "version": "0.1.15",
+  "version": "0.1.17",
   "description": "A typesafe abstraction for advanced theming in your Next.js projects.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
