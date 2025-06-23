@@ -806,7 +806,7 @@ export class Engine {
         const stratObj = Engine.args.config[i]!.mode!
 
         const obj: NonNullable<ReturnType<NonNullable<Engine['modes']>['get']>> = {
-          selectors: new Set([...PRESET.modes.dom.selectors, ...(typeof stratObj.selector === 'string' ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors)]),
+          selectors: new Set([...PRESET.modes.dom.selectors, ...(Engine.args.selector ? typeof Engine.args.selector === 'string' ? [Engine.args.selector] : Engine.args.selector : []), ...(typeof stratObj.selector === 'string' ? [stratObj.selector] : Array.isArray(stratObj.selector) ? stratObj.selector : PRESET.modes.dom.island.selectors)]),
           strategy: stratObj.strategy,
           colorSchemes:
             stratObj.strategy === STRATS.mono

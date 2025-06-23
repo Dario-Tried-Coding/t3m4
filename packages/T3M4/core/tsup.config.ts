@@ -5,7 +5,6 @@ export default defineConfig([
     entry: ['src/index.ts'],
     format: 'iife',
     platform: 'browser',
-    // outDir: '../../../apps/docs/public'
   },
   {
     entry: ['src/types/exports/index.ts', 'src/types/exports/constants.ts', 'src/types/exports/subscribers.ts'],
