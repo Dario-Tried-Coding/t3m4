@@ -22,7 +22,6 @@ export const config = {
     mode: {
       strategy: 'system',
       default: 'dark',
-      selector: 'color-scheme'
     },
     facets: {
       layout: {
