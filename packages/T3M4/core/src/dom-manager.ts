@@ -7,6 +7,7 @@ import { State } from './types/subscribers/state'
 
 export class DomManager {
   private static instance: DomManager | undefined
+  private static abortController: AbortController | undefined
   private static observer: MutationObserver | undefined
   private static isPerfomingMutation = false
 
@@ -291,7 +292,7 @@ export class DomManager {
               if (needsUpdate) el.setAttribute(Engine.getInstance().selectors.types.dataAttributes.computed.mode, state.mode)
 
               const colorScheme = Engine.utils.resolve.colorScheme(island, state.mode)!
-              DomManager.set.mode.set(island, el, colorScheme)
+              DomManager.set.mode.all(island, colorScheme, { els: new Set([el]) })
             }
           })
 
@@ -307,41 +308,51 @@ export class DomManager {
       },
     },
     mode: {
-      dataAttribute: (island: string, el: Element, value: COLOR_SCHEME) => {
+      dataAttribute: (island: string, value: COLOR_SCHEME, opts?: { els?: Set<Element> }) => {
         if (!Engine.getInstance().modes.get(island)?.selectors.has('data-attribute')) return
-        if (!(el instanceof HTMLElement)) return
 
-        const currValue = el.getAttribute(Engine.getInstance().selectors.types.dataAttributes.colorScheme)
+        const els = opts?.els ?? DomManager.get.islands.byIsland(island)
+        els?.forEach((el) => {
+          if (!(el instanceof HTMLElement)) return
 
-        const needsUpdate = currValue !== value
-        if (needsUpdate) el.setAttribute(Engine.getInstance().selectors.types.dataAttributes.colorScheme, value)
+          const currValue = el.getAttribute(Engine.getInstance().selectors.types.dataAttributes.colorScheme)
+
+          const needsUpdate = currValue !== value
+          if (needsUpdate) el.setAttribute(Engine.getInstance().selectors.types.dataAttributes.colorScheme, value)
+        })
       },
-      colorScheme: (island: string, el: Element, value: COLOR_SCHEME) => {
+      colorScheme: (island: string, value: COLOR_SCHEME, opts?: { els?: Set<Element> }) => {
         if (!Engine.getInstance().modes.get(island)?.selectors.has('color-scheme')) return
-        if (!(el instanceof HTMLElement)) return
 
-        const currValue = el.style.colorScheme
+        const els = opts?.els ?? DomManager.get.islands.byIsland(island)
+        els?.forEach((el) => {
+          if (!(el instanceof HTMLElement)) return
 
-        const needsUpdate = currValue !== value
-        if (needsUpdate) el.style.colorScheme = value
+          const currValue = el.style.colorScheme
+
+          const needsUpdate = currValue !== value
+          if (needsUpdate) el.style.colorScheme = value
+        })
       },
-      class: (island: string, el: Element, value: COLOR_SCHEME) => {
+      class: (island: string, value: COLOR_SCHEME, opts?: { els?: Set<Element> }) => {
         if (!Engine.getInstance().modes.get(island)?.selectors.has('class')) return
-        if (!(el instanceof HTMLElement)) return
 
-        const currValue = el.classList.contains(MODES.light) ? MODES.light : el.classList.contains(MODES.dark) ? MODES.dark : undefined
-        const needsUpdate = currValue !== value
-        if (needsUpdate) {
-          const other = value === MODES.light ? MODES.dark : MODES.light
-          el.classList.replace(other, value) || el.classList.add(value)
-        }
+        const els = opts?.els ?? DomManager.get.islands.byIsland(island)
+        els?.forEach((el) => {
+          if (!(el instanceof HTMLElement)) return
+
+          const currValue = el.classList.contains(MODES.light) ? MODES.light : el.classList.contains(MODES.dark) ? MODES.dark : undefined
+          const needsUpdate = currValue !== value
+          if (needsUpdate) {
+            const other = value === MODES.light ? MODES.dark : MODES.light
+            el.classList.replace(other, value) || el.classList.add(value)
+          }
+        })
       },
-      set: (island: string, el: Element, value: COLOR_SCHEME) => {
-        if (!(el instanceof HTMLElement)) return
-
-        if (Engine.getInstance().modes.get(island)?.selectors.has('data-attribute')) DomManager.set.mode.dataAttribute(island, el, value)
-        if (Engine.getInstance().modes.get(island)?.selectors.has('color-scheme')) DomManager.set.mode.colorScheme(island, el, value)
-        if (Engine.getInstance().modes.get(island)?.selectors.has('class')) DomManager.set.mode.class(island, el, value)
+      all: (island: string, value: COLOR_SCHEME, opts?: { els?: Set<Element> }) => {
+        if (Engine.getInstance().modes.get(island)?.selectors.has('data-attribute')) DomManager.set.mode.dataAttribute(island, value, opts)
+        if (Engine.getInstance().modes.get(island)?.selectors.has('color-scheme')) DomManager.set.mode.colorScheme(island, value, opts)
+        if (Engine.getInstance().modes.get(island)?.selectors.has('class')) DomManager.set.mode.class(island, value, opts)
       },
     },
   }
@@ -390,9 +401,9 @@ export class DomManager {
     )
 
     const handleMutations = (mutations: MutationRecord[]) => {
-      for (const { type, oldValue, attributeName, target } of mutations) {
-        if (DomManager.isPerfomingMutation) continue
+      if (DomManager.isPerfomingMutation) return
 
+      for (const { type, oldValue, attributeName, target } of mutations) {
         if (type === 'attributes' && target instanceof HTMLElement && attributeName && Engine.getInstance().observe.has('DOM')) {
           if (attributeName === Engine.getInstance().selectors.types.dataAttributes.island) {
             const newIsland = target.getAttribute(Engine.getInstance().selectors.types.dataAttributes.island)
@@ -745,6 +756,30 @@ export class DomManager {
       attributeOldValue: true,
       subtree: true,
       childList: true,
+    })
+
+    DomManager.abortController = new AbortController()
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    media.addListener((e) => {
+      if (DomManager.isPerfomingMutation) return
+
+      const currState = Main.get.state.base()
+      if (!currState) return
+
+      const currModes = Engine.utils.construct.modes(currState)
+      currModes?.forEach((mode, island) => {
+        const isSystemStrat = Engine.getInstance().modes.get(island)?.strategy === 'system'
+        const isSystemMode = mode === Engine.getInstance().modes.get(island)?.system?.mode
+        const isColorSchemeEnabled = Engine.getInstance().modes.get(island)?.selectors.has('color-scheme')
+        
+        if (isSystemStrat && isSystemMode && isColorSchemeEnabled) {
+          const fallbackMode = Engine.getInstance().modes.get(island)?.system?.fallback!
+          const fallbackColoScheme = Engine.utils.resolve.colorScheme(island, fallbackMode)!
+
+          const colorScheme = Engine.utils.miscellaneous.getSystemPref()
+          DomManager.set.mode.colorScheme(island, colorScheme ?? fallbackColoScheme)
+        }
+      })
     })
   }
 }
