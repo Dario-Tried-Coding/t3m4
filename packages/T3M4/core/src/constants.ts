@@ -44,7 +44,7 @@ export type OBSERVABLE = (typeof OBSERVABLES)[keyof typeof OBSERVABLES]
 
 export const SELECTORS = {
   class: 'class',
-  data_attribute: 'data-attribute',
+  data_color_scheme: 'data-color-scheme',
   color_scheme: 'color-scheme'
 } as const
 export type SELECTORS = typeof SELECTORS

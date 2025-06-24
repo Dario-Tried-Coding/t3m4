@@ -4,15 +4,7 @@ import { FC, PropsWithChildren } from 'react'
 
 export const schema = {
   root: {
-    facets: {
-      layout: ['full', 'fixed'],
-    },
     mode: { light: 'light', dark: 'dark' },
-  },
-  demo: {
-    facets: {
-      color: ['default', 'red', 'rose', 'orange', 'green', 'blue', 'yellow', 'violet']
-    }
   }
 } as const satisfies Schema.Suggested
 export type TSchema = typeof schema
@@ -22,21 +14,7 @@ export const config = {
     mode: {
       strategy: 'system',
       default: 'dark',
-    },
-    facets: {
-      layout: {
-        strategy: 'multi',
-        default: 'full',
-      },
-    },
-  },
-  demo: {
-    facets: {
-      color: {
-        strategy: 'multi',
-        default: 'default',
-        store: false
-      }
+      selector: ['color-scheme', 'class']
     }
   }
 } as const satisfies Config<TSchema>

@@ -309,7 +309,7 @@ export class DomManager {
     },
     mode: {
       dataAttribute: (island: string, value: COLOR_SCHEME, opts?: { els?: Set<Element> }) => {
-        if (!Engine.getInstance().modes.get(island)?.selectors.has('data-attribute')) return
+        if (!Engine.getInstance().modes.get(island)?.selectors.has('data-color-scheme')) return
 
         const els = opts?.els ?? DomManager.get.islands.byIsland(island)
         els?.forEach((el) => {
@@ -350,7 +350,7 @@ export class DomManager {
         })
       },
       all: (island: string, value: COLOR_SCHEME, opts?: { els?: Set<Element> }) => {
-        if (Engine.getInstance().modes.get(island)?.selectors.has('data-attribute')) DomManager.set.mode.dataAttribute(island, value, opts)
+        if (Engine.getInstance().modes.get(island)?.selectors.has('data-color-scheme')) DomManager.set.mode.dataAttribute(island, value, opts)
         if (Engine.getInstance().modes.get(island)?.selectors.has('color-scheme')) DomManager.set.mode.colorScheme(island, value, opts)
         if (Engine.getInstance().modes.get(island)?.selectors.has('class')) DomManager.set.mode.class(island, value, opts)
       },
@@ -612,7 +612,7 @@ export class DomManager {
             const isIsland = Engine.utils.isValid.value.island(island)
             if (!isIsland) continue
 
-            const isSelectorEnabled = Engine.getInstance().modes.get(island)?.selectors.has('data-attribute')
+            const isSelectorEnabled = Engine.getInstance().modes.get(island)?.selectors.has('data-color-scheme')
             if (!isSelectorEnabled) continue
 
             const supportedColorSchemes = new Set(Engine.getInstance().modes.get(island)?.colorSchemes.values() ?? [])
