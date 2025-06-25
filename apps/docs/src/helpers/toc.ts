@@ -30,7 +30,7 @@ export function buildToc(nodes: RichTextTocNode[], depth: number = 1): TocEntry[
         if (node.content) {
           // cerchiamo testo con mark di tipo link
           let url: string | undefined
-          let titleParts: string[] = []
+          const titleParts: string[] = []
 
           for (const c of node.content) {
             if (c.type === 'text') {
