@@ -1,5 +1,13 @@
 # @t3m4/next
 
+## 0.1.18
+
+### Patch Changes
+
+- CLI support adaptation
+- Updated dependencies
+  - @t3m4/react@0.1.19
+
 ## 0.1.17
 
 ### Patch Changes

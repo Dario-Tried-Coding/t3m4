@@ -12,4 +12,5 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   splitting: false,
   bundle: true,
+  publicDir: true
 })

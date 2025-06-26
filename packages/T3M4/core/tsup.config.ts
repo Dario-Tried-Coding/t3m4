@@ -17,7 +17,6 @@ export default defineConfig(() => {
           console.log('Build successful, file copied to apps/docs/public/index.global.js')
         } catch (error) {
           console.error('Error during build or file copy:', error)
-          throw error
         }
       },
     },

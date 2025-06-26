@@ -2,6 +2,7 @@ import { Expand } from '@t3m4/utils'
 import { Schema } from './schema'
 import { State } from './state'
 
+export type Data_Attributes<Sc extends Schema> = Data_Attributes.Islands<Schema> & Data_Attributes.Force<Schema> & Data_Attributes.Base<Schema>
 export namespace Data_Attributes {
   export type Islands<Sc extends Schema> = { 'data-island'?: keyof Schema.Polished<Sc> }
 
