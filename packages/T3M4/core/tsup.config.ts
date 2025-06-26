@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup'
 import { promises as fs } from 'node:fs'
 import { dirname } from 'node:path'
 
-export default defineConfig(({ env }) => {
+export default defineConfig(() => {
   return [
     {
       entry: ['src/index.ts'],
