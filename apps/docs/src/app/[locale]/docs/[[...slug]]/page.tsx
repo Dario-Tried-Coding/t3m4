@@ -22,9 +22,7 @@ interface Props {
 const theme = createCssVariablesTheme({
   name: 'css-variables',
   variablePrefix: '--shiki-',
-  variableDefaults: {
-    'token-constant': '#d73a49',
-  },
+  variableDefaults: {},
   fontStyle: true,
 })
 
@@ -78,6 +76,16 @@ export default async function Page(props: Props) {
                         },
                       },
                     },
+                    on_CodeBlockComponent: {
+                      _id: true,
+                      __typename: true,
+                      icon: true,
+                      _title: true,
+                      code: {
+                        code: true,
+                        language: true,
+                      },
+                    },
                   },
                 },
               },
@@ -105,7 +113,7 @@ export default async function Page(props: Props) {
               <RichText
                 blocks={docs.item!.body.json.blocks}
                 components={{
-                  pre: ({ language, code }) => <DynamicCodeBlock lang={language} code={code} />,
+                  pre: ({code, language}) => (<DynamicCodeBlock code={code} lang={language} />),
                   li: ({ children, ...props }) => (
                     <li {...props} className='[&_p]:my-0'>
                       {children}
@@ -146,13 +154,15 @@ export default async function Page(props: Props) {
                       </Tabs>
                     )
                   },
+                  CodeBlockComponent: ({ icon, _title, code: { code, language } }) => (
+                    <CodeBlock icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined} title={_title}>
+                      <BH_CodeBlock snippets={[{ code, language }]} theme={theme} />
+                    </CodeBlock>
+                  ),
                 }}
               >
                 {docs.item?.body.json.content}
               </RichText>
-              <CodeBlock icon={<ChevronDown />} title='Example'>
-                <BH_CodeBlock snippets={[{ code: 'console.log("hi")', language: 'ts' }]} theme={theme} />
-              </CodeBlock>
             </DocsBody>
           </DocsPage>
         )
