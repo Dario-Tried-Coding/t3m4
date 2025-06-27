@@ -7,6 +7,8 @@ import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Card, Cards } from 'fumadocs-ui/components/card'
+import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { Locale } from 'next-intl'
 import { draftMode } from 'next/headers'
@@ -103,11 +105,19 @@ export default async function Page(props: Props) {
                         <RichText components={customComponents}>{body?.json.content}</RichText>
                       </Callout>
                     )
-                  }
+                  },
                 }}
               >
                 {docs.item?.body.json.content}
               </RichText>
+              <Tabs groupId='package-manager' items={['npm', 'pnpm']} label='Initialize T3M4' persist>
+                <Tab value='pnpm'>
+                  <DynamicCodeBlock lang='bash' code='pnpm dlx t3m4@latest init' />
+                </Tab>
+                <Tab value='npm'>
+                  <DynamicCodeBlock lang='bash' code='npx t3m4@latest init' />
+                </Tab>
+              </Tabs>
             </DocsBody>
           </DocsPage>
         )
