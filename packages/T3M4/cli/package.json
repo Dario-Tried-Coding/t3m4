@@ -1,6 +1,6 @@
 {
   "name": "t3m4",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A CLI tool to quickly get up and running with T3M4 in your project.",
   "private": false,
   "main": "index.js",
