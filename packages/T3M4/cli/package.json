@@ -1,25 +1,46 @@
 {
-  "name": "@t3m4/cli",
-  "version": "0.0.0",
-  "description": "",
+  "name": "t3m4",
+  "version": "0.0.2",
+  "description": "A CLI tool to quickly get up and running with T3M4 in your project.",
+  "private": false,
   "main": "index.js",
   "scripts": {
+    "test": "vitest run",
     "build": "tsc",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit"
   },
   "bin": {
     "t3m4": "./dist/index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "theming",
+    "typescript",
+    "cli"
+  ],
+  "author": "dariotriedcoding",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dario-Tried-Coding/T3M4"
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
+    "@types/ejs": "^3.1.5",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20",
-    "typescript": "^5.8.3"
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint": "^9.29.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "commander": "^14.0.0",
+    "ejs": "^3.1.10",
     "execa": "^9.6.0",
     "fs-extra": "^11.3.0",
     "inquirer": "^12.6.3",

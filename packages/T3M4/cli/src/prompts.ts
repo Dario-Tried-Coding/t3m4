@@ -30,7 +30,7 @@ export async function getPrompts() {
       type: 'input',
       name: 'entry',
       message: 'Where should we generate your T3M4 entry file?',
-      default: './lib',
+      default: './src/lib',
     },
   ])
   const entryDir = path.resolve(cwd, entry)
@@ -40,7 +40,7 @@ export async function getPrompts() {
       type: 'input',
       name: 'types',
       message: 'Where should we generate your T3M4 declaration types file?',
-      default: './types',
+      default: './src/types',
     },
   ])
   const typesDir = path.resolve(cwd, types)

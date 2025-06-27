@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.17
+
+### Patch Changes
+
+- CLI adaptation prep
+
 ## 0.1.16
 
 ### Patch Changes

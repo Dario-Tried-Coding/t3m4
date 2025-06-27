@@ -2,7 +2,7 @@ import { Expand } from '@t3m4/utils'
 import { Schema } from './schema'
 import { State } from './state'
 
-export type Data_Attributes<Sc extends Schema> = Data_Attributes.Islands<Schema> & Data_Attributes.Force<Schema> & Data_Attributes.Base<Schema>
+export type Data_Attributes<Sc extends Schema> = Data_Attributes.Islands<Sc> & Data_Attributes.Force<Sc> & Data_Attributes.Target<Sc>
 export namespace Data_Attributes {
   export type Islands<Sc extends Schema> = { 'data-island'?: keyof Schema.Polished<Sc> }
 
@@ -45,7 +45,7 @@ export namespace Data_Attributes {
     [F in AllFacets<T>]: Expand<FacetValues<T, F>>
   }
 
-  export type Base<Sc extends Schema> = Partial<
+  export type Target<Sc extends Schema> = Partial<
     MergeFacets<{
       [I in keyof State<Sc>]: (State<Sc>[I] extends State.Static.Island.Facets
         ? {

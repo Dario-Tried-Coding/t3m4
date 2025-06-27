@@ -1,6 +1,6 @@
 {
   "name": "@t3m4/core",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "A typesafe abstraction for advanced theming across frameworks.",
   "private": false,
   "browser": "./dist/index.global.js",
@@ -18,7 +18,7 @@
   "author": "dariotriedcoding",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Dario-Tried-Coding/T3M4.git"
+    "url": "https://github.com/Dario-Tried-Coding/T3M4"
   },
   "license": "MIT",
   "files": [
