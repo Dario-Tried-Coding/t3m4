@@ -4,6 +4,9 @@ import { FC, PropsWithChildren } from 'react'
 
 export const schema = {
   root: {
+    facets: {
+      color: ['blue', 'green', 'red']
+    },
     mode: { light: 'light', dark: 'dark' },
   }
 } as const satisfies Schema.Suggested
@@ -11,6 +14,12 @@ export type TSchema = typeof schema
 
 export const config = {
   root: {
+    facets: {
+      color: {
+        strategy: 'multi',
+        default: 'green'
+      }
+    },
     mode: {
       strategy: 'system',
       default: 'dark',
