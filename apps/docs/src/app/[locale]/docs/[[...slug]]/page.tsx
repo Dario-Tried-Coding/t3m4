@@ -12,6 +12,7 @@ import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { Locale } from 'next-intl'
+import { setRequestLocale } from 'next-intl/server'
 import { draftMode } from 'next/headers'
 
 export interface CodeBlockProps {
@@ -35,6 +36,8 @@ interface Props {
 }
 export default async function Page(props: Props) {
   const { slug, locale } = await props.params
+
+  setRequestLocale(locale)
 
   return (
     <Pump

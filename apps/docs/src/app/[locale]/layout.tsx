@@ -14,6 +14,10 @@ interface Props {
   params: Promise<{ locale: Locale }>
 }
 
+export async function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }))
+}
+
 export default async function RootLayout({ children, params }: Readonly<Props>) {
   const { locale } = await params
   if (!hasLocale(routing.locales, locale)) notFound()
