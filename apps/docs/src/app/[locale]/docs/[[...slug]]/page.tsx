@@ -4,28 +4,35 @@ import { buildToc } from '@/helpers/toc'
 import { customComponents } from '@/lib/basehub'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
+import { highlight } from 'fumadocs-core/highlight'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Card, Cards } from 'fumadocs-ui/components/card'
-import { CodeBlock, Pre } from 'fumadocs-ui/components/codeblock'
+import * as Base from 'fumadocs-ui/components/codeblock'
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
-import { ChevronDown } from 'fumadocs-ui/internal/icons'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { Locale } from 'next-intl'
 import { draftMode } from 'next/headers'
-import { CodeBlock as BH_CodeBlock, createCssVariablesTheme } from 'basehub/react-code-block'
+
+export interface CodeBlockProps {
+  code: string
+  wrapper?: Base.CodeBlockProps
+  lang: string
+}
+async function CodeBlock({ code, lang, wrapper }: CodeBlockProps) {
+  const rendered = await highlight(code, {
+    lang,
+    components: {
+      pre: Base.Pre,
+    },
+  })
+
+  return <Base.CodeBlock {...wrapper}>{rendered}</Base.CodeBlock>
+}
 
 interface Props {
   params: Promise<{ slug?: string[]; locale: Locale }>
 }
-
-const theme = createCssVariablesTheme({
-  name: 'css-variables',
-  variablePrefix: '--shiki-',
-  variableDefaults: {},
-  fontStyle: true,
-})
-
 export default async function Page(props: Props) {
   const { slug, locale } = await props.params
 
@@ -35,62 +42,75 @@ export default async function Page(props: Props) {
       queries={[
         {
           docs: {
-            item: {
-              _title: true,
-              excerpt: true,
-              body: {
-                json: {
-                  content: true,
-                  toc: true,
-                  blocks: {
-                    on_CardsComponent: {
-                      _id: true,
-                      __typename: true,
-                      cards: {
-                        items: {
+            articles: {
+              item: {
+                _title: true,
+                title: true,
+                excerpt: true,
+                body: {
+                  json: {
+                    content: true,
+                    toc: true,
+                    blocks: {
+                      on_CalloutComponent: {
+                        _id: true,
+                        __typename: true,
+                        title: true,
+                        body: { json: { content: true } },
+                        type: true,
+                      },
+                      on_TabsComponent: {
+                        _id: true,
+                        __typename: true,
+                        tabs: {
+                          items: {
+                            _id: true,
+                            title: true,
+                            body: { code: true, language: true },
+                          },
+                        },
+                      },
+                      on_CardsComponent: {
+                        _id: true,
+                        __typename: true,
+                        cards: {
+                          items: {
+                            link: true,
+                            instance: {
+                              _id: true,
+                              title: true,
+                              description: { json: { content: true } },
+                              color: true,
+                              icon: true,
+                              href: true,
+                            },
+                          },
+                        },
+                      },
+                      on_ReferenceComponent: {
+                        _id: true,
+                        __typename: true,
+                        reference: {
                           _id: true,
-                          _title: true,
-                          primaryColor: true,
+                          title: true,
                           description: { json: { content: true } },
-                          href: true,
                           icon: true,
+                          href: true,
                         },
                       },
-                    },
-                    on_CalloutComponent: {
-                      _id: true,
-                      __typename: true,
-                      _title: true,
-                      body: { json: { content: true } },
-                      type: true,
-                    },
-                    on_TabsComponent: {
-                      _id: true,
-                      __typename: true,
-                      label: true,
-                      tabs: {
-                        items: {
-                          _id: true,
-                          _title: true,
-                          body: { code: true, language: true },
-                        },
-                      },
-                    },
-                    on_CodeBlockComponent: {
-                      _id: true,
-                      __typename: true,
-                      icon: true,
-                      _title: true,
-                      code: {
-                        code: true,
-                        language: true,
+                      on_CodeBlockComponent: {
+                        _id: true,
+                        __typename: true,
+                        title: true,
+                        icon: true,
+                        code: { language: true, code: true },
                       },
                     },
                   },
                 },
               },
+              __args: { filter: { slug: { eq: slug ? `/docs/${slug.join('/')}` : '/docs' } }, variants: { languages: locale } },
             },
-            __args: { variants: { languages: locale }, filter: { slug: { eq: (slug as unknown as string) ?? '/' } } },
           },
         },
       ]}
@@ -98,12 +118,13 @@ export default async function Page(props: Props) {
       {async ([{ docs }]) => {
         'use server'
 
-        const toc = buildToc(docs.item?.body.json.toc ?? [])
+        const article = docs.articles.item
+        const toc = buildToc(article?.body.json.toc ?? [])
 
         return (
           <DocsPage toc={toc}>
-            <DocsTitle>{docs.item?._title}</DocsTitle>
-            <DocsDescription className='mb-0'>{docs.item?.excerpt}</DocsDescription>
+            <DocsTitle>{article?.title}</DocsTitle>
+            <DocsDescription className='mb-0'>{article?.excerpt}</DocsDescription>
             <div className='flex gap-2'>
               <CopyMarkdown />
               <OpenInBtn />
@@ -111,16 +132,16 @@ export default async function Page(props: Props) {
             <hr />
             <DocsBody>
               <RichText
-                blocks={docs.item!.body.json.blocks}
+                blocks={article?.body.json.blocks}
                 components={{
-                  pre: ({code, language}) => (<DynamicCodeBlock code={code} lang={language} />),
+                  pre: ({ code, language }) => <DynamicCodeBlock code={code} lang={language} />,
                   li: ({ children, ...props }) => (
                     <li {...props} className='[&_p]:my-0'>
                       {children}
                     </li>
                   ),
                   CardsComponent: ({ _id, cards }) => {
-                    const colors = {
+                    const colors: Record<NonNullable<(typeof cards.items)[0]['instance']['color']>, string> = {
                       blue: 'text-blue-300',
                       green: 'text-green-300',
                       purple: 'text-purple-300',
@@ -128,8 +149,8 @@ export default async function Page(props: Props) {
 
                     return (
                       <Cards key={_id}>
-                        {cards.items.map(({ _id, _title, description, primaryColor, href, icon }) => (
-                          <Card key={_id} title={_title} href={href ?? undefined} icon={icon ? <span className={primaryColor ? colors[primaryColor] : undefined} dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                        {cards.items.map(({ link, instance: { _id, title, description, color, href, icon } }) => (
+                          <Card key={_id} title={title} href={link ? href : undefined} icon={icon ? <span className={color ? colors[color] : undefined} dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
                             <RichText>{description?.json.content}</RichText>
                           </Card>
                         ))}
@@ -143,26 +164,21 @@ export default async function Page(props: Props) {
                       </Callout>
                     )
                   },
-                  TabsComponent: ({ label, tabs }) => {
+                  TabsComponent: ({ tabs, persistent }) => {
                     return (
-                      <Tabs items={tabs.items.map((t) => t._title)} label={label} persist>
-                        {tabs.items.map((tab) => (
-                          <Tab key={tab._id} value={tab._title}>
-                            <DynamicCodeBlock lang={tab.body.language} code={tab.body.code} />
+                      <Tabs items={tabs.items.map((t) => t.title)} persist={persistent}>
+                        {tabs.items.map(({ _id, title, body }) => (
+                          <Tab key={_id} value={title}>
+                            <DynamicCodeBlock code={body.code} lang={body.language} />
                           </Tab>
                         ))}
                       </Tabs>
                     )
                   },
-                  CodeBlockComponent: ({ icon, _title, code: { code, language } }) => (
-                    <CodeBlock icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined} title={_title}>
-                      <BH_CodeBlock snippets={[{ code, language }]} theme={theme} />
-                    </CodeBlock>
-                  ),
+                  CodeBlockComponent: ({ icon, title, code: { code, language } }) => <CodeBlock code={code} lang={language} wrapper={{ title: title, icon: icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined }} />,
                 }}
-              >
-                {docs.item?.body.json.content}
-              </RichText>
+                content={article?.body.json.content}
+              />
             </DocsBody>
           </DocsPage>
         )
