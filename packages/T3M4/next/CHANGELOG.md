@@ -1,5 +1,11 @@
 # @t3m4/next
 
+## 0.1.21
+
+### Patch Changes
+
+- EsLint adjustments to scaffold
+
 ## 0.1.20
 
 ### Patch Changes
