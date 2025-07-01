@@ -16,7 +16,7 @@ export const baseOptions = async (): Promise<BaseLayoutProps> => {
           <span className='text-sm tracking-wide'>T3M4</span>
         </>
       ),
-      transparentMode: 'top'
+      transparentMode: 'top',
     },
   }
 }

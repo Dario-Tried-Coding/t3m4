@@ -1,1 +1,10 @@
-{}
+{
+  "docs": {
+    "last-updated": "Last updated on {date}",
+    "Rate": {
+      "question": "How is this guide?",
+      "good": "Good",
+      "bad": "Bad"
+    }
+  }
+}

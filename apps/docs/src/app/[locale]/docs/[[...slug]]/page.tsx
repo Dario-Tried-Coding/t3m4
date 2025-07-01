@@ -1,35 +1,21 @@
 import { CopyMarkdown } from '@/components/CopyMarkdown'
+import { LastUpdated } from '@/components/LastUpdated'
 import { OpenInBtn } from '@/components/OpenInBtn'
-import { buildToc } from '@/helpers/toc'
+import { Rate } from '@/components/Rate'
 import { customComponents } from '@/lib/basehub'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
 import { highlight } from 'fumadocs-core/highlight'
+import { getTableOfContents } from 'fumadocs-core/server'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Card, Cards } from 'fumadocs-ui/components/card'
-import * as Base from 'fumadocs-ui/components/codeblock'
+import * as CodeBlock from 'fumadocs-ui/components/codeblock'
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { Locale } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { draftMode } from 'next/headers'
-
-export interface CodeBlockProps {
-  code: string
-  wrapper?: Base.CodeBlockProps
-  lang: string
-}
-async function CodeBlock({ code, lang, wrapper }: CodeBlockProps) {
-  const rendered = await highlight(code, {
-    lang,
-    components: {
-      pre: Base.Pre,
-    },
-  })
-
-  return <Base.CodeBlock {...wrapper}>{rendered}</Base.CodeBlock>
-}
 
 interface Props {
   params: Promise<{ slug?: string[]; locale: Locale }>
@@ -48,7 +34,6 @@ export default async function Page(props: Props) {
             articles: {
               item: {
                 _title: true,
-                title: true,
                 excerpt: true,
                 body: {
                   json: {
@@ -110,9 +95,13 @@ export default async function Page(props: Props) {
                       },
                     },
                   },
+                  markdown: true
+                },
+                _sys: {
+                  lastModifiedAt: true,
                 },
               },
-              __args: { filter: { slug: { eq: slug ? `/docs/${slug.join('/')}` : '/docs' } }, variants: { languages: locale } },
+              __args: { filter: { _sys_slugPath: { eq: `root docs articles ${slug?.join(' ') ?? 'quick-start'}` } } },
             },
           },
         },
@@ -122,18 +111,18 @@ export default async function Page(props: Props) {
         'use server'
 
         const article = docs.articles.item
-        const toc = buildToc(article?.body.json.toc ?? [])
+        const toc = getTableOfContents(article?.body.markdown ?? '')
 
         return (
-          <DocsPage toc={toc}>
-            <DocsTitle>{article?.title}</DocsTitle>
+          <DocsPage toc={toc} tableOfContent={{ single: false,  }}>
+            <DocsTitle>{article?._title}</DocsTitle>
             <DocsDescription className='mb-0'>{article?.excerpt}</DocsDescription>
             <div className='flex gap-2'>
               <CopyMarkdown />
               <OpenInBtn />
             </div>
             <hr />
-            <DocsBody>
+            <DocsBody >
               <RichText
                 blocks={article?.body.json.blocks}
                 components={{
@@ -178,10 +167,25 @@ export default async function Page(props: Props) {
                       </Tabs>
                     )
                   },
-                  CodeBlockComponent: ({ icon, title, code: { code, language } }) => <CodeBlock code={code} lang={language} wrapper={{ title: title, icon: icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined }} />,
+                  CodeBlockComponent: async ({ icon, title, code: { code, language } }) => {
+                    const rendered = await highlight(code, {
+                      lang: language,
+                      components: {
+                        pre: CodeBlock.Pre,
+                      },
+                    })
+
+                    return (
+                      <CodeBlock.CodeBlock title={title} icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                        {rendered}
+                      </CodeBlock.CodeBlock>
+                    )
+                  },
                 }}
                 content={article?.body.json.content}
               />
+              <Rate />
+              {article?._sys.lastModifiedAt && <LastUpdated date={article._sys.lastModifiedAt} />}
             </DocsBody>
           </DocsPage>
         )
