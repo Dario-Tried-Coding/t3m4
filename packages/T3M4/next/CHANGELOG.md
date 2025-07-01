@@ -1,5 +1,13 @@
 # @t3m4/next
 
+## 0.1.20
+
+### Patch Changes
+
+- CLI - improved scaffolding process adaptation
+- Updated dependencies
+  - @t3m4/react@0.1.21
+
 ## 0.1.19
 
 ### Patch Changes

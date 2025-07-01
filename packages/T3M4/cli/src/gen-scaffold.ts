@@ -1,32 +1,36 @@
 import fs from 'fs-extra'
-import { Module } from './types'
+import { Language, Module } from './types'
 import path from 'path'
 import ejs from 'ejs'
 
-export async function genScaffold({ entryDir, typesDir, cwd, module }: { cwd: string; entryDir: string; typesDir: string; module: Module }) {
-  const scaffoldPath = path.join(cwd, 'node_modules', '@t3m4', module, 'dist', 'scaffold')
-  
+async function renderAndWrite(templatePath: string, outputPath: string, data: object) {
+  const template = await fs.readFile(templatePath, 'utf-8')
+  const output = ejs.render(template, data)
+  await fs.ensureDir(path.dirname(outputPath))
+  await fs.writeFile(outputPath, output)
+}
+
+export async function genScaffold({ module, lang }: { module: Module; lang: Language }) {
+  const isDev = process.env.NODE_ENV === 'development'
+  const cwd = process.cwd()
+
+  const entryDir = path.join(cwd, 'src', 'lib')
+  const typesDir = path.join(cwd, 'src', 'types')
+
+  const scaffoldDir = isDev ? path.join(__dirname, '..', '..', module, 'public', 'scaffold') : path.join(cwd, 'node_modules', '@t3m4', module, 'dist', 'scaffold')
+
   try {
     const relPathToEntryFile = './' + path.relative(typesDir, path.join(entryDir, 'T3M4')).replace(/\\/g, '/')
-    
-    const tsxScaffold = await fs.readFile(path.join(scaffoldPath, 'T3M4.tsx.ejs'), 'utf-8')
-    const tsxOutput = ejs.render(tsxScaffold, { module })
-    
-    const dtsScaffold = await fs.readFile(path.join(scaffoldPath, 'T3M4.d.ts.ejs'), 'utf-8')
-    const dtsOutput = ejs.render(dtsScaffold, { relPathToEntryFile, module })
-    
-    await fs.ensureDir(entryDir)
-    await fs.ensureDir(typesDir)
-    
-    const entryFilePath = path.join(entryDir, 'T3M4.tsx')
-    await fs.writeFile(entryFilePath, tsxOutput)
 
-    const typesFilePath = path.join(typesDir, 'T3M4.d.ts')
-    await fs.writeFile(typesFilePath, dtsOutput)
+    if (lang === 'typescript') {
+      await renderAndWrite(path.join(scaffoldDir, 'T3M4.tsx.ejs'), path.join(entryDir, 'T3M4.tsx'), { module })
+      await renderAndWrite(path.join(scaffoldDir, 'T3M4.d.ts.ejs'), path.join(typesDir, 'T3M4.d.ts'), { relPathToEntryFile, module })
+    } else if (lang === 'javascript') {
+      await renderAndWrite(path.join(scaffoldDir, 'T3M4.jsx.ejs'), path.join(entryDir, 'T3M4.jsx'), { module })
+    }
 
-    return { entryFilePath, typesFilePath }
-  } catch (err) {
-    console.error(`❌ Failed to scaffold T3M4 files for module: ${module}`)
-    throw err
+    console.log(`✔ Scaffolded T3M4 files for module: ${module}`)
+  } catch {
+    throw new Error(`❗Failed to scaffold T3M4 files for module: ${module}`)
   }
 }

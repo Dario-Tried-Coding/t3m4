@@ -1,18 +1,26 @@
 import { genScaffold } from './gen-scaffold'
-import { isValidPackageRoot } from './helpers/pkgManagers'
 import { installDeps } from './install-deps'
 import { getPrompts } from './prompts'
+import { validateOpts } from './validate-opts'
+import { verifyEnv } from './verify-env'
 
-export async function init() {
+export interface Opts {  
+  module?: string
+}
+export async function init(opts: Opts) {
   try {
-    const prompts = await getPrompts()
-    const pkgManager = isValidPackageRoot(prompts.cwd)
-  
-    await installDeps({ ...prompts, pkgManager })
-    await genScaffold(prompts)
+    const validOpts = validateOpts(opts)
+
+    const env = verifyEnv()
+    const prompts = await getPrompts(validOpts)
+
+    const args = { ...env, ...prompts }
+
+    await installDeps(args)
+    await genScaffold(args)
   } catch (error) {
-    console.error('❌ Initialization failed:', error)
+    console.error('❌ Initialization failed...')
+    console.error(error instanceof Error ? error.message : error)
     process.exit(1)
   }
-
 }

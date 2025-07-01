@@ -1,5 +1,11 @@
 # t3m4
 
+## 0.0.4
+
+### Patch Changes
+
+- CLI - improved scaffolding process adaptation
+
 ## 0.0.3
 
 ### Patch Changes

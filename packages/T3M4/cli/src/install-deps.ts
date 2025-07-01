@@ -1,7 +1,8 @@
 import { execa } from 'execa'
 import { Module, PkgManager } from './types'
 
-export async function installDeps({ pkgManager, module, cwd }:{pkgManager: PkgManager, module: Module, cwd: string}) {
+export async function installDeps({ pkgManager, module }:{pkgManager: PkgManager, module: Module}) {
+  const cwd = process.cwd()
   const pkgName = `@t3m4/${module}`
 
   const installArgs = {

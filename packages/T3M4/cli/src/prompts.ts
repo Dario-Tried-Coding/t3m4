@@ -1,49 +1,27 @@
 import inquirer from 'inquirer'
-import path from 'path'
+import { Module } from './types'
 
-export async function getPrompts() {
-  const { root }: { root: string } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'root',
-      message: 'Where is the root of your project?',
-      default: '.',
-    },
-  ])
-  const cwd = path.resolve(process.cwd(), root)
+interface Opts {
+  module: Module
+}
 
-  const { module }: { module: 'core' | 'react' | 'next' } = await inquirer.prompt([
-    {
-      type: 'select',
-      name: 'module',
-      message: 'Which T3M4 module whould you like to use?',
-      choices: [
-        { value: 'core', name: 'Core', disabled: true },
-        { value: 'react', name: 'React' },
-        { value: 'next', name: 'Next' },
-      ],
-    },
-  ])
+export async function getPrompts(opts: Opts | undefined) {
+  const module =
+    opts?.module ??
+    (
+      (await inquirer.prompt([
+        {
+          type: 'select',
+          name: 'module',
+          message: 'Which T3M4 module whould you like to use?',
+          choices: [
+            { value: 'core', name: 'Core', disabled: true },
+            { value: 'react', name: 'React' },
+            { value: 'next', name: 'Next' },
+          ],
+        },
+      ])) as { module: Module }
+    ).module
 
-  const { entry }: { entry: string } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'entry',
-      message: 'Where should we generate your T3M4 entry file?',
-      default: './src/lib',
-    },
-  ])
-  const entryDir = path.resolve(cwd, entry)
-
-  const { types }: { types: string } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'types',
-      message: 'Where should we generate your T3M4 declaration types file?',
-      default: './src/types',
-    },
-  ])
-  const typesDir = path.resolve(cwd, types)
-
-  return { cwd, module, entryDir, typesDir };
+  return { module }
 }
