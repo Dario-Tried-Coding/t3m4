@@ -1,4 +1,5 @@
 import { Providers } from '@/components/Providers'
+import { SvgDefs } from '@/components/SvgDefs'
 import { FontMono, FontSans } from '@/fonts'
 import { routing } from '@/lib/next-intl/routing'
 import { cn } from '@/lib/utils'
@@ -31,7 +32,10 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
         <script crossOrigin='anonymous' src={process.env.VERCEL_ENV === 'production' ? '//unpkg.com/@t3m4/core/dist/index.global.js' : '/index.global.js'} />
       </head>
       <body className={cn('flex min-h-screen flex-col font-sans', FontSans.variable, FontMono.variable)}>
-        <Providers locale={locale}>{children}</Providers>
+        <Providers locale={locale}>
+          <SvgDefs />
+          {children}
+        </Providers>
         <Toolbar />
       </body>
     </html>

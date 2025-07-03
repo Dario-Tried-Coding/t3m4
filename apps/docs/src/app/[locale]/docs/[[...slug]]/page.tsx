@@ -3,6 +3,7 @@ import { LastUpdated } from '@/components/LastUpdated'
 import { OpenInBtn } from '@/components/OpenInBtn'
 import { Rate } from '@/components/Rate'
 import { customComponents } from '@/lib/basehub'
+import { T3M4 } from '@/lib/T3M4'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
 import { highlight } from 'fumadocs-core/highlight'
@@ -35,6 +36,9 @@ export default async function Page(props: Props) {
               item: {
                 _title: true,
                 excerpt: true,
+                category: {
+                  _slug: true,
+                },
                 body: {
                   json: {
                     content: true,
@@ -43,7 +47,7 @@ export default async function Page(props: Props) {
                       on_CalloutComponent: {
                         _id: true,
                         __typename: true,
-                        title: true,
+                        _title: true,
                         body: { json: { content: true } },
                         type: true,
                       },
@@ -53,7 +57,7 @@ export default async function Page(props: Props) {
                         tabs: {
                           items: {
                             _id: true,
-                            title: true,
+                            _title: true,
                             body: { code: true, language: true },
                           },
                         },
@@ -66,7 +70,8 @@ export default async function Page(props: Props) {
                             link: true,
                             instance: {
                               _id: true,
-                              title: true,
+                              _title: true,
+                              _slug: true,
                               description: { json: { content: true } },
                               color: true,
                               icon: true,
@@ -80,7 +85,7 @@ export default async function Page(props: Props) {
                         __typename: true,
                         reference: {
                           _id: true,
-                          title: true,
+                          _title: true,
                           description: { json: { content: true } },
                           icon: true,
                           href: true,
@@ -89,19 +94,19 @@ export default async function Page(props: Props) {
                       on_CodeBlockComponent: {
                         _id: true,
                         __typename: true,
-                        title: true,
+                        _title: true,
                         icon: true,
                         code: { language: true, code: true },
                       },
                     },
                   },
-                  markdown: true
+                  markdown: true,
                 },
                 _sys: {
                   lastModifiedAt: true,
                 },
               },
-              __args: { filter: { _sys_slugPath: { eq: `root docs articles ${slug?.join(' ') ?? 'quick-start'}` } } },
+              __args: { filter: { slug: { eq: `/${slug?.join('/') ?? ''}` } } },
             },
           },
         },
@@ -114,7 +119,8 @@ export default async function Page(props: Props) {
         const toc = getTableOfContents(article?.body.markdown ?? '')
 
         return (
-          <DocsPage toc={toc} tableOfContent={{ single: false,  }}>
+          <DocsPage toc={toc} tableOfContent={{ single: false }}>
+            <span data-force-root-facet-color={article?.category._slug as T3M4['root']['facets']['color']} />
             <DocsTitle>{article?._title}</DocsTitle>
             <DocsDescription className='mb-0'>{article?.excerpt}</DocsDescription>
             <div className='flex gap-2'>
@@ -122,7 +128,7 @@ export default async function Page(props: Props) {
               <OpenInBtn />
             </div>
             <hr />
-            <DocsBody >
+            <DocsBody>
               <RichText
                 blocks={article?.body.json.blocks}
                 components={{
@@ -133,16 +139,10 @@ export default async function Page(props: Props) {
                     </li>
                   ),
                   CardsComponent: ({ _id, cards }) => {
-                    const colors: Record<NonNullable<(typeof cards.items)[0]['instance']['color']>, string> = {
-                      blue: 'text-blue-300',
-                      green: 'text-green-300',
-                      purple: 'text-purple-300',
-                    }
-
                     return (
                       <Cards key={_id}>
-                        {cards.items.map(({ link, instance: { _id, title, description, color, href, icon } }) => (
-                          <Card key={_id} title={title} href={link ? href : undefined} icon={icon ? <span className={color ? colors[color] : undefined} dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                        {cards.items.map(({ link, instance: { _id, _title, _slug, description, href, icon } }) => (
+                          <Card key={_id} title={_title} href={link ? href : undefined} icon={icon ? <span data-facet-color={_slug as T3M4['root']['facets']['color']} className='text-fd-primary' dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
                             <RichText>{description?.json.content}</RichText>
                           </Card>
                         ))}
@@ -158,16 +158,16 @@ export default async function Page(props: Props) {
                   },
                   TabsComponent: ({ tabs, persistent }) => {
                     return (
-                      <Tabs items={tabs.items.map((t) => t.title)} persist={persistent}>
-                        {tabs.items.map(({ _id, title, body }) => (
-                          <Tab key={_id} value={title}>
+                      <Tabs items={tabs.items.map((t) => t._title)} persist={persistent}>
+                        {tabs.items.map(({ _id, _title, body }) => (
+                          <Tab key={_id} value={_title}>
                             <DynamicCodeBlock code={body.code} lang={body.language} />
                           </Tab>
                         ))}
                       </Tabs>
                     )
                   },
-                  CodeBlockComponent: async ({ icon, title, code: { code, language } }) => {
+                  CodeBlockComponent: async ({ icon, _title, code: { code, language } }) => {
                     const rendered = await highlight(code, {
                       lang: language,
                       components: {
@@ -176,7 +176,7 @@ export default async function Page(props: Props) {
                     })
 
                     return (
-                      <CodeBlock.CodeBlock title={title} icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                      <CodeBlock.CodeBlock title={_title} icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
                         {rendered}
                       </CodeBlock.CodeBlock>
                     )

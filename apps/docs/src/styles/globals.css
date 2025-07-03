@@ -6,3 +6,24 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+[data-island='root'][data-mode='light'] {
+  --core-color: var(--color-purple-600);
+  --react-color: var(--color-blue-600);
+  --next-color: var(--color-green-600);
+}
+[data-island='root'][data-mode='dark'] {
+  --core-color: var(--color-purple-300);
+  --react-color: var(--color-blue-300);
+  --next-color: var(--color-green-300);
+}
+
+[data-facet-color='core'] {
+  --color-fd-primary: var(--core-color);
+}
+[data-facet-color='react'] {
+  --color-fd-primary: var(--react-color);
+}
+[data-facet-color='next'] {
+  --color-fd-primary: var(--next-color);
+}
