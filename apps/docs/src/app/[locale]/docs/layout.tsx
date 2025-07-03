@@ -1,6 +1,7 @@
 import { baseOptions } from '@/config/layout.config'
 import { T3M4 } from '@/lib/T3M4'
 import { basehub } from 'basehub'
+import { Icon } from 'basehub/react-svg'
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import { ComponentProps, PropsWithChildren } from 'react'
 
@@ -23,7 +24,14 @@ export default async function Layout({ children }: PropsWithChildren) {
     for (const [cat, { category, articles }] of Object.entries(groupedByCat)) {
       if (!category?.folder) {
         result.push({ type: 'separator', name: cat })
-        articles.forEach((article) => result.push({ type: 'page', name: article._title, url: `/docs${article.slug}`, icon: article.icon ? <span dangerouslySetInnerHTML={{ __html: article.icon }} /> : undefined }))
+        articles.forEach((article) =>
+          result.push({
+            type: 'page',
+            name: article._title,
+            url: `/docs${article.slug}`,
+            icon: article.icon ? <Icon content={article.icon} components={{ svg: (props) => <svg {...props} /> }} /> : undefined,
+          })
+        )
         continue
       }
 
@@ -32,8 +40,13 @@ export default async function Layout({ children }: PropsWithChildren) {
           type: 'folder',
           root: category.root,
           name: cat,
-          icon: category.icon ? <span data-facet-color={category._slug as T3M4['root']['facets']['color']} className='text-fd-primary' dangerouslySetInnerHTML={{ __html: category.icon }} /> : undefined,
-          children: articles.map((item) => ({ type: 'page', name: item._title, url: `/docs${item.slug}`, icon: item.icon ? <span dangerouslySetInnerHTML={{ __html: item.icon }} /> : undefined })),
+          icon: category.icon ? <Icon content={category.icon} components={{ svg: (props) => <svg {...props} data-facet-color={category._slug as T3M4['root']['facets']['color']} className='text-fd-primary' /> }} /> : undefined,
+          children: articles.map((item) => ({
+            type: 'page',
+            name: item._title,
+            url: `/docs${item.slug}`,
+            icon: item.icon ? <Icon content={item.icon} components={{ svg: (props) => <svg {...props} data-facet-color={category._slug as T3M4['root']['facets']['color']} /> }} /> : undefined,
+          })),
         })
         continue
       }

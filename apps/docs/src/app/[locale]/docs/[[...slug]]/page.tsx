@@ -6,6 +6,7 @@ import { customComponents } from '@/lib/basehub'
 import { T3M4 } from '@/lib/T3M4'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
+import { Icon } from 'basehub/react-svg'
 import { highlight } from 'fumadocs-core/highlight'
 import { getTableOfContents } from 'fumadocs-core/server'
 import { Callout } from 'fumadocs-ui/components/callout'
@@ -142,7 +143,12 @@ export default async function Page(props: Props) {
                     return (
                       <Cards key={_id}>
                         {cards.items.map(({ link, instance: { _id, _title, _slug, description, href, icon } }) => (
-                          <Card key={_id} title={_title} href={link ? href : undefined} icon={icon ? <span data-facet-color={_slug as T3M4['root']['facets']['color']} className='text-fd-primary' dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                          <Card
+                            key={_id}
+                            title={_title}
+                            href={link ? href : undefined}
+                            icon={icon ? <Icon content={icon} components={{ svg: (props) => <svg {...props} data-facet-color={_slug as T3M4['root']['facets']['color']} className='text-fd-primary' /> }} /> : undefined}
+                          >
                             <RichText>{description?.json.content}</RichText>
                           </Card>
                         ))}
@@ -176,7 +182,7 @@ export default async function Page(props: Props) {
                     })
 
                     return (
-                      <CodeBlock.CodeBlock title={_title} icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                      <CodeBlock.CodeBlock title={_title} icon={icon ? <Icon content={icon} components={{ svg: (props) => <svg {...props} className='h-4 w-4' /> }} /> : undefined}>
                         {rendered}
                       </CodeBlock.CodeBlock>
                     )
