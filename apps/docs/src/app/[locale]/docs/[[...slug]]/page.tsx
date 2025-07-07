@@ -28,8 +28,6 @@ export default async function Page(props: Props) {
   setRequestLocale(locale)
 
   if (!slug) redirect({ href: '/docs/getting-started', locale })
-  
-  fragmentOn('')
 
   return (
     <Pump
