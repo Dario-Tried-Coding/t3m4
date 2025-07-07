@@ -46,7 +46,6 @@ export default async function Layout({ children }: PropsWithChildren) {
           type: 'page',
           name: _title,
           url: `/docs/${_slug}`,
-          icon: icon ? <Icon content={icon} /> : undefined,
         })
       }
     }

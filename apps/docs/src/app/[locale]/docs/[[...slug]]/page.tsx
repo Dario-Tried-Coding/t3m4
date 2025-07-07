@@ -8,6 +8,7 @@ import { T3M4 } from '@/lib/T3M4'
 import { fragmentOn } from 'basehub'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
+import { Icon } from 'basehub/react-svg'
 import { highlight } from 'fumadocs-core/highlight'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Card, Cards } from 'fumadocs-ui/components/card'
@@ -193,7 +194,7 @@ export default async function Page(props: Props) {
                     })
 
                     return (
-                      <CodeBlock.CodeBlock title={_title} icon={icon ? <span dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                      <CodeBlock.CodeBlock title={_title} icon={icon ? <Icon content={icon} components={{ svg: (props) => <svg {...props} className='h-4 w-4' /> }} /> : undefined}>
                         {rendered}
                       </CodeBlock.CodeBlock>
                     )
