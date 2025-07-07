@@ -3,11 +3,12 @@ import { LastUpdated } from '@/components/LastUpdated'
 import { OpenInBtn } from '@/components/OpenInBtn'
 import { Rate } from '@/components/Rate'
 import { customComponents } from '@/lib/basehub'
+import { redirect } from '@/lib/next-intl/navigation'
 import { T3M4 } from '@/lib/T3M4'
+import { fragmentOn } from 'basehub'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
 import { highlight } from 'fumadocs-core/highlight'
-import { getTableOfContents } from 'fumadocs-core/server'
 import { Callout } from 'fumadocs-ui/components/callout'
 import { Card, Cards } from 'fumadocs-ui/components/card'
 import * as CodeBlock from 'fumadocs-ui/components/codeblock'
@@ -26,6 +27,10 @@ export default async function Page(props: Props) {
 
   setRequestLocale(locale)
 
+  if (!slug) redirect({ href: '/docs/getting-started', locale })
+  
+  fragmentOn('')
+
   return (
     <Pump
       draft={(await draftMode()).isEnabled}
@@ -34,81 +39,88 @@ export default async function Page(props: Props) {
           docs: {
             articles: {
               item: {
-                _title: true,
-                excerpt: true,
-                category: {
-                  _slug: true,
-                },
-                body: {
-                  json: {
-                    content: true,
-                    toc: true,
-                    blocks: {
-                      on_CalloutComponent: {
-                        _id: true,
-                        __typename: true,
-                        _title: true,
-                        body: { json: { content: true } },
-                        type: true,
-                      },
-                      on_TabsComponent: {
-                        _id: true,
-                        __typename: true,
-                        tabs: {
-                          items: {
-                            _id: true,
-                            _title: true,
-                            body: { code: true, language: true },
-                          },
-                        },
-                      },
-                      on_CardsComponent: {
-                        _id: true,
-                        __typename: true,
-                        cards: {
-                          items: {
-                            link: true,
-                            instance: {
-                              _id: true,
-                              _title: true,
-                              _slug: true,
-                              description: { json: { content: true } },
-                              color: true,
-                              icon: true,
-                              href: true,
-                            },
-                          },
-                        },
-                      },
-                      on_ReferenceComponent: {
-                        _id: true,
-                        __typename: true,
-                        reference: {
-                          _id: true,
-                          _title: true,
-                          description: { json: { content: true } },
-                          icon: true,
-                          href: true,
-                        },
-                      },
-                      on_CodeBlockComponent: {
-                        _id: true,
-                        __typename: true,
-                        _title: true,
-                        icon: true,
-                        code: { language: true, code: true },
-                      },
-                    },
-                  },
-                  markdown: true,
-                },
-                _sys: {
-                  lastModifiedAt: true,
-                },
+                _slugPath: true,
               },
-              __args: { filter: { slug: { eq: `/${slug?.join('/') ?? ''}` } } },
+              __args: { skip: 1}
+              // __args: { filter: { _sys_slugPath: { eq: `root docs articles test nested-article` } } },
             },
           },
+          // docs: {
+          //   articles: {
+          //     item: {
+          //       _title: true,
+          //       excerpt: true,
+          //       body: {
+          //         json: {
+          //           content: true,
+          //           toc: true,
+          //           // blocks: {
+          //           //   on_CalloutComponent: {
+          //           //     _id: true,
+          //           //     __typename: true,
+          //           //     _title: true,
+          //           //     body: { json: { content: true } },
+          //           //     type: true,
+          //           //   },
+          //           //   on_TabsComponent: {
+          //           //     _id: true,
+          //           //     __typename: true,
+          //           //     tabs: {
+          //           //       items: {
+          //           //         _id: true,
+          //           //         _title: true,
+          //           //         body: { code: true, language: true },
+          //           //       },
+          //           //     },
+          //           //   },
+          //           //   on_CardsComponent: {
+          //           //     _id: true,
+          //           //     __typename: true,
+          //           //     cards: {
+          //           //       items: {
+          //           //         link: true,
+          //           //         instance: {
+          //           //           _id: true,
+          //           //           _title: true,
+          //           //           _slug: true,
+          //           //           description: { json: { content: true } },
+          //           //           color: true,
+          //           //           icon: true,
+          //           //           href: true,
+          //           //         },
+          //           //       },
+          //           //     },
+          //           //   },
+          //           //   on_ReferenceComponent: {
+          //           //     _id: true,
+          //           //     __typename: true,
+          //           //     reference: {
+          //           //       _id: true,
+          //           //       _title: true,
+          //           //       description: { json: { content: true } },
+          //           //       icon: true,
+          //           //       href: true,
+          //           //     },
+          //           //   },
+          //           //   on_CodeBlockComponent: {
+          //           //     _id: true,
+          //           //     __typename: true,
+          //           //     _title: true,
+          //           //     icon: true,
+          //           //     code: { language: true, code: true },
+          //           //   },
+          //           // },
+          //         },
+          //         markdown: true,
+          //       },
+          //       _sys: {
+          //         lastModifiedAt: true,
+          //         slugPath: true
+          //       },
+          //     },
+          //     __args: { filter: { slug: { eq: `/${slug?.join('/') ?? ''}` } } },
+          //   },
+          // },
         },
       ]}
     >
@@ -116,7 +128,9 @@ export default async function Page(props: Props) {
         'use server'
 
         const article = docs.articles.item
-        const toc = getTableOfContents(article?.body.markdown ?? '')
+        // const toc = getTableOfContents(article?.body.markdown ?? '')
+
+        return <div>{article?._slugPath}</div>
 
         return (
           <DocsPage toc={toc} tableOfContent={{ single: false }}>
@@ -142,7 +156,12 @@ export default async function Page(props: Props) {
                     return (
                       <Cards key={_id}>
                         {cards.items.map(({ link, instance: { _id, _title, _slug, description, href, icon } }) => (
-                          <Card key={_id} title={_title} href={link ? href : undefined} icon={icon ? <span data-facet-color={_slug as T3M4['root']['facets']['color']} className='text-fd-primary' dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}>
+                          <Card
+                            key={_id}
+                            title={_title}
+                            href={link ? href : undefined}
+                            icon={icon ? <span data-facet-color={_slug as T3M4['root']['facets']['color']} className='text-fd-primary' dangerouslySetInnerHTML={{ __html: icon }} /> : undefined}
+                          >
                             <RichText>{description?.json.content}</RichText>
                           </Card>
                         ))}

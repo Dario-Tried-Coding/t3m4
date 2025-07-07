@@ -1,51 +1,61 @@
 import { baseOptions } from '@/config/layout.config'
 import { T3M4 } from '@/lib/T3M4'
 import { basehub } from 'basehub'
+import { Icon } from 'basehub/react-svg'
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
+import { draftMode } from 'next/headers'
 import { ComponentProps, PropsWithChildren } from 'react'
 
 export default async function Layout({ children }: PropsWithChildren) {
-  const { docs } = await basehub().query({ docs: { articles: { items: { slug: true, category: { _title: true, _slug: true, folder: true, root: true, icon: true, url: true }, icon: true, _title: true } } } })
+  const { docs } = await basehub({ draft: (await draftMode()).isEnabled }).query({
+    docs: { articles: { items: { _title: true, _slug: true, icon: true, children: { items: { _title: true, _slug: true, icon: true, root: true, children: { items: { _title: true, _slug: true, icon: true } } } } } } },
+  })
 
-  const getTree = (articles: typeof docs.articles.items) => {
-    const groupedByCat = articles.reduce(
-      (acc, article) => {
-        if (!acc[article.category._title]) acc[article.category._title] = { category: article.category, articles: [] } as (typeof acc)[typeof article.category._title]
-        acc[article.category._title].articles.push(article)
-        return acc
-      },
-      {} as Record<string, { category: (typeof docs.articles.items)[0]['category']; articles: Omit<(typeof docs.articles.items)[0], 'category'>[] }>
-    )
-
+  const getTree = () => {
     type Tree = ComponentProps<typeof DocsLayout>['tree']['children']
     const result: Tree = []
 
-    for (const [cat, { category, articles }] of Object.entries(groupedByCat)) {
-      if (!category?.folder) {
-        result.push({ type: 'separator', name: cat })
-        articles.forEach((article) => result.push({ type: 'page', name: article._title, url: `/docs${article.slug}`, icon: article.icon ? <span dangerouslySetInnerHTML={{ __html: article.icon }} /> : undefined }))
-        continue
-      }
-
-      if (category.folder) {
-        result.push({
-          type: 'folder',
-          root: category.root,
-          name: cat,
-          icon: category.icon ? <span data-facet-color={category._slug as T3M4['root']['facets']['color']} className='text-fd-primary' dangerouslySetInnerHTML={{ __html: category.icon }} /> : undefined,
-          children: articles.map((item) => ({ type: 'page', name: item._title, url: `/docs${item.slug}`, icon: item.icon ? <span dangerouslySetInnerHTML={{ __html: item.icon }} /> : undefined })),
+    for (const { _title, _slug, children, icon } of docs.articles.items) {
+      if (children.items.length > 0) {
+        result.push({ type: 'separator', name: _title, icon: icon ? <Icon content={icon} /> : undefined })
+        children.items.forEach(({ _title, _slug: _artSlug, icon, root, children }) => {
+          if (children.items.length > 0) {
+            result.push({
+              type: 'folder',
+              name: _title,
+              root,
+              icon: icon ? <Icon content={icon} /> : undefined,
+              children: children.items.map(({}) => ({
+                type: 'page',
+                name: _title,
+                url: `/docs/${_slug}/${_artSlug}`,
+                icon: icon ? <Icon content={icon} /> : undefined,
+              })),
+            })
+          } else {
+            result.push({
+              type: 'page',
+              name: _title,
+              url: `/docs/${_slug}/${_artSlug}`,
+              icon: icon ? <Icon content={icon} /> : undefined,
+            })
+          }
         })
-        continue
+      } else {
+        result.push({
+          type: 'page',
+          name: _title,
+          url: `/docs/${_slug}`,
+          icon: icon ? <Icon content={icon} /> : undefined,
+        })
       }
-
-      continue
     }
 
     return result
   }
 
   return (
-    <DocsLayout tree={{ name: 'docs', children: getTree(docs.articles.items) }} {...await baseOptions()}>
+    <DocsLayout tree={{ name: 'docs', children: getTree() }} {...await baseOptions()}>
       {children}
     </DocsLayout>
   )
