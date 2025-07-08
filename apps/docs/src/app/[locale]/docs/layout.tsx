@@ -2,11 +2,10 @@ import { baseOptions } from '@/config/layout.config'
 import { articleFragment, constructTree } from '@/helpers/basehub'
 import { basehub } from 'basehub'
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
-import { draftMode } from 'next/headers'
 import { PropsWithChildren } from 'react'
 
 export default async function Layout({ children }: PropsWithChildren) {
-  const { docs } = await basehub({ draft: (await draftMode()).isEnabled }).query({
+  const { docs } = await basehub({}).query({
     docs: { items: { ...articleFragment } },
   })
 

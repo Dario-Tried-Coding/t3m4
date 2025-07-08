@@ -65,6 +65,11 @@ export const articleFragment = fragmentOnRecursiveCollection(
     _sys: {
       lastModifiedAt: true,
     },
+    children: {
+      __args: {
+        
+      }
+    }
   },
   { recursiveKey: 'children', levels: 3 }
 )
