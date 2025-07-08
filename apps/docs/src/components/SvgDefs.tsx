@@ -1,11 +1,11 @@
 export function SvgDefs() {
   return (
-    <svg width='0' height='0' style={{ position: 'absolute' }}>
+    <svg width='0' height='0' style={{ position: 'absolute', overflow: 'hidden' }}>
       <defs>
-        <linearGradient id='logo-gradient' x1='0' y1='0' x2='155' y2='155' gradientUnits='userSpaceOnUse'>
-          <stop stopColor='currentColor' />
-          <stop offset='0.754808' stopColor='var(--color-fd-primary)' />
-        </linearGradient>
+        <radialGradient id='logo_gradient' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='translate(26.5 26.5) rotate(45) scale(167.584)'>
+          <stop offset='0.478283' />
+          <stop offset='1' stopColor='white' />
+        </radialGradient>
       </defs>
     </svg>
   )
