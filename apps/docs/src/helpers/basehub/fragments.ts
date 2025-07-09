@@ -51,7 +51,16 @@ export const ArticleBodyFragment = fragmentOn('BodyRichText', {
 })
 export type ArticleBodyFragment = fragmentOn.infer<typeof ArticleBodyFragment>
 
-export const ArticleFragment = fragmentOn('ArticleComponent', { _title: true, _slug: true, _sys: { lastModifiedAt: true }, excerpt: true, ogImage: { url: true }, body: { json: ArticleBodyFragment } })
+export const ArticleFragment = fragmentOn('ArticleComponent', {
+  _id: true,
+  _title: true,
+  _slug: true,
+  excerpt: true,
+  icon: true,
+  root: true,
+  _sys: { lastModifiedAt: true },
+  body: { readingTime: true, json: { content: true }, markdown: true },
+})
 export type ArticleFragment = fragmentOn.infer<typeof ArticleFragment>
 
 export const ArticleFragmentRecursive = fragmentOnRecursiveCollection('ArticleComponent', ArticleFragment, { recursiveKey: 'children', levels: 3 })

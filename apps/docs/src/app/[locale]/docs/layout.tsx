@@ -1,4 +1,4 @@
-import { baseOptions } from '@/config/layout.config'
+import { baseOptions } from '../../../../fumadocs.config'
 import { ArticleSlugFragmentRecursive } from '@/helpers/basehub/fragments'
 import { getTree } from '@/helpers/basehub/tree'
 import { basehub } from 'basehub'

@@ -13,9 +13,6 @@ export function getTree(articles: ArticleSlugFragmentRecursive[]): Tree {
     const articlePath = [...basePath, article._slug]
 
     if (!article.children.items.length) {
-      const last = tree.at(-1)
-      if (last) tree.push({ type: 'separator' })
-      
       tree.push({ type: 'page', name: article._title, url: `/${articlePath.join('/')}`, icon: article.icon ? <Icon content={article.icon} /> : undefined })
     } else {
       tree.push({ type: 'separator', name: article._title, icon: article.icon ? <Icon content={article.icon} /> : undefined })
