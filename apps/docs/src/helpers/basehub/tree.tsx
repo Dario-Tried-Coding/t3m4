@@ -7,40 +7,51 @@ type Tree = ComponentProps<typeof DocsLayout>['tree']['children']
 
 export function getTree(articles: ArticleSlugFragmentRecursive[]): Tree {
   const basePath = ['docs']
-  const tree: Tree = []
 
-  articles.forEach((article) => {
-    const articlePath = [...basePath, article._slug]
+  function buildTree(items: ArticleSlugFragmentRecursive[], currentPath: string[] = [], level = 0): Tree {
+    const result: Tree = []
 
-    if (!article.children.items.length) {
-      tree.push({ type: 'page', name: article._title, url: `/${articlePath.join('/')}`, icon: article.icon ? <Icon content={article.icon} /> : undefined })
-    } else {
-      tree.push({ type: 'separator', name: article._title, icon: article.icon ? <Icon content={article.icon} /> : undefined })
-      article.children.items.forEach((child) => {
-        const childPath = [...articlePath, child._slug]
+    for (const item of items) {
+      const itemPath = [...currentPath, item._slug]
+      const icon = item.icon ? <Icon content={item.icon} /> : undefined
+      const hasChildren = item.children.items.length > 0
 
-        if (!child.children.items.length) tree.push({ type: 'page', name: child._title, url: `/${childPath.join('/')}`, icon: child.icon ? <Icon content={child.icon} /> : undefined })
-        else {
-          tree.push({
+      if (!hasChildren) {
+        result.push({
+          type: 'page',
+          name: item._title,
+          url: `/${itemPath.join('/')}`,
+          icon,
+        })
+      } else {
+        const base = {
+          name: item._title,
+          icon,
+        }
+
+        if (level === 0) {
+          result.push({
+            type: 'separator',
+            ...base,
+          })
+
+          const children = buildTree(item.children.items, itemPath, level + 1)
+          result.push(...children)
+        } else {
+          const children = buildTree(item.children.items, itemPath, level + 1)
+
+          result.push({
             type: 'folder',
-            name: child._title,
-            icon: child.icon ? <Icon content={child.icon} /> : undefined,
-            root: child.root,
-            children: child.children.items.map((grandChild) => {
-              const grandChildPath = [...childPath, grandChild._slug]
-
-              return {
-                type: 'page',
-                name: grandChild._title,
-                url: `/${grandChildPath.join('/')}`,
-                icon: grandChild.icon ? <Icon content={grandChild.icon} /> : undefined,
-              }
-            }),
+            ...base,
+            root: item.root,
+            children,
           })
         }
-      })
+      }
     }
-  })
 
-  return tree
+    return result
+  }
+
+  return buildTree(articles, basePath)
 }
