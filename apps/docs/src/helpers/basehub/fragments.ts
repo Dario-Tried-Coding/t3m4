@@ -60,6 +60,7 @@ export const ArticleFragment = fragmentOn('ArticleComponent', {
   root: true,
   _sys: { lastModifiedAt: true },
   body: { readingTime: true, json: { content: true }, markdown: true },
+  ogImage: { url: true, width: true, height: true }
 })
 export type ArticleFragment = fragmentOn.infer<typeof ArticleFragment>
 

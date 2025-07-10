@@ -72,7 +72,7 @@ export interface ArticleComponent {
     _slugPath: Scalars['String']
     _sys: BlockDocumentSys
     _title: Scalars['String']
-    body: Body
+    body: (Body | null)
     children: Children
     excerpt: Scalars['String']
     icon: (Scalars['String'] | null)
@@ -120,7 +120,7 @@ export interface BlockColor {
     __typename: 'BlockColor'
 }
 
-export type BlockDocument = (ArticleComponent | Children | Docs | Settings | _AgentStart | articleComponent_AsList) & { __isUnion?: true }
+export type BlockDocument = (ArticleComponent | Children | Docs | Settings | _AgentSTART | articleComponent_AsList) & { __isUnion?: true }
 
 export interface BlockDocumentSys {
     apiNamePath: Scalars['String']
@@ -311,7 +311,7 @@ export interface Mutation {
 }
 
 export interface Query {
-    _agent: (_AgentStart | null)
+    _agent: (_AgentSTART | null)
     /** Query across the custom AI agents in the repository. */
     _agents: _agents
     /** Query across all of the instances of a component. Pass in filters and sorts if you want, and get each instance via the `items` key. */
@@ -371,7 +371,7 @@ export interface Variant {
     __typename: 'Variant'
 }
 
-export interface _AgentStart {
+export interface _AgentSTART {
     _agentKey: Scalars['String']
     _analyticsKey: Scalars['String']
     _dashboardUrl: Scalars['String']
@@ -396,7 +396,7 @@ export interface _AgentStart {
     searchTheWeb: Scalars['Boolean']
     slackInstallUrl: Scalars['String']
     systemPrompt: Scalars['String']
-    __typename: '_AgentStart'
+    __typename: '_AgentSTART'
 }
 
 export interface _BranchInfo {
@@ -465,7 +465,7 @@ export type _ResolveTargetsWithEnum = 'id' | 'objectName'
 export type _StructureFormatEnum = 'json' | 'xml'
 
 export interface _agents {
-    start: _AgentStart
+    start: _AgentSTART
     __typename: '_agents'
 }
 
@@ -585,7 +585,7 @@ export interface BlockDocumentGenqlSelection{
     on_Children?: ChildrenGenqlSelection
     on_Docs?: DocsGenqlSelection
     on_Settings?: SettingsGenqlSelection
-    on__AgentStart?: _AgentStartGenqlSelection
+    on__AgentSTART?: _AgentSTARTGenqlSelection
     on_articleComponent_AsList?: articleComponent_AsListGenqlSelection
     __typename?: boolean | number
 }
@@ -881,7 +881,7 @@ export interface MutationGenqlSelection{
 export interface NumberFilter {eq?: (Scalars['Float'] | null),gt?: (Scalars['Float'] | null),gte?: (Scalars['Float'] | null),isNull?: (Scalars['Boolean'] | null),lt?: (Scalars['Float'] | null),lte?: (Scalars['Float'] | null),neq?: (Scalars['Float'] | null)}
 
 export interface QueryGenqlSelection{
-    _agent?: (_AgentStartGenqlSelection & { __args: {
+    _agent?: (_AgentSTARTGenqlSelection & { __args: {
     /** The ID of the agent. */
     id: Scalars['String']} })
     /** Query across the custom AI agents in the repository. */
@@ -981,7 +981,7 @@ export interface VariantGenqlSelection{
     __typename?: boolean | number
 }
 
-export interface _AgentStartGenqlSelection{
+export interface _AgentSTARTGenqlSelection{
     _agentKey?: boolean | number
     _analyticsKey?: { __args: {
     /**
@@ -1077,7 +1077,7 @@ export interface _PlaygroundInfoGenqlSelection{
 }
 
 export interface _agentsGenqlSelection{
-    start?: _AgentStartGenqlSelection
+    start?: _AgentSTARTGenqlSelection
     __typename?: boolean | number
 }
 
@@ -1228,9 +1228,9 @@ export interface FragmentsMap {
     root: Variant,
     selection: VariantGenqlSelection,
 }
-  _AgentStart: {
-    root: _AgentStart,
-    selection: _AgentStartGenqlSelection,
+  _AgentSTART: {
+    root: _AgentSTART,
+    selection: _AgentSTARTGenqlSelection,
 }
   _BranchInfo: {
     root: _BranchInfo,
