@@ -1,7 +1,9 @@
-import { RootProvider } from 'fumadocs-ui/provider'
-import { PropsWithChildren } from 'react'
-import { Locale, NextIntlClientProvider } from 'next-intl'
 import { T3M4Provider } from '@/lib/T3M4'
+import { Analytics } from '@vercel/analytics/next'
+import { Locale, NextIntlClientProvider } from 'next-intl'
+import { PropsWithChildren } from 'react'
+import { FumadocsProvider } from '../../fumadocs.config'
+import { SvgDefs } from './SvgDefs'
 
 interface Props extends PropsWithChildren {
   locale: Locale
@@ -11,15 +13,11 @@ export function Providers({ children, locale }: Props) {
   return (
     <NextIntlClientProvider>
       <T3M4Provider>
-        <RootProvider
-          i18n={{
-            locale,
-            locales: [{ locale: 'en', name: 'English' }],
-          }}
-          theme={{ enabled: false }}
-        >
+        <FumadocsProvider locale={locale}>
+          <Analytics />
+          <SvgDefs />
           {children}
-        </RootProvider>
+        </FumadocsProvider>
       </T3M4Provider>
     </NextIntlClientProvider>
   )

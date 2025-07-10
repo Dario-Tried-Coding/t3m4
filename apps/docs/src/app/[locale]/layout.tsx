@@ -1,5 +1,4 @@
 import { Providers } from '@/components/Providers'
-import { SvgDefs } from '@/components/SvgDefs'
 import { FontMono, FontSans } from '@/fonts'
 import { routing } from '@/lib/next-intl/routing'
 import { cn } from '@/lib/utils'
@@ -33,7 +32,6 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
       </head>
       <body className={cn('flex min-h-screen flex-col font-sans', FontSans.variable, FontMono.variable)}>
         <Providers locale={locale}>
-          <SvgDefs />
           {children}
         </Providers>
         <Toolbar />

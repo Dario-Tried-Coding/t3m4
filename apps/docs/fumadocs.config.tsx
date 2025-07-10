@@ -1,6 +1,9 @@
 import { basehub } from 'basehub'
 import { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
 import { Icon } from 'basehub/react-svg'
+import { PropsWithChildren } from 'react'
+import { RootProvider } from 'fumadocs-ui/provider'
+import { Locale } from 'next-intl'
 
 export const baseOptions = async (): Promise<BaseLayoutProps> => {
   const { settings } = await basehub().query({ settings: { logo: true } })
@@ -20,4 +23,18 @@ export const baseOptions = async (): Promise<BaseLayoutProps> => {
       transparentMode: 'top',
     },
   }
+}
+
+export const FumadocsProvider = ({ children, locale }: PropsWithChildren<{ locale: Locale }>) => {
+  return (
+    <RootProvider
+      i18n={{
+        locale,
+        locales: [{ locale: 'en', name: 'English' }],
+      }}
+      theme={{ enabled: false }}
+    >
+      {children}
+    </RootProvider>
+  )
 }
