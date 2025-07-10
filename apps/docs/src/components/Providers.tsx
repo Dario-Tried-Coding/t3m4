@@ -1,5 +1,6 @@
 import { T3M4Provider } from '@/lib/T3M4'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Locale, NextIntlClientProvider } from 'next-intl'
 import { PropsWithChildren } from 'react'
 import { FumadocsProvider } from '../../fumadocs.config'
@@ -15,6 +16,7 @@ export function Providers({ children, locale }: Props) {
       <T3M4Provider>
         <FumadocsProvider locale={locale}>
           <Analytics />
+          <SpeedInsights />
           <SvgDefs />
           {children}
         </FumadocsProvider>

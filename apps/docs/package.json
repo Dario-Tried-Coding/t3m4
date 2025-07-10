@@ -11,6 +11,7 @@
   "dependencies": {
     "@t3m4/next": "workspace:*",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "basehub": "^9.0.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
