@@ -1,4 +1,4 @@
-import { COLOR_SCHEME } from '../../constants'
+import { COLOR_SCHEME } from '../constants'
 import { Config } from './config'
 
 export type Color_Schemes<C extends Config.Static> = {

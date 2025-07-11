@@ -1,1 +1,1 @@
-export type { COLOR_SCHEME as ColorScheme } from '../../constants'
+export type { COLOR_SCHEME as ColorScheme } from '../constants'

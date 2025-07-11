@@ -1,4 +1,4 @@
-import { MODES } from '../../constants'
+import { MODES } from '../constants'
 import { Schema } from './schema'
 
 // #region Values

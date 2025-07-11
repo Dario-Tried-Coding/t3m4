@@ -1,4 +1,6 @@
 import { defineConfig } from 'tsup'
+import fs from 'fs';
+import path from 'path'
 
 export default defineConfig({
   entry: {
@@ -12,5 +14,19 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   splitting: false,
   bundle: true,
-  publicDir: true
+  publicDir: true,
+  esbuildPlugins: [{
+    name: 'copy-iife',
+    setup(build) {
+      build.onEnd(() => {
+        const from = path.resolve(__dirname, 'node_modules/@t3m4/core/dist/index.global.js')
+        const to = path.resolve(__dirname, 'dist/index.global.js')
+        
+        if (fs.existsSync(from)) {
+          fs.copyFileSync(from, to)
+          console.log('[tsup] ✅ Copied index.global.js from core to react')
+        } else console.warn('[tsup] ⚠️ IIFE not found in core/dist')
+      })
+    }
+  }]
 })

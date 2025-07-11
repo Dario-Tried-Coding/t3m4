@@ -1,5 +1,11 @@
 # @T3M4/core
 
+## 0.1.18
+
+### Patch Changes
+
+- No CDN approach any more && minor bug fixes
+
 ## 0.1.17
 
 ### Patch Changes

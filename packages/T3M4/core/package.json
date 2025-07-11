@@ -1,9 +1,12 @@
 {
   "name": "@t3m4/core",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "A typesafe abstraction for advanced theming across frameworks.",
   "private": false,
   "browser": "./dist/index.global.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "test": "vitest run",
     "build": "tsup",
@@ -25,20 +28,25 @@
     "dist"
   ],
   "exports": {
-    "./types": {
+    ".": {
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./types": {
+      "import": "./dist/types/index.mjs",
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
     "./types/subscribers": {
-      "import": "./dist/subscribers.mjs",
-      "types": "./dist/subscribers.d.ts",
-      "default": "./dist/subscribers.js"
+      "import": "./dist/types/subscribers.mjs",
+      "types": "./dist/types/subscribers.d.ts",
+      "default": "./dist/types/subscribers.js"
     },
     "./types/constants": {
-      "import": "./dist/constants.mjs",
-      "types": "./dist/constants.d.ts",
-      "default": "./dist/constants.js"
+      "import": "./dist/types/constants.mjs",
+      "types": "./dist/types/constants.d.ts",
+      "default": "./dist/types/constants.js"
     }
   },
   "dependencies": {

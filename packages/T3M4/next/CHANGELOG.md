@@ -1,5 +1,13 @@
 # @t3m4/next
 
+## 0.1.22
+
+### Patch Changes
+
+- No CDN approach any more && minor bug fixes
+- Updated dependencies
+  - @t3m4/react@0.1.22
+
 ## 0.1.21
 
 ### Patch Changes

@@ -1,4 +1,4 @@
-import { COLOR_SCHEME, MODES, SELECTOR, STRATS } from '../../constants'
+import { COLOR_SCHEME, MODES, SELECTOR, STRATS } from '../constants'
 import { Schema } from './schema'
 
 // #region Config

@@ -1,5 +1,5 @@
 import { LinientAutoComplete } from '@t3m4/utils'
-import { LIBRARY_NAME, OBSERVABLE, SELECTOR } from '../constants'
+import { LIBRARY_NAME, OBSERVABLE, SELECTOR } from './constants'
 import { Schema } from './subscribers/schema'
 import { Config } from './subscribers/config'
 

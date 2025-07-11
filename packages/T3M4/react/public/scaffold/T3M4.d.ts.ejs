@@ -1,8 +1,0 @@
-import type { TSchema } from '<%= relPathToEntryFile %>'
-import { DataAttributes } from '@t3m4/<%= module %>/types'
-
-import 'react'
-
-declare module 'react' {
-  interface HTMLAttributes<T> extends DataAttributes<TSchema> {}
-}

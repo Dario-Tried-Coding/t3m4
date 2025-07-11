@@ -23,5 +23,4 @@ export interface T3M4 {
   }
   subscribe: <E extends keyof EventMap>(e: E, id: CallbackID, cb: (payload: EventMap[E]) => void) => void
   reboot: (args: Args.Static) => void
-  init: (args: Args.Static) => void
 }

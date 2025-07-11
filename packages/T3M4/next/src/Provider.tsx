@@ -1,15 +1,14 @@
 'use client'
 
-import { initializer, T3M4Provider as Provider } from '@t3m4/react'
+import { T3M4Provider as Provider, initializer } from '@t3m4/react'
 import { Args, Config, Schema, T3M4ProviderProps } from '@t3m4/react/types'
-import { PropsWithChildren, ScriptHTMLAttributes } from 'react'
+import { HTMLAttributes, PropsWithChildren } from 'react'
 
-interface InitializerProps extends Omit<ScriptHTMLAttributes<HTMLScriptElement>, 'nonce'> {
-  args: Args.Static
+interface InitializerProps<Sc extends Schema, C extends Config<Sc>> extends Omit<HTMLAttributes<HTMLScriptElement>, 'nonce'> {
+  args: Args<Sc, C>
 }
-function Initializer({ args, ...props }:InitializerProps) {
-  const stringArgs = JSON.stringify(args)
-  return <script suppressHydrationWarning nonce={args.nonce} dangerouslySetInnerHTML={{ __html: `(${initializer.toString()})(${stringArgs})` }} {...props} />
+function Initializer<Sc extends Schema, C extends Config<Sc>>({args, ...props}: InitializerProps<Sc, C>) {
+  return <script suppressHydrationWarning nonce={args.nonce} dangerouslySetInnerHTML={{ __html: `(${initializer.toString()})(${JSON.stringify(args)})` }} {...props} />
 }
 
 interface T3M4Props<Sc extends Schema, C extends Config<Sc>> extends PropsWithChildren, T3M4ProviderProps<Sc, C> {}

@@ -1,6 +1,6 @@
 {
   "name": "@t3m4/react",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "A typesafe abstraction for advanced theming in your React apps.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
