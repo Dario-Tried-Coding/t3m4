@@ -120,7 +120,7 @@ export interface BlockColor {
     __typename: 'BlockColor'
 }
 
-export type BlockDocument = (ArticleComponent | Children | Docs | Settings | _AgentSTART | articleComponent_AsList) & { __isUnion?: true }
+export type BlockDocument = (ArticleComponent | Children | Docs | Settings | Site | _AgentSTART | articleComponent_AsList) & { __isUnion?: true }
 
 export interface BlockDocumentSys {
     apiNamePath: Scalars['String']
@@ -319,8 +319,8 @@ export interface Query {
     /** The structure of the repository. Used by START. */
     _structure: Scalars['JSON']
     _sys: RepoSys
-    docs: Docs
     settings: Settings
+    site: Site
     __typename: 'Query'
 }
 
@@ -345,8 +345,26 @@ export interface Settings {
     _slugPath: Scalars['String']
     _sys: BlockDocumentSys
     _title: Scalars['String']
+    description: Scalars['String']
+    favicon: BlockImage
     logo: Scalars['String']
+    ogImage: BlockOgImage
+    template: Scalars['String']
+    title: Scalars['String']
     __typename: 'Settings'
+}
+
+export interface Site {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    docs: Docs
+    __typename: 'Site'
 }
 
 export interface TransactionStatus {
@@ -585,6 +603,7 @@ export interface BlockDocumentGenqlSelection{
     on_Children?: ChildrenGenqlSelection
     on_Docs?: DocsGenqlSelection
     on_Settings?: SettingsGenqlSelection
+    on_Site?: SiteGenqlSelection
     on__AgentSTART?: _AgentSTARTGenqlSelection
     on_articleComponent_AsList?: articleComponent_AsListGenqlSelection
     __typename?: boolean | number
@@ -903,16 +922,8 @@ export interface QueryGenqlSelection{
     /** Whether to include type options in the structure. */
     withTypeOptions?: (Scalars['Boolean'] | null)} } | boolean | number
     _sys?: RepoSysGenqlSelection
-    docs?: (DocsGenqlSelection & { __args?: {
-    /** Filter by a field. */
-    filter?: (ArticleComponentFilterInput | null), 
-    /** Limit the number of items returned. Defaults to 500. */
-    first?: (Scalars['Int'] | null), 
-    /** Order by a field. */
-    orderBy?: (ArticleComponentOrderByEnum | null), 
-    /** Skip the first n items. */
-    skip?: (Scalars['Int'] | null)} })
     settings?: SettingsGenqlSelection
+    site?: SiteGenqlSelection
     __typename?: boolean | number
 }
 
@@ -951,7 +962,39 @@ export interface SettingsGenqlSelection{
     _slugPath?: boolean | number
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
+    description?: boolean | number
+    favicon?: BlockImageGenqlSelection
     logo?: boolean | number
+    ogImage?: BlockOgImageGenqlSelection
+    template?: boolean | number
+    title?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface SiteGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    docs?: (DocsGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (ArticleComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (ArticleComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
     __typename?: boolean | number
 }
 
@@ -1219,6 +1262,10 @@ export interface FragmentsMap {
   Settings: {
     root: Settings,
     selection: SettingsGenqlSelection,
+}
+  Site: {
+    root: Site,
+    selection: SiteGenqlSelection,
 }
   TransactionStatus: {
     root: TransactionStatus,

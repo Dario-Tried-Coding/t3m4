@@ -6,12 +6,12 @@ import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import { PropsWithChildren } from 'react'
 
 export default async function Layout({ children }: PropsWithChildren) {
-  const { docs } = await basehub().query({
-    docs: { items: ArticleSlugFragmentRecursive },
+  const { site } = await basehub().query({
+    site: { docs: { items: ArticleSlugFragmentRecursive } },
   })
 
   return (
-    <DocsLayout tree={{ name: 'docs', children: getTree(docs.items) }} {...await baseOptions()}>
+    <DocsLayout tree={{ name: 'docs', children: getTree(site.docs.items) }} {...await baseOptions()}>
       {children}
     </DocsLayout>
   )

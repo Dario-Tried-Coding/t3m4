@@ -3,7 +3,9 @@ import { FontMono, FontSans } from '@/fonts'
 import { routing } from '@/lib/next-intl/routing'
 import { cn } from '@/lib/utils'
 import '@/styles/globals.css'
+import { basehub } from 'basehub'
 import { Toolbar } from 'basehub/next-toolbar'
+import { Metadata } from 'next'
 import { hasLocale, Locale } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -12,6 +14,36 @@ import { ReactNode } from 'react'
 interface Props {
   children: ReactNode
   params: Promise<{ locale: Locale }>
+}
+
+export async function generateMetadata({params}: Omit<Props, 'children'>): Promise<Metadata> {
+  const { locale } = await params
+  const { settings } = await basehub().query({ settings: { title: true, template: true, description: true, favicon: {url: true}, ogImage: {url: true, height: true, width: true } } })
+  
+  return {
+    title: {
+      template: '%s | ' + settings.template,
+      default: settings.title
+    },
+    description: settings.description,
+    icons: {
+      icon: settings.favicon.url,
+      shortcut: settings.favicon.url,
+      apple: settings.favicon.url,
+    },
+    openGraph: {
+      title: settings.title,
+      description: settings.description,
+      siteName: settings.template,
+      locale: locale,
+      type: 'website',
+      images: [{
+        url: settings.ogImage.url,
+        width: settings.ogImage.width,
+        height: settings.ogImage.height,
+      }]
+    }
+  }
 }
 
 export async function generateStaticParams() {

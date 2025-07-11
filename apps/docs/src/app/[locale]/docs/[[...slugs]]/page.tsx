@@ -17,19 +17,22 @@ import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-static'
 
-export const generateStaticParams = async () => {
-  const { docs } = await basehub().query({
-    docs: {
-      items: ArticleSlugFragmentRecursive,
-    },
-  })
-
-  return flattenArticlesPaths(docs.items)
-}
-
 interface Props {
   params: Promise<{ slugs?: string[]; locale: Locale }>
 }
+
+export const generateStaticParams = async () => {
+  const { site } = await basehub().query({
+    site: {
+      docs: {
+        items: ArticleSlugFragmentRecursive,
+      },
+    },
+  })
+
+  return flattenArticlesPaths(site.docs.items)
+}
+
 export default async function Page(props: Props) {
   const { locale, slugs } = await props.params
 
@@ -38,13 +41,13 @@ export default async function Page(props: Props) {
   if (!slugs || !slugs.length) return redirect({ href: '/docs/introduction', locale })
 
   return (
-    <Pump queries={[{ docs: { item: ArticleFragmentRecursive, __args: { filter: { _sys_slug: { eq: slugs.at(0) } } } } }]} bind={{ slug: `/${slugs.join('/')}` }}>
-      {async ({ slug }, [{ docs }]) => {
+    <Pump queries={[{ site: { docs: { item: ArticleFragmentRecursive, __args: { filter: { _sys_slug: { eq: slugs.at(0) } } } } } }]} bind={{ slug: `/${slugs.join('/')}` }}>
+      {async ({ slug }, [{ site }]) => {
         'use server'
 
-        if (!docs.item) return notFound()
+        if (!site.docs.item) return notFound()
 
-        const article = getArticleBySlug(docs.item, slug)
+        const article = getArticleBySlug(site.docs.item, slug)
         if (!article) return notFound()
 
         const toc = getTableOfContents(article.body?.markdown ?? '')
