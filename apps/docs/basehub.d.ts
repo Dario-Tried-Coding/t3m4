@@ -51,6 +51,8 @@ export interface Scalars {
 }))[],
     BSHBRichTextContentSchema: RichTextNode[],
     BSHBRichTextTOCSchema: RichTextTocNode[],
+    BSHBSelect_2050362569: 'single' | 'multiple',
+    BSHBSelect_2062842401: 'error' | 'info' | 'warn',
     Boolean: boolean,
     CodeSnippetLanguage: B_Language,
     DateTime: any,
@@ -60,6 +62,56 @@ export interface Scalars {
     JSON: any,
     String: string,
 }
+
+export interface AccordionComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    body: Scalars['String']
+    __typename: 'AccordionComponent'
+}
+
+export type AccordionComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'body__ASC' | 'body__DESC'
+
+export interface Accordions {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (AccordionComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: AccordionComponent[]
+    __typename: 'Accordions'
+}
+
+export interface AccordionsComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    accordions: Accordions
+    type: Scalars['BSHBSelect_2050362569']
+    __typename: 'AccordionsComponent'
+}
+
+export type AccordionsComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'accordions__ASC' | 'accordions__DESC' | 'type__ASC' | 'type__DESC'
 
 export type AnalyticsKeyScope = 'query' | 'send'
 
@@ -72,7 +124,7 @@ export interface ArticleComponent {
     _slugPath: Scalars['String']
     _sys: BlockDocumentSys
     _title: Scalars['String']
-    body: (Body | null)
+    body: (Body_1 | null)
     children: Children
     excerpt: Scalars['String']
     icon: (Scalars['String'] | null)
@@ -120,7 +172,7 @@ export interface BlockColor {
     __typename: 'BlockColor'
 }
 
-export type BlockDocument = (ArticleComponent | Children | Docs | Settings | Site | _AgentSTART | articleComponent_AsList) & { __isUnion?: true }
+export type BlockDocument = (AccordionComponent | Accordions | AccordionsComponent | ArticleComponent | CalloutComponent | CardComponent | Cards | CardsComponent | Children | Components | Docs | Settings | Site | _AgentSTART | accordionComponent_AsList | accordionsComponent_AsList | articleComponent_AsList | calloutComponent_AsList | cardComponent_AsList | cardsComponent_AsList) & { __isUnion?: true }
 
 export interface BlockDocumentSys {
     apiNamePath: Scalars['String']
@@ -179,7 +231,7 @@ export interface BlockImage {
     __typename: 'BlockImage'
 }
 
-export type BlockList = (Children | Docs | articleComponent_AsList) & { __isUnion?: true }
+export type BlockList = (Accordions | Cards | Children | Docs | accordionComponent_AsList | accordionsComponent_AsList | articleComponent_AsList | calloutComponent_AsList | cardComponent_AsList | cardsComponent_AsList) & { __isUnion?: true }
 
 export interface BlockOgImage {
     height: Scalars['Int']
@@ -190,7 +242,7 @@ export interface BlockOgImage {
 
 
 /** Rich text block */
-export type BlockRichText = (Body) & { __isUnion?: true }
+export type BlockRichText = (Body | Body_1 | Description) & { __isUnion?: true }
 
 export interface BlockVideo {
     aspectRatio: Scalars['String']
@@ -221,6 +273,90 @@ export interface BodyRichText {
     __typename: 'BodyRichText'
 }
 
+export interface Body_1 {
+    html: Scalars['String']
+    json: Body_1RichText
+    markdown: Scalars['String']
+    plainText: Scalars['String']
+    readingTime: Scalars['Int']
+    __typename: 'Body_1'
+}
+
+export interface Body_1RichText {
+    blocks: UnionCardsComponentCalloutComponentAccordionsComponent[]
+    content: Scalars['BSHBRichTextContentSchema']
+    toc: Scalars['BSHBRichTextTOCSchema']
+    __typename: 'Body_1RichText'
+}
+
+export interface CalloutComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    body: Body
+    title: (Scalars['String'] | null)
+    type: Scalars['BSHBSelect_2062842401']
+    __typename: 'CalloutComponent'
+}
+
+export type CalloutComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'body__ASC' | 'body__DESC' | 'title__ASC' | 'title__DESC' | 'type__ASC' | 'type__DESC'
+
+export interface CardComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    description: (Description | null)
+    icon: (Scalars['String'] | null)
+    url: (Scalars['String'] | null)
+    __typename: 'CardComponent'
+}
+
+export type CardComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'description__ASC' | 'description__DESC' | 'icon__ASC' | 'icon__DESC' | 'url__ASC' | 'url__DESC'
+
+export interface Cards {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (CardComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: CardComponent[]
+    __typename: 'Cards'
+}
+
+export interface CardsComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    cards: Cards
+    __typename: 'CardsComponent'
+}
+
+export type CardsComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'cards__ASC' | 'cards__DESC'
+
 export interface Children {
     _analyticsKey: Scalars['String']
     _dashboardUrl: Scalars['String']
@@ -238,6 +374,36 @@ export interface Children {
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
     items: ArticleComponent[]
     __typename: 'Children'
+}
+
+export interface Components {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    accordions: AccordionsComponent
+    callout: CalloutComponent
+    cards: CardsComponent
+    __typename: 'Components'
+}
+
+export interface Description {
+    html: Scalars['String']
+    json: DescriptionRichText
+    markdown: Scalars['String']
+    plainText: Scalars['String']
+    readingTime: Scalars['Int']
+    __typename: 'Description'
+}
+
+export interface DescriptionRichText {
+    content: Scalars['BSHBRichTextContentSchema']
+    toc: Scalars['BSHBRichTextTOCSchema']
+    __typename: 'DescriptionRichText'
 }
 
 export interface Docs {
@@ -319,6 +485,7 @@ export interface Query {
     /** The structure of the repository. Used by START. */
     _structure: Scalars['JSON']
     _sys: RepoSys
+    components: Components
     settings: Settings
     site: Site
     __typename: 'Query'
@@ -334,7 +501,7 @@ export interface RepoSys {
     __typename: 'RepoSys'
 }
 
-export type RichTextJson = (BaseRichTextJson | BodyRichText) & { __isUnion?: true }
+export type RichTextJson = (BaseRichTextJson | BodyRichText | Body_1RichText | DescriptionRichText) & { __isUnion?: true }
 
 export interface Settings {
     _analyticsKey: Scalars['String']
@@ -379,6 +546,8 @@ export interface TransactionStatus {
 }
 
 export type TransactionStatusEnum = 'Cancelled' | 'Completed' | 'Failed' | 'Running' | 'Scheduled'
+
+export type UnionCardsComponentCalloutComponentAccordionsComponent = (AccordionsComponent | CalloutComponent | CardsComponent) & { __isUnion?: true }
 
 export interface Variant {
     apiName: Scalars['String']
@@ -488,8 +657,51 @@ export interface _agents {
 }
 
 export interface _components {
+    accordion: accordionComponent_AsList
+    accordions: accordionsComponent_AsList
     article: articleComponent_AsList
+    callout: calloutComponent_AsList
+    card: cardComponent_AsList
+    cards: cardsComponent_AsList
     __typename: '_components'
+}
+
+export interface accordionComponent_AsList {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (AccordionComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: AccordionComponent[]
+    __typename: 'accordionComponent_AsList'
+}
+
+export interface accordionsComponent_AsList {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (AccordionsComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: AccordionsComponent[]
+    __typename: 'accordionsComponent_AsList'
 }
 
 export interface articleComponent_AsList {
@@ -511,6 +723,139 @@ export interface articleComponent_AsList {
     __typename: 'articleComponent_AsList'
 }
 
+export interface calloutComponent_AsList {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (CalloutComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: CalloutComponent[]
+    __typename: 'calloutComponent_AsList'
+}
+
+export interface cardComponent_AsList {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (CardComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: CardComponent[]
+    __typename: 'cardComponent_AsList'
+}
+
+export interface cardsComponent_AsList {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (CardsComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: CardsComponent[]
+    __typename: 'cardsComponent_AsList'
+}
+
+export interface AccordionComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    body?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface AccordionComponentFilterInput {AND?: (AccordionComponentFilterInput | null),OR?: (AccordionComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),body?: (StringFilter | null)}
+
+export interface AccordionsGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: AccordionComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: AccordionComponentGenqlSelection
+    __typename?: boolean | number
+}
+
+export interface AccordionsComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    accordions?: (AccordionsGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (AccordionComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (AccordionComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    type?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface AccordionsComponentFilterInput {AND?: (AccordionsComponentFilterInput | null),OR?: (AccordionsComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),accordions?: (ListFilter | null),type?: (SelectFilter | null)}
+
 export interface ArticleComponentGenqlSelection{
     _analyticsKey?: { __args: {
     /**
@@ -526,7 +871,7 @@ export interface ArticleComponentGenqlSelection{
     _slugPath?: boolean | number
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
-    body?: BodyGenqlSelection
+    body?: Body_1GenqlSelection
     children?: (ChildrenGenqlSelection & { __args?: {
     /** Filter by a field. */
     filter?: (ArticleComponentFilterInput | null), 
@@ -599,13 +944,26 @@ export interface BlockDocumentGenqlSelection{
     _slugPath?: boolean | number
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
+    on_AccordionComponent?: AccordionComponentGenqlSelection
+    on_Accordions?: AccordionsGenqlSelection
+    on_AccordionsComponent?: AccordionsComponentGenqlSelection
     on_ArticleComponent?: ArticleComponentGenqlSelection
+    on_CalloutComponent?: CalloutComponentGenqlSelection
+    on_CardComponent?: CardComponentGenqlSelection
+    on_Cards?: CardsGenqlSelection
+    on_CardsComponent?: CardsComponentGenqlSelection
     on_Children?: ChildrenGenqlSelection
+    on_Components?: ComponentsGenqlSelection
     on_Docs?: DocsGenqlSelection
     on_Settings?: SettingsGenqlSelection
     on_Site?: SiteGenqlSelection
     on__AgentSTART?: _AgentSTARTGenqlSelection
+    on_accordionComponent_AsList?: accordionComponent_AsListGenqlSelection
+    on_accordionsComponent_AsList?: accordionsComponent_AsListGenqlSelection
     on_articleComponent_AsList?: articleComponent_AsListGenqlSelection
+    on_calloutComponent_AsList?: calloutComponent_AsListGenqlSelection
+    on_cardComponent_AsList?: cardComponent_AsListGenqlSelection
+    on_cardsComponent_AsList?: cardsComponent_AsListGenqlSelection
     __typename?: boolean | number
 }
 
@@ -684,9 +1042,16 @@ export interface BlockListGenqlSelection{
     _slugPath?: boolean | number
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
+    on_Accordions?: AccordionsGenqlSelection
+    on_Cards?: CardsGenqlSelection
     on_Children?: ChildrenGenqlSelection
     on_Docs?: DocsGenqlSelection
+    on_accordionComponent_AsList?: accordionComponent_AsListGenqlSelection
+    on_accordionsComponent_AsList?: accordionsComponent_AsListGenqlSelection
     on_articleComponent_AsList?: articleComponent_AsListGenqlSelection
+    on_calloutComponent_AsList?: calloutComponent_AsListGenqlSelection
+    on_cardComponent_AsList?: cardComponent_AsListGenqlSelection
+    on_cardsComponent_AsList?: cardsComponent_AsListGenqlSelection
     __typename?: boolean | number
 }
 
@@ -712,6 +1077,8 @@ export interface BlockRichTextGenqlSelection{
     /** Words per minute, defaults to average 183wpm */
     wpm?: (Scalars['Int'] | null)} } | boolean | number
     on_Body?: BodyGenqlSelection
+    on_Body_1?: Body_1GenqlSelection
+    on_Description?: DescriptionGenqlSelection
     __typename?: boolean | number
 }
 
@@ -750,6 +1117,128 @@ export interface BodyRichTextGenqlSelection{
     __typename?: boolean | number
 }
 
+export interface Body_1GenqlSelection{
+    html?: { __args: {
+    /** It automatically generates a unique id for each heading present in the HTML. Enabled by default. */
+    slugs?: (Scalars['Boolean'] | null), 
+    /** Inserts a table of contents at the beginning of the HTML. */
+    toc?: (Scalars['Boolean'] | null)} } | boolean | number
+    json?: Body_1RichTextGenqlSelection
+    markdown?: boolean | number
+    plainText?: boolean | number
+    readingTime?: { __args: {
+    /** Words per minute, defaults to average 183wpm */
+    wpm?: (Scalars['Int'] | null)} } | boolean | number
+    __typename?: boolean | number
+}
+
+export interface Body_1RichTextGenqlSelection{
+    blocks?: UnionCardsComponentCalloutComponentAccordionsComponentGenqlSelection
+    content?: boolean | number
+    toc?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface CalloutComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    body?: BodyGenqlSelection
+    title?: boolean | number
+    type?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface CalloutComponentFilterInput {AND?: (CalloutComponentFilterInput | null),OR?: (CalloutComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),title?: (StringFilter | null),type?: (SelectFilter | null)}
+
+export interface CardComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    description?: DescriptionGenqlSelection
+    icon?: boolean | number
+    url?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface CardComponentFilterInput {AND?: (CardComponentFilterInput | null),OR?: (CardComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),url?: (StringFilter | null)}
+
+export interface CardsGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: CardComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: CardComponentGenqlSelection
+    __typename?: boolean | number
+}
+
+export interface CardsComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    cards?: (CardsGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (CardComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (CardComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    __typename?: boolean | number
+}
+
+export interface CardsComponentFilterInput {AND?: (CardsComponentFilterInput | null),OR?: (CardsComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),cards?: (ListFilter | null)}
+
 export interface ChildrenGenqlSelection{
     _analyticsKey?: { __args: {
     /**
@@ -775,7 +1264,49 @@ export interface ChildrenGenqlSelection{
     __typename?: boolean | number
 }
 
+export interface ComponentsGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    accordions?: AccordionsComponentGenqlSelection
+    callout?: CalloutComponentGenqlSelection
+    cards?: CardsComponentGenqlSelection
+    __typename?: boolean | number
+}
+
 export interface DateFilter {eq?: (Scalars['DateTime'] | null),isAfter?: (Scalars['DateTime'] | null),isBefore?: (Scalars['DateTime'] | null),isNull?: (Scalars['Boolean'] | null),neq?: (Scalars['DateTime'] | null),onOrAfter?: (Scalars['DateTime'] | null),onOrBefore?: (Scalars['DateTime'] | null)}
+
+export interface DescriptionGenqlSelection{
+    html?: { __args: {
+    /** It automatically generates a unique id for each heading present in the HTML. Enabled by default. */
+    slugs?: (Scalars['Boolean'] | null), 
+    /** Inserts a table of contents at the beginning of the HTML. */
+    toc?: (Scalars['Boolean'] | null)} } | boolean | number
+    json?: DescriptionRichTextGenqlSelection
+    markdown?: boolean | number
+    plainText?: boolean | number
+    readingTime?: { __args: {
+    /** Words per minute, defaults to average 183wpm */
+    wpm?: (Scalars['Int'] | null)} } | boolean | number
+    __typename?: boolean | number
+}
+
+export interface DescriptionRichTextGenqlSelection{
+    content?: boolean | number
+    toc?: boolean | number
+    __typename?: boolean | number
+}
 
 export interface DocsGenqlSelection{
     _analyticsKey?: { __args: {
@@ -922,6 +1453,7 @@ export interface QueryGenqlSelection{
     /** Whether to include type options in the structure. */
     withTypeOptions?: (Scalars['Boolean'] | null)} } | boolean | number
     _sys?: RepoSysGenqlSelection
+    components?: ComponentsGenqlSelection
     settings?: SettingsGenqlSelection
     site?: SiteGenqlSelection
     __typename?: boolean | number
@@ -942,6 +1474,8 @@ export interface RichTextJsonGenqlSelection{
     toc?: boolean | number
     on_BaseRichTextJson?: BaseRichTextJsonGenqlSelection
     on_BodyRichText?: BodyRichTextGenqlSelection
+    on_Body_1RichText?: Body_1RichTextGenqlSelection
+    on_DescriptionRichText?: DescriptionRichTextGenqlSelection
     __typename?: boolean | number
 }
 
@@ -1012,6 +1546,14 @@ export interface TransactionStatusGenqlSelection{
     message?: boolean | number
     startedAt?: boolean | number
     status?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface UnionCardsComponentCalloutComponentAccordionsComponentGenqlSelection{
+    on_AccordionsComponent?:AccordionsComponentGenqlSelection,
+    on_CalloutComponent?:CalloutComponentGenqlSelection,
+    on_CardsComponent?:CardsComponentGenqlSelection,
+    on_BlockDocument?: BlockDocumentGenqlSelection,
     __typename?: boolean | number
 }
 
@@ -1125,6 +1667,24 @@ export interface _agentsGenqlSelection{
 }
 
 export interface _componentsGenqlSelection{
+    accordion?: (accordionComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (AccordionComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (AccordionComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    accordions?: (accordionsComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (AccordionsComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (AccordionsComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
     article?: (articleComponent_AsListGenqlSelection & { __args?: {
     /** Filter by a field. */
     filter?: (ArticleComponentFilterInput | null), 
@@ -1134,6 +1694,83 @@ export interface _componentsGenqlSelection{
     orderBy?: (ArticleComponentOrderByEnum | null), 
     /** Skip the first n items. */
     skip?: (Scalars['Int'] | null)} })
+    callout?: (calloutComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (CalloutComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (CalloutComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    card?: (cardComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (CardComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (CardComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    cards?: (cardsComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (CardsComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (CardsComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    __typename?: boolean | number
+}
+
+export interface accordionComponent_AsListGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: AccordionComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: AccordionComponentGenqlSelection
+    __typename?: boolean | number
+}
+
+export interface accordionsComponent_AsListGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: AccordionsComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: AccordionsComponentGenqlSelection
     __typename?: boolean | number
 }
 
@@ -1162,7 +1799,94 @@ export interface articleComponent_AsListGenqlSelection{
     __typename?: boolean | number
 }
 
+export interface calloutComponent_AsListGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: CalloutComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: CalloutComponentGenqlSelection
+    __typename?: boolean | number
+}
+
+export interface cardComponent_AsListGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: CardComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: CardComponentGenqlSelection
+    __typename?: boolean | number
+}
+
+export interface cardsComponent_AsListGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: CardsComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: CardsComponentGenqlSelection
+    __typename?: boolean | number
+}
+
 export interface FragmentsMap {
+  AccordionComponent: {
+    root: AccordionComponent,
+    selection: AccordionComponentGenqlSelection,
+}
+  Accordions: {
+    root: Accordions,
+    selection: AccordionsGenqlSelection,
+}
+  AccordionsComponent: {
+    root: AccordionsComponent,
+    selection: AccordionsComponentGenqlSelection,
+}
   ArticleComponent: {
     root: ArticleComponent,
     selection: ArticleComponentGenqlSelection,
@@ -1223,9 +1947,45 @@ export interface FragmentsMap {
     root: BodyRichText,
     selection: BodyRichTextGenqlSelection,
 }
+  Body_1: {
+    root: Body_1,
+    selection: Body_1GenqlSelection,
+}
+  Body_1RichText: {
+    root: Body_1RichText,
+    selection: Body_1RichTextGenqlSelection,
+}
+  CalloutComponent: {
+    root: CalloutComponent,
+    selection: CalloutComponentGenqlSelection,
+}
+  CardComponent: {
+    root: CardComponent,
+    selection: CardComponentGenqlSelection,
+}
+  Cards: {
+    root: Cards,
+    selection: CardsGenqlSelection,
+}
+  CardsComponent: {
+    root: CardsComponent,
+    selection: CardsComponentGenqlSelection,
+}
   Children: {
     root: Children,
     selection: ChildrenGenqlSelection,
+}
+  Components: {
+    root: Components,
+    selection: ComponentsGenqlSelection,
+}
+  Description: {
+    root: Description,
+    selection: DescriptionGenqlSelection,
+}
+  DescriptionRichText: {
+    root: DescriptionRichText,
+    selection: DescriptionRichTextGenqlSelection,
 }
   Docs: {
     root: Docs,
@@ -1307,8 +2067,28 @@ export interface FragmentsMap {
     root: _components,
     selection: _componentsGenqlSelection,
 }
+  accordionComponent_AsList: {
+    root: accordionComponent_AsList,
+    selection: accordionComponent_AsListGenqlSelection,
+}
+  accordionsComponent_AsList: {
+    root: accordionsComponent_AsList,
+    selection: accordionsComponent_AsListGenqlSelection,
+}
   articleComponent_AsList: {
     root: articleComponent_AsList,
     selection: articleComponent_AsListGenqlSelection,
+}
+  calloutComponent_AsList: {
+    root: calloutComponent_AsList,
+    selection: calloutComponent_AsListGenqlSelection,
+}
+  cardComponent_AsList: {
+    root: cardComponent_AsList,
+    selection: cardComponent_AsListGenqlSelection,
+}
+  cardsComponent_AsList: {
+    root: cardsComponent_AsList,
+    selection: cardsComponent_AsListGenqlSelection,
 }
 }

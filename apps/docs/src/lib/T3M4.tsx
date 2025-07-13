@@ -33,7 +33,7 @@ export type TConfig = typeof config
 export type T3M4 = State<TSchema>
 
 export const T3M4Provider: FC<PropsWithChildren> = ({ children }) => (
-  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} store>
+  <ThemingProvider<TSchema, TConfig> schema={schema} config={config} store disableTransitionOnChange>
     {children}
   </ThemingProvider>
 )

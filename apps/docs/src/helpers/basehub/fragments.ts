@@ -8,8 +8,19 @@ export const ArticleFragment = fragmentOn('ArticleComponent', {
   icon: true,
   root: true,
   _sys: { lastModifiedAt: true },
-  body: { readingTime: true, json: { content: true }, markdown: true },
-  ogImage: { url: true, width: true, height: true }
+  body: {
+    readingTime: true,
+    json: {
+      content: true,
+      blocks: {
+        on_CardsComponent: { __typename: true, _id: true, cards: { items: { _id: true, _slug: true, _title: true, icon: true, url: true, description: { plainText: true } } } },
+        on_AccordionsComponent: { __typename: true, _id: true, type: true, accordions: { items: { _id: true, _slug: true, _title: true, body: true } } },
+        on_CalloutComponent: { __typename: true, _id: true, type: true, body: { json: { content: true } }, title: true },
+      },
+    },
+    markdown: true,
+  },
+  ogImage: { url: true, width: true, height: true },
 })
 export type ArticleFragment = fragmentOn.infer<typeof ArticleFragment>
 

@@ -12,6 +12,7 @@ export const baseOptions = async (): Promise<BaseLayoutProps> => {
     themeSwitch: {
       enabled: false,
     },
+    githubUrl: 'ciao come stai',
     nav: {
       url: '/',
       title: (

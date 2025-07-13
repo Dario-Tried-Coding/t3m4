@@ -1,7 +1,3 @@
-import { CopyMarkdown } from '@/components/CopyMarkdown'
-import { LastUpdated } from '@/components/LastUpdated'
-import { OpenInBtn } from '@/components/OpenInBtn'
-import { Rate } from '@/components/Rate'
 import { ArticleFragmentRecursive, ArticleSlugFragmentRecursive } from '@/helpers/basehub/fragments'
 import { flattenArticlesPaths, getArticleBySlug } from '@/helpers/basehub/page'
 import { redirect } from '@/lib/next-intl/navigation'
@@ -14,6 +10,11 @@ import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page
 import { Locale } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
+import { Card, Cards } from 'fumadocs-ui/components/card'
+import { Accordion, Accordions } from 'fumadocs-ui/components/accordion'
+import { Callout } from 'fumadocs-ui/components/callout'
+import { Icon } from 'basehub/react-icon'
+import { T3M4 } from '@/lib/T3M4'
 
 export const dynamic = 'force-static'
 
@@ -53,16 +54,12 @@ export default async function Page(props: Props) {
         const toc = getTableOfContents(article.body?.markdown ?? '')
 
         return (
-          <DocsPage toc={toc} tableOfContent={{ single: false }}>
+          <DocsPage toc={toc} lastUpdate={site.docs.item._sys.lastModifiedAt}>
             <DocsTitle>{article?._title}</DocsTitle>
-            <DocsDescription className='mb-0'>{article?.excerpt}</DocsDescription>
-            <div className='flex gap-2'>
-              <CopyMarkdown />
-              <OpenInBtn />
-            </div>
-            <hr />
+            <DocsDescription>{article?.excerpt}</DocsDescription>
             <DocsBody>
               <RichText
+                blocks={article.body?.json.blocks}
                 components={{
                   pre: ({ code, language }) => <DynamicCodeBlock code={code} lang={language} />,
                   li: ({ children, ...props }) => (
@@ -70,11 +67,36 @@ export default async function Page(props: Props) {
                       {children}
                     </li>
                   ),
+                  CardsComponent: (props) => (
+                    <Cards>
+                      {props.cards.items.map(({ url, _id, _slug, _title, description, icon }) => (
+                        <Card
+                          key={_id}
+                          title={_title}
+                          description={description?.plainText}
+                          href={url ?? undefined}
+                          icon={icon ? <Icon content={icon} components={{ svg: (props) => <svg {...props} data-facet-color={_slug as T3M4['root']['facets']['color']} className='text-fd-primary' /> }} /> : undefined}
+                        />
+                      ))}
+                    </Cards>
+                  ),
+                  AccordionsComponent: ({ type, accordions }) => (
+                    <Accordions type={type}>
+                      {accordions.items.map(({ _slug, _title, body }) => (
+                        <Accordion key={_slug} title={_title}>
+                          {body}
+                        </Accordion>
+                      ))}
+                    </Accordions>
+                  ),
+                  CalloutComponent: ({ type, title, body }) => (
+                    <Callout title={title} type={type}>
+                      <RichText content={body.json.content} />
+                    </Callout>
+                  ),
                 }}
                 content={article?.body?.json.content}
               />
-              <Rate />
-              {article?._sys.lastModifiedAt && <LastUpdated date={article._sys.lastModifiedAt} />}
             </DocsBody>
           </DocsPage>
         )
