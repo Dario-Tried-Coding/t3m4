@@ -8,6 +8,7 @@ import { Toolbar } from 'basehub/next-toolbar'
 import { Metadata } from 'next'
 import { hasLocale, Locale } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
+import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { ReactNode } from 'react'
 
@@ -16,14 +17,14 @@ interface Props {
   params: Promise<{ locale: Locale }>
 }
 
-export async function generateMetadata({params}: Omit<Props, 'children'>): Promise<Metadata> {
+export async function generateMetadata({ params }: Omit<Props, 'children'>): Promise<Metadata> {
   const { locale } = await params
-  const { settings } = await basehub().query({ settings: { title: true, template: true, description: true, favicon: {url: true}, ogImage: {url: true, height: true, width: true } } })
-  
+  const { settings } = await basehub({ draft: (await draftMode()).isEnabled }).query({ settings: { title: true, template: true, description: true, favicon: { url: true }, ogImage: { url: true, height: true, width: true } } })
+
   return {
     title: {
       template: '%s | ' + settings.template,
-      default: settings.title
+      default: settings.title,
     },
     description: settings.description,
     icons: {
@@ -37,12 +38,14 @@ export async function generateMetadata({params}: Omit<Props, 'children'>): Promi
       siteName: settings.template,
       locale: locale,
       type: 'website',
-      images: [{
-        url: settings.ogImage.url,
-        width: settings.ogImage.width,
-        height: settings.ogImage.height,
-      }]
-    }
+      images: [
+        {
+          url: settings.ogImage.url,
+          width: settings.ogImage.width,
+          height: settings.ogImage.height,
+        },
+      ],
+    },
   }
 }
 
@@ -59,9 +62,7 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
   return (
     <html suppressHydrationWarning lang={locale} data-island='root'>
       <body className={cn('flex min-h-screen flex-col font-sans', FontSans.variable, FontMono.variable)}>
-        <Providers locale={locale}>
-          {children}
-        </Providers>
+        <Providers locale={locale}>{children}</Providers>
         <Toolbar />
       </body>
     </html>

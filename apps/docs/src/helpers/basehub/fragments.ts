@@ -1,5 +1,18 @@
 import { fragmentOn, fragmentOnRecursiveCollection } from 'basehub'
 
+export const CardFragment = fragmentOn('CardComponent', {
+  _id: true,
+  __typename: true,
+  _title: true,
+  _slug: true,
+  description: { plainText: true },
+  icon: true,
+  url: true,
+  single: true,
+})
+
+export const CardsFragment = fragmentOn('CardsComponent', { __typename: true, _id: true, cards: { items: CardFragment } })
+
 export const ArticleFragment = fragmentOn('ArticleComponent', {
   _id: true,
   _title: true,
@@ -13,9 +26,12 @@ export const ArticleFragment = fragmentOn('ArticleComponent', {
     json: {
       content: true,
       blocks: {
-        on_CardsComponent: { __typename: true, _id: true, cards: { items: { _id: true, _slug: true, _title: true, icon: true, url: true, description: { plainText: true } } } },
+        on_CardComponent: CardFragment,
+        on_CardsComponent: CardsFragment,
         on_AccordionsComponent: { __typename: true, _id: true, type: true, accordions: { items: { _id: true, _slug: true, _title: true, body: true } } },
         on_CalloutComponent: { __typename: true, _id: true, type: true, body: { json: { content: true } }, title: true },
+        on_TabsComponent: { __typename: true, _id: true, tabs: { items: { _slug: true, _title: true, body: true } } },
+        on_CodeBlockComponent: { __typename: true, _id: true, _title: true, tabs: { items: { _slug: true, _title: true, icon: true, fileName: true, code: { language: true, code: true } } } },
       },
     },
     markdown: true,
