@@ -172,7 +172,7 @@ export interface BlockColor {
     __typename: 'BlockColor'
 }
 
-export type BlockDocument = (AccordionComponent | Accordions | AccordionsComponent | ArticleComponent | CalloutComponent | CardComponent | Cards | CardsComponent | Children | CodeBlockComponent | Components | Docs | Settings | Site | TabComponent | TabComponent_1 | Tabs | TabsComponent | Tabs_1 | _AgentSTART | accordionComponent_AsList | accordionsComponent_AsList | articleComponent_AsList | calloutComponent_AsList | cardComponent_AsList | cardsComponent_AsList | codeBlockComponent_AsList | tabComponent1_AsList | tabComponent_AsList | tabsComponent_AsList) & { __isUnion?: true }
+export type BlockDocument = (AccordionComponent | Accordions | AccordionsComponent | ArticleComponent | CalloutComponent | CardComponent | Cards | CardsComponent | Children | CodeBlockComponent | CodeBlockTabComponent | CodeBlockTabsComponent | Components | Docs | Settings | Site | TabComponent | Tabs | TabsComponent | Tabs_1 | _AgentSTART | accordionComponent_AsList | accordionsComponent_AsList | articleComponent_AsList | calloutComponent_AsList | cardComponent_AsList | cardsComponent_AsList | codeBlockComponent_AsList | codeBlockTabComponent_AsList | codeBlockTabsComponent_AsList | tabComponent_AsList | tabsComponent_AsList) & { __isUnion?: true }
 
 export interface BlockDocumentSys {
     apiNamePath: Scalars['String']
@@ -231,7 +231,7 @@ export interface BlockImage {
     __typename: 'BlockImage'
 }
 
-export type BlockList = (Accordions | Cards | Children | Docs | Tabs | Tabs_1 | accordionComponent_AsList | accordionsComponent_AsList | articleComponent_AsList | calloutComponent_AsList | cardComponent_AsList | cardsComponent_AsList | codeBlockComponent_AsList | tabComponent1_AsList | tabComponent_AsList | tabsComponent_AsList) & { __isUnion?: true }
+export type BlockList = (Accordions | Cards | Children | Docs | Tabs | Tabs_1 | accordionComponent_AsList | accordionsComponent_AsList | articleComponent_AsList | calloutComponent_AsList | cardComponent_AsList | cardsComponent_AsList | codeBlockComponent_AsList | codeBlockTabComponent_AsList | codeBlockTabsComponent_AsList | tabComponent_AsList | tabsComponent_AsList) & { __isUnion?: true }
 
 export interface BlockOgImage {
     height: Scalars['Int']
@@ -283,7 +283,7 @@ export interface Body_1 {
 }
 
 export interface Body_1RichText {
-    blocks: UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockComponentAccordionsComponent[]
+    blocks: UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockTabsComponentAccordionsComponentCodeBlockComponent[]
     content: Scalars['BSHBRichTextContentSchema']
     toc: Scalars['BSHBRichTextTOCSchema']
     __typename: 'Body_1RichText'
@@ -386,11 +386,44 @@ export interface CodeBlockComponent {
     _slugPath: Scalars['String']
     _sys: BlockDocumentSys
     _title: Scalars['String']
-    tabs: Tabs
+    code: BlockCodeSnippet
+    fileLocation: (Scalars['String'] | null)
+    icon: (Scalars['String'] | null)
     __typename: 'CodeBlockComponent'
 }
 
-export type CodeBlockComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'tabs__ASC' | 'tabs__DESC'
+export type CodeBlockComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'code__ASC' | 'code__DESC' | 'fileLocation__ASC' | 'fileLocation__DESC' | 'icon__ASC' | 'icon__DESC'
+
+export interface CodeBlockTabComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    codeBlock: CodeBlockComponent
+    icon: (Scalars['String'] | null)
+    __typename: 'CodeBlockTabComponent'
+}
+
+export type CodeBlockTabComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'codeBlock__ASC' | 'codeBlock__DESC' | 'icon__ASC' | 'icon__DESC'
+
+export interface CodeBlockTabsComponent {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    tabs: Tabs
+    __typename: 'CodeBlockTabsComponent'
+}
+
+export type CodeBlockTabsComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'tabs__ASC' | 'tabs__DESC'
 
 export interface Components {
     _analyticsKey: Scalars['String']
@@ -404,7 +437,7 @@ export interface Components {
     accordions: AccordionsComponent
     callout: CalloutComponent
     cards: CardsComponent
-    codeBlock: CodeBlockComponent
+    codeBlockTabs: CodeBlockTabsComponent
     tabs: TabsComponent
     __typename: 'Components'
 }
@@ -561,28 +594,11 @@ export interface TabComponent {
     _slugPath: Scalars['String']
     _sys: BlockDocumentSys
     _title: Scalars['String']
-    code: BlockCodeSnippet
-    fileName: (Scalars['String'] | null)
-    icon: (Scalars['String'] | null)
+    body: Scalars['String']
     __typename: 'TabComponent'
 }
 
-export type TabComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'code__ASC' | 'code__DESC' | 'fileName__ASC' | 'fileName__DESC' | 'icon__ASC' | 'icon__DESC'
-
-export interface TabComponent_1 {
-    _analyticsKey: Scalars['String']
-    _dashboardUrl: Scalars['String']
-    _id: Scalars['String']
-    _idPath: Scalars['String']
-    _slug: Scalars['String']
-    _slugPath: Scalars['String']
-    _sys: BlockDocumentSys
-    _title: Scalars['String']
-    body: Scalars['String']
-    __typename: 'TabComponent_1'
-}
-
-export type TabComponent_1OrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'body__ASC' | 'body__DESC'
+export type TabComponentOrderByEnum = '_sys_createdAt__ASC' | '_sys_createdAt__DESC' | '_sys_hash__ASC' | '_sys_hash__DESC' | '_sys_id__ASC' | '_sys_id__DESC' | '_sys_lastModifiedAt__ASC' | '_sys_lastModifiedAt__DESC' | '_sys_slug__ASC' | '_sys_slug__DESC' | '_sys_title__ASC' | '_sys_title__DESC' | 'body__ASC' | 'body__DESC'
 
 export interface Tabs {
     _analyticsKey: Scalars['String']
@@ -597,9 +613,9 @@ export interface Tabs {
     _sys: BlockDocumentSys
     _title: Scalars['String']
     /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
-    item: (TabComponent | null)
+    item: (CodeBlockTabComponent | null)
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
-    items: TabComponent[]
+    items: CodeBlockTabComponent[]
     __typename: 'Tabs'
 }
 
@@ -631,9 +647,9 @@ export interface Tabs_1 {
     _sys: BlockDocumentSys
     _title: Scalars['String']
     /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
-    item: (TabComponent_1 | null)
+    item: (TabComponent | null)
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
-    items: TabComponent_1[]
+    items: TabComponent[]
     __typename: 'Tabs_1'
 }
 
@@ -650,7 +666,7 @@ export interface TransactionStatus {
 
 export type TransactionStatusEnum = 'Cancelled' | 'Completed' | 'Failed' | 'Running' | 'Scheduled'
 
-export type UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockComponentAccordionsComponent = (AccordionsComponent | CalloutComponent | CardComponent | CardsComponent | CodeBlockComponent | TabsComponent) & { __isUnion?: true }
+export type UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockTabsComponentAccordionsComponentCodeBlockComponent = (AccordionsComponent | CalloutComponent | CardComponent | CardsComponent | CodeBlockComponent | CodeBlockTabsComponent | TabsComponent) & { __isUnion?: true }
 
 export interface Variant {
     apiName: Scalars['String']
@@ -767,8 +783,9 @@ export interface _components {
     card: cardComponent_AsList
     cards: cardsComponent_AsList
     codeBlock: codeBlockComponent_AsList
+    codeBlockTab: codeBlockTabComponent_AsList
+    codeBlockTabs: codeBlockTabsComponent_AsList
     tab: tabComponent_AsList
-    tabComponent1: tabComponent1_AsList
     tabs: tabsComponent_AsList
     __typename: '_components'
 }
@@ -906,7 +923,7 @@ export interface codeBlockComponent_AsList {
     __typename: 'codeBlockComponent_AsList'
 }
 
-export interface tabComponent1_AsList {
+export interface codeBlockTabComponent_AsList {
     _analyticsKey: Scalars['String']
     _dashboardUrl: Scalars['String']
     _id: Scalars['String']
@@ -919,10 +936,29 @@ export interface tabComponent1_AsList {
     _sys: BlockDocumentSys
     _title: Scalars['String']
     /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
-    item: (TabComponent_1 | null)
+    item: (CodeBlockTabComponent | null)
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
-    items: TabComponent_1[]
-    __typename: 'tabComponent1_AsList'
+    items: CodeBlockTabComponent[]
+    __typename: 'codeBlockTabComponent_AsList'
+}
+
+export interface codeBlockTabsComponent_AsList {
+    _analyticsKey: Scalars['String']
+    _dashboardUrl: Scalars['String']
+    _id: Scalars['String']
+    _idPath: Scalars['String']
+    _meta: ListMeta
+    /** The key used to search from the frontend. */
+    _searchKey: Scalars['String']
+    _slug: Scalars['String']
+    _slugPath: Scalars['String']
+    _sys: BlockDocumentSys
+    _title: Scalars['String']
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item: (CodeBlockTabsComponent | null)
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items: CodeBlockTabsComponent[]
+    __typename: 'codeBlockTabsComponent_AsList'
 }
 
 export interface tabComponent_AsList {
@@ -1137,12 +1173,13 @@ export interface BlockDocumentGenqlSelection{
     on_CardsComponent?: CardsComponentGenqlSelection
     on_Children?: ChildrenGenqlSelection
     on_CodeBlockComponent?: CodeBlockComponentGenqlSelection
+    on_CodeBlockTabComponent?: CodeBlockTabComponentGenqlSelection
+    on_CodeBlockTabsComponent?: CodeBlockTabsComponentGenqlSelection
     on_Components?: ComponentsGenqlSelection
     on_Docs?: DocsGenqlSelection
     on_Settings?: SettingsGenqlSelection
     on_Site?: SiteGenqlSelection
     on_TabComponent?: TabComponentGenqlSelection
-    on_TabComponent_1?: TabComponent_1GenqlSelection
     on_Tabs?: TabsGenqlSelection
     on_TabsComponent?: TabsComponentGenqlSelection
     on_Tabs_1?: Tabs_1GenqlSelection
@@ -1154,7 +1191,8 @@ export interface BlockDocumentGenqlSelection{
     on_cardComponent_AsList?: cardComponent_AsListGenqlSelection
     on_cardsComponent_AsList?: cardsComponent_AsListGenqlSelection
     on_codeBlockComponent_AsList?: codeBlockComponent_AsListGenqlSelection
-    on_tabComponent1_AsList?: tabComponent1_AsListGenqlSelection
+    on_codeBlockTabComponent_AsList?: codeBlockTabComponent_AsListGenqlSelection
+    on_codeBlockTabsComponent_AsList?: codeBlockTabsComponent_AsListGenqlSelection
     on_tabComponent_AsList?: tabComponent_AsListGenqlSelection
     on_tabsComponent_AsList?: tabsComponent_AsListGenqlSelection
     __typename?: boolean | number
@@ -1248,7 +1286,8 @@ export interface BlockListGenqlSelection{
     on_cardComponent_AsList?: cardComponent_AsListGenqlSelection
     on_cardsComponent_AsList?: cardsComponent_AsListGenqlSelection
     on_codeBlockComponent_AsList?: codeBlockComponent_AsListGenqlSelection
-    on_tabComponent1_AsList?: tabComponent1_AsListGenqlSelection
+    on_codeBlockTabComponent_AsList?: codeBlockTabComponent_AsListGenqlSelection
+    on_codeBlockTabsComponent_AsList?: codeBlockTabsComponent_AsListGenqlSelection
     on_tabComponent_AsList?: tabComponent_AsListGenqlSelection
     on_tabsComponent_AsList?: tabsComponent_AsListGenqlSelection
     __typename?: boolean | number
@@ -1332,7 +1371,7 @@ export interface Body_1GenqlSelection{
 }
 
 export interface Body_1RichTextGenqlSelection{
-    blocks?: UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockComponentAccordionsComponentGenqlSelection
+    blocks?: UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockTabsComponentAccordionsComponentCodeBlockComponentGenqlSelection
     content?: boolean | number
     toc?: boolean | number
     __typename?: boolean | number
@@ -1479,19 +1518,66 @@ export interface CodeBlockComponentGenqlSelection{
     _slugPath?: boolean | number
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
+    code?: BlockCodeSnippetGenqlSelection
+    fileLocation?: boolean | number
+    icon?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface CodeBlockComponentFilterInput {AND?: (CodeBlockComponentFilterInput | null),OR?: (CodeBlockComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),fileLocation?: (StringFilter | null)}
+
+export interface CodeBlockTabComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    codeBlock?: CodeBlockComponentGenqlSelection
+    icon?: boolean | number
+    __typename?: boolean | number
+}
+
+export interface CodeBlockTabComponentFilterInput {AND?: (CodeBlockTabComponentFilterInput | null),OR?: (CodeBlockTabComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),codeBlock?: (CodeBlockTabComponentFilterInput__codeBlock | null)}
+
+export interface CodeBlockTabComponentFilterInput__codeBlock {_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),fileLocation?: (StringFilter | null)}
+
+export interface CodeBlockTabsComponentGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
     tabs?: (TabsGenqlSelection & { __args?: {
     /** Filter by a field. */
-    filter?: (TabComponentFilterInput | null), 
+    filter?: (CodeBlockTabComponentFilterInput | null), 
     /** Limit the number of items returned. Defaults to 500. */
     first?: (Scalars['Int'] | null), 
     /** Order by a field. */
-    orderBy?: (TabComponentOrderByEnum | null), 
+    orderBy?: (CodeBlockTabComponentOrderByEnum | null), 
     /** Skip the first n items. */
     skip?: (Scalars['Int'] | null)} })
     __typename?: boolean | number
 }
 
-export interface CodeBlockComponentFilterInput {AND?: (CodeBlockComponentFilterInput | null),OR?: (CodeBlockComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),tabs?: (ListFilter | null)}
+export interface CodeBlockTabsComponentFilterInput {AND?: (CodeBlockTabsComponentFilterInput | null),OR?: (CodeBlockTabsComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),tabs?: (ListFilter | null)}
 
 export interface ComponentsGenqlSelection{
     _analyticsKey?: { __args: {
@@ -1511,7 +1597,7 @@ export interface ComponentsGenqlSelection{
     accordions?: AccordionsComponentGenqlSelection
     callout?: CalloutComponentGenqlSelection
     cards?: CardsComponentGenqlSelection
-    codeBlock?: CodeBlockComponentGenqlSelection
+    codeBlockTabs?: CodeBlockTabsComponentGenqlSelection
     tabs?: TabsComponentGenqlSelection
     __typename?: boolean | number
 }
@@ -1782,34 +1868,11 @@ export interface TabComponentGenqlSelection{
     _slugPath?: boolean | number
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
-    code?: BlockCodeSnippetGenqlSelection
-    fileName?: boolean | number
-    icon?: boolean | number
-    __typename?: boolean | number
-}
-
-export interface TabComponentFilterInput {AND?: (TabComponentFilterInput | null),OR?: (TabComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),fileName?: (StringFilter | null)}
-
-export interface TabComponent_1GenqlSelection{
-    _analyticsKey?: { __args: {
-    /**
-     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
-     * 
-     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
-     */
-    scope?: (AnalyticsKeyScope | null)} } | boolean | number
-    _dashboardUrl?: boolean | number
-    _id?: boolean | number
-    _idPath?: boolean | number
-    _slug?: boolean | number
-    _slugPath?: boolean | number
-    _sys?: BlockDocumentSysGenqlSelection
-    _title?: boolean | number
     body?: boolean | number
     __typename?: boolean | number
 }
 
-export interface TabComponent_1FilterInput {AND?: (TabComponent_1FilterInput | null),OR?: (TabComponent_1FilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),body?: (StringFilter | null)}
+export interface TabComponentFilterInput {AND?: (TabComponentFilterInput | null),OR?: (TabComponentFilterInput | null),_id?: (StringFilter | null),_slug?: (StringFilter | null),_sys_apiNamePath?: (StringFilter | null),_sys_createdAt?: (DateFilter | null),_sys_hash?: (StringFilter | null),_sys_id?: (StringFilter | null),_sys_idPath?: (StringFilter | null),_sys_lastModifiedAt?: (DateFilter | null),_sys_slug?: (StringFilter | null),_sys_slugPath?: (StringFilter | null),_sys_title?: (StringFilter | null),_title?: (StringFilter | null),body?: (StringFilter | null)}
 
 export interface TabsGenqlSelection{
     _analyticsKey?: { __args: {
@@ -1830,9 +1893,9 @@ export interface TabsGenqlSelection{
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
     /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
-    item?: TabComponentGenqlSelection
+    item?: CodeBlockTabComponentGenqlSelection
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
-    items?: TabComponentGenqlSelection
+    items?: CodeBlockTabComponentGenqlSelection
     __typename?: boolean | number
 }
 
@@ -1853,11 +1916,11 @@ export interface TabsComponentGenqlSelection{
     _title?: boolean | number
     tabs?: (Tabs_1GenqlSelection & { __args?: {
     /** Filter by a field. */
-    filter?: (TabComponent_1FilterInput | null), 
+    filter?: (TabComponentFilterInput | null), 
     /** Limit the number of items returned. Defaults to 500. */
     first?: (Scalars['Int'] | null), 
     /** Order by a field. */
-    orderBy?: (TabComponent_1OrderByEnum | null), 
+    orderBy?: (TabComponentOrderByEnum | null), 
     /** Skip the first n items. */
     skip?: (Scalars['Int'] | null)} })
     __typename?: boolean | number
@@ -1884,9 +1947,9 @@ export interface Tabs_1GenqlSelection{
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
     /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
-    item?: TabComponent_1GenqlSelection
+    item?: TabComponentGenqlSelection
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
-    items?: TabComponent_1GenqlSelection
+    items?: TabComponentGenqlSelection
     __typename?: boolean | number
 }
 
@@ -1903,12 +1966,13 @@ export interface TransactionStatusGenqlSelection{
     __typename?: boolean | number
 }
 
-export interface UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockComponentAccordionsComponentGenqlSelection{
+export interface UnionTabsComponentCardsComponentCardComponentCalloutComponentCodeBlockTabsComponentAccordionsComponentCodeBlockComponentGenqlSelection{
     on_AccordionsComponent?:AccordionsComponentGenqlSelection,
     on_CalloutComponent?:CalloutComponentGenqlSelection,
     on_CardComponent?:CardComponentGenqlSelection,
     on_CardsComponent?:CardsComponentGenqlSelection,
     on_CodeBlockComponent?:CodeBlockComponentGenqlSelection,
+    on_CodeBlockTabsComponent?:CodeBlockTabsComponentGenqlSelection,
     on_TabsComponent?:TabsComponentGenqlSelection,
     on_BlockDocument?: BlockDocumentGenqlSelection,
     __typename?: boolean | number
@@ -2087,6 +2151,24 @@ export interface _componentsGenqlSelection{
     orderBy?: (CodeBlockComponentOrderByEnum | null), 
     /** Skip the first n items. */
     skip?: (Scalars['Int'] | null)} })
+    codeBlockTab?: (codeBlockTabComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (CodeBlockTabComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (CodeBlockTabComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
+    codeBlockTabs?: (codeBlockTabsComponent_AsListGenqlSelection & { __args?: {
+    /** Filter by a field. */
+    filter?: (CodeBlockTabsComponentFilterInput | null), 
+    /** Limit the number of items returned. Defaults to 500. */
+    first?: (Scalars['Int'] | null), 
+    /** Order by a field. */
+    orderBy?: (CodeBlockTabsComponentOrderByEnum | null), 
+    /** Skip the first n items. */
+    skip?: (Scalars['Int'] | null)} })
     tab?: (tabComponent_AsListGenqlSelection & { __args?: {
     /** Filter by a field. */
     filter?: (TabComponentFilterInput | null), 
@@ -2094,15 +2176,6 @@ export interface _componentsGenqlSelection{
     first?: (Scalars['Int'] | null), 
     /** Order by a field. */
     orderBy?: (TabComponentOrderByEnum | null), 
-    /** Skip the first n items. */
-    skip?: (Scalars['Int'] | null)} })
-    tabComponent1?: (tabComponent1_AsListGenqlSelection & { __args?: {
-    /** Filter by a field. */
-    filter?: (TabComponent_1FilterInput | null), 
-    /** Limit the number of items returned. Defaults to 500. */
-    first?: (Scalars['Int'] | null), 
-    /** Order by a field. */
-    orderBy?: (TabComponent_1OrderByEnum | null), 
     /** Skip the first n items. */
     skip?: (Scalars['Int'] | null)} })
     tabs?: (tabsComponent_AsListGenqlSelection & { __args?: {
@@ -2292,7 +2365,7 @@ export interface codeBlockComponent_AsListGenqlSelection{
     __typename?: boolean | number
 }
 
-export interface tabComponent1_AsListGenqlSelection{
+export interface codeBlockTabComponent_AsListGenqlSelection{
     _analyticsKey?: { __args: {
     /**
      * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
@@ -2311,9 +2384,34 @@ export interface tabComponent1_AsListGenqlSelection{
     _sys?: BlockDocumentSysGenqlSelection
     _title?: boolean | number
     /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
-    item?: TabComponent_1GenqlSelection
+    item?: CodeBlockTabComponentGenqlSelection
     /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
-    items?: TabComponent_1GenqlSelection
+    items?: CodeBlockTabComponentGenqlSelection
+    __typename?: boolean | number
+}
+
+export interface codeBlockTabsComponent_AsListGenqlSelection{
+    _analyticsKey?: { __args: {
+    /**
+     * The scope of the analytics key. Use `send` for just ingesting data. Use `query` if you need to show an analytics data in your website.
+     * 
+     * Have in mind, if you expose your `query` analytics key in the frontend, you'll be exposing all of this block's analytics data to the public. This is generally safe, but it might not be in your case.
+     */
+    scope?: (AnalyticsKeyScope | null)} } | boolean | number
+    _dashboardUrl?: boolean | number
+    _id?: boolean | number
+    _idPath?: boolean | number
+    _meta?: ListMetaGenqlSelection
+    /** The key used to search from the frontend. */
+    _searchKey?: boolean | number
+    _slug?: boolean | number
+    _slugPath?: boolean | number
+    _sys?: BlockDocumentSysGenqlSelection
+    _title?: boolean | number
+    /** Returns the first item in the list, or null if the list is empty. Useful when you expect only one result. */
+    item?: CodeBlockTabsComponentGenqlSelection
+    /** Returns the list of items after filtering and paginating according to the arguments sent by the client. */
+    items?: CodeBlockTabsComponentGenqlSelection
     __typename?: boolean | number
 }
 
@@ -2472,6 +2570,14 @@ export interface FragmentsMap {
     root: CodeBlockComponent,
     selection: CodeBlockComponentGenqlSelection,
 }
+  CodeBlockTabComponent: {
+    root: CodeBlockTabComponent,
+    selection: CodeBlockTabComponentGenqlSelection,
+}
+  CodeBlockTabsComponent: {
+    root: CodeBlockTabsComponent,
+    selection: CodeBlockTabsComponentGenqlSelection,
+}
   Components: {
     root: Components,
     selection: ComponentsGenqlSelection,
@@ -2527,10 +2633,6 @@ export interface FragmentsMap {
   TabComponent: {
     root: TabComponent,
     selection: TabComponentGenqlSelection,
-}
-  TabComponent_1: {
-    root: TabComponent_1,
-    selection: TabComponent_1GenqlSelection,
 }
   Tabs: {
     root: Tabs,
@@ -2612,9 +2714,13 @@ export interface FragmentsMap {
     root: codeBlockComponent_AsList,
     selection: codeBlockComponent_AsListGenqlSelection,
 }
-  tabComponent1_AsList: {
-    root: tabComponent1_AsList,
-    selection: tabComponent1_AsListGenqlSelection,
+  codeBlockTabComponent_AsList: {
+    root: codeBlockTabComponent_AsList,
+    selection: codeBlockTabComponent_AsListGenqlSelection,
+}
+  codeBlockTabsComponent_AsList: {
+    root: codeBlockTabsComponent_AsList,
+    selection: codeBlockTabsComponent_AsListGenqlSelection,
 }
   tabComponent_AsList: {
     root: tabComponent_AsList,
