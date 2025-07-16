@@ -5,19 +5,19 @@ import { CardsComponent } from '@/components/article/Cards'
 import { CodeBlockComponent } from '@/components/article/CodeBlock'
 import { CodeBlockTabsComponent } from '@/components/article/CodeBlockTabs'
 import { TabsComponent } from '@/components/article/Tabs'
-import { flattenArticlesPaths, getArticleBySlug, highlightCode } from '@/helpers/basehub/article'
+import { flattenArticlesPaths, getArticleBySlug } from '@/helpers/basehub/article'
 import { ArticleFragmentRecursive, ArticleSlugFragmentRecursive } from '@/helpers/basehub/fragments'
 import { Link, redirect } from '@/lib/next-intl/navigation'
 import { basehub } from 'basehub'
 import { Pump } from 'basehub/react-pump'
 import { RichText } from 'basehub/react-rich-text'
 import { getTableOfContents } from 'fumadocs-core/server'
-import { CodeBlock } from 'fumadocs-ui/components/codeblock'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { Locale } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 
 export const dynamic = 'force-static'
 
@@ -65,10 +65,11 @@ export default async function Page(props: Props) {
                 blocks={article.body?.json.blocks}
                 components={{
                   a: (props) => <Link {...props} />,
-                  pre: async ({ code, language, ...props }) => {
-                    const rendered = await highlightCode(code, language)
-                    return <CodeBlock {...props}>{rendered}</CodeBlock>
-                  },
+                  pre: ({ code, language, ...props }) => (
+                    <Suspense>
+                      <CodeBlockComponent code={{ code, language }} {...props} />
+                    </Suspense>
+                  ),
                   li: ({ children, ...props }) => (
                     <li {...props} className='[&_p]:my-0'>
                       {children}

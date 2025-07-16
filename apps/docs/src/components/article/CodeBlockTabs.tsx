@@ -11,7 +11,7 @@ export type CodeBlockTabsFragment = fragmentOn.infer<typeof CodeBlockTabsFragmen
 
 export const CodeBlockTabsComponent = ({ tabs }: CodeBlockTabsFragment) => {
   return (
-    <CodeBlockTabs defaultValue={tabs.items.at(0)?._slug}>
+    <CodeBlockTabs defaultValue={tabs.items.at(0)?._slug} persist>
       <CodeBlockTabsList>
         {tabs.items.map(({ _slug, _title, icon }) => (
           <CodeBlockTabsTrigger key={_slug} value={_slug}>
