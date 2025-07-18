@@ -298,7 +298,7 @@ export interface CalloutComponent {
     _slugPath: Scalars['String']
     _sys: BlockDocumentSys
     _title: Scalars['String']
-    body: Body
+    body: (Body | null)
     title: (Scalars['String'] | null)
     type: Scalars['BSHBSelect_2062842401']
     __typename: 'CalloutComponent'

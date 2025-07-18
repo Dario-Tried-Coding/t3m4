@@ -11,7 +11,7 @@ export type CalloutFragment = fragmentOn.infer<typeof CalloutFragment>
 export const CalloutComponent = ({ type, title, body }: CalloutFragment) => (
   <Callout title={title} type={type}>
     <RichText
-      content={body.json.content}
+      content={body?.json.content}
       components={{
         a: (props) => <Link {...props} />,
         pre: ({ code, language, ...props }) => (
